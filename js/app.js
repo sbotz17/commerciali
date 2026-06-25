@@ -508,6 +508,43 @@ function clientiPage() {
     form:         {},
     salvando:     false,
 
+    // ── Creditsafe ───────────────────────────────────────────
+    csModale:    false,
+    csCaricando: false,
+    csDati:      null,
+    csErrore:    "",
+
+    async verificaPIVA(cliente) {
+      const piva = (cliente.piva || cliente.partita_iva || "").trim();
+      if (!piva) {
+        Alpine.store("ui").mostraToast("Nessuna Partita IVA per questo cliente", "error");
+        return;
+      }
+      this.csDati = null; this.csErrore = ""; this.csCaricando = true; this.csModale = true;
+      try {
+        const ris = await SP.verificaPIVA(piva);
+        if (ris.ok) {
+          this.csDati = ris;
+        } else {
+          this.csErrore = ris.error || "Errore sconosciuto";
+        }
+      } catch (e) {
+        this.csErrore = e.message;
+      } finally {
+        this.csCaricando = false;
+      }
+    },
+
+    csScoreColore(score) {
+      const map = { "AAA": "text-emerald-700 bg-emerald-50", "AA": "text-emerald-700 bg-emerald-50", "A": "text-green-700 bg-green-50", "BB": "text-amber-700 bg-amber-50", "B": "text-orange-700 bg-orange-50", "C": "text-red-600 bg-red-50", "D": "text-red-800 bg-red-100" };
+      return map[score] || "text-slate-600 bg-slate-100";
+    },
+
+    fmt(val, valuta = "EUR") {
+      if (val == null) return "—";
+      return new Intl.NumberFormat("it-IT", { style: "currency", currency: valuta, maximumFractionDigits: 0 }).format(val);
+    },
+
     get canWrite() { return Alpine.store("sessione").haPermesso("clienti", "scrittura"); },
 
     get clientiFiltrati() {
@@ -525,7 +562,7 @@ function clientiPage() {
 
     apriNuovo() {
       this.corrente = null;
-      this.form = { nome: "", referente: "", email: "", telefono: "", citta: "", ateco: "", settore: "ristorazione", regione: "lombardia", note: "" };
+      this.form = { nome: "", referente: "", email: "", telefono: "", citta: "", ateco: "", settore: "ristorazione", regione: "lombardia", piva: "", note: "" };
       this.modaleAperto = true;
     },
     apriModifica(c) { this.corrente = c; this.form = { ...c }; this.modaleAperto = true; },
@@ -1477,9 +1514,7 @@ function importBandiPage() {
     },
 
     async _importaRecords(raw, fonte) {
-      const oggi   = new Date();
-      const attivi = raw.filter(d => !d.Data_chiusura || new Date(d.Data_chiusura) >= oggi);
-      const records = attivi.map(d => _normalizzaBando(d, fonte));
+      const records = raw.map(d => _normalizzaBando(d, fonte));
       this.uploadFase = "importazione";
       const BATCH = 100;
       let importati = 0;
@@ -1488,9 +1523,12 @@ function importBandiPage() {
         importati += Math.min(BATCH, records.length - i);
         this.uploadProgresso = Math.round((importati / records.length) * 100);
       }
-      this.uploadStats = { totale: raw.length, attivi: attivi.length, importati };
+      const attivi = records.filter(r => r.stato !== "scaduto").length;
+      this.uploadStats = { totale: raw.length, attivi, importati };
       this.uploadFase  = "completato";
       Alpine.store("ui").mostraToast(`${importati} bandi importati!`);
+      await SP.scriviLogManuale(importati, raw.length);
+      await this.ricarica();
     },
 
     resetUpload() { this.uploadFase = "idle"; this.uploadProgresso = 0; this.uploadStats = null; this.uploadErrMsg = ""; },

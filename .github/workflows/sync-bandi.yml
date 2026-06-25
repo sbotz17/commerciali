@@ -1,33 +1,3 @@
-name: Sync Bandi Incentivi
-
-on:
-  schedule:
-    - cron: '0 3 * * *'   # ogni notte alle 03:00 UTC
-  workflow_dispatch:        # permette avvio manuale dal tab Actions
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Test connettività incentivi.gov.it
-        run: |
-          echo "Test ping e HTTP..."
-          curl -v --max-time 30 -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" \
-            "https://www.incentivi.gov.it/solr/coredrupal/select?q.op=OR&wt=json&rows=1&q=index_id%3Aincentivi+" \
-            -o /dev/null -w "HTTP status: %{http_code}\nTempo: %{time_total}s\n" || echo "CURL FALLITO con codice $?"
-
-      - name: Run sync script
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON: ${{ secrets.SUPABASE_ANON }}
-          NODE_OPTIONS: "--max-old-space-size=512"
-        run: node scripts/sync-bandi-locale.js
-        timeout-minutes: 10
+# Workflow rimosso — incentivi.gov.it blocca le connessioni dai server GitHub (Azure IP range).
+# La sincronizzazione avviene tramite Windows Task Scheduler sul PC locale.
+# Vedi scripts/sync-bandi-locale.js per le istruzioni.
