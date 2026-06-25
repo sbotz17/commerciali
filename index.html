@@ -432,7 +432,8 @@
                   <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full shrink-0 font-medium" x-text="c.ateco || 'N/D'"></span>
                 </div>
                 <div class="space-y-1 text-xs text-slate-500 mb-4">
-                  <p x-show="c.citta" x-text="'📍 ' + c.citta + (c.regione ? ' (' + c.regione + ')' : '')"></p>
+                  <p x-show="c.piva" x-text="'🏛 P.IVA ' + c.piva"></p>
+                  <p x-show="c.indirizzo || c.citta" x-text="'📍 ' + [c.indirizzo, c.civico, c.cap, c.citta, c.provincia].filter(Boolean).join(' ')"></p>
                   <p x-show="c.email" x-text="'✉️ ' + c.email"></p>
                   <p x-show="c.telefono" x-text="'📞 ' + c.telefono"></p>
                   <p class="text-slate-400" x-text="countPreventivi(c.id) + ' preventivi'"></p>
@@ -579,14 +580,38 @@
                 <button @click="modaleAperto = false" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
               </div>
               <div class="space-y-4">
-                <div><label class="text-xs font-medium text-slate-500">Ragione sociale *</label><input x-model="form.nome" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <!-- Tipo cliente + Ragione sociale -->
+                <div class="grid grid-cols-3 gap-3">
+                  <div>
+                    <label class="text-xs font-medium text-slate-500">Tipo cliente</label>
+                    <select x-model="form.tipo_cliente" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="azienda">Azienda</option>
+                      <option value="libero_professionista">Libero professionista</option>
+                      <option value="privato">Privato</option>
+                    </select>
+                  </div>
+                  <div class="col-span-2"><label class="text-xs font-medium text-slate-500">Ragione sociale / Nome *</label><input x-model="form.nome" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                </div>
+                <!-- P.IVA + CF -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="text-xs font-medium text-slate-500">Partita IVA</label><input x-model="form.piva" type="text" placeholder="Es. 12345678901" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                  <div><label class="text-xs font-medium text-slate-500">Codice Fiscale</label><input x-model="form.codice_fiscale" type="text" placeholder="Es. RSSMRA80A01H501U" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                </div>
+                <!-- Referente + Telefono + Email -->
                 <div><label class="text-xs font-medium text-slate-500">Referente</label><input x-model="form.referente" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
                 <div class="grid grid-cols-2 gap-3">
                   <div><label class="text-xs font-medium text-slate-500">Email</label><input x-model="form.email" type="email" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
                   <div><label class="text-xs font-medium text-slate-500">Telefono</label><input x-model="form.telefono" type="tel" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
                 </div>
-                <div class="grid grid-cols-2 gap-3">
+                <!-- Indirizzo -->
+                <div class="grid grid-cols-4 gap-3">
+                  <div class="col-span-2"><label class="text-xs font-medium text-slate-500">Indirizzo</label><input x-model="form.indirizzo" type="text" placeholder="Via Roma" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                  <div><label class="text-xs font-medium text-slate-500">Civico</label><input x-model="form.civico" type="text" placeholder="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                  <div><label class="text-xs font-medium text-slate-500">CAP</label><input x-model="form.cap" type="text" placeholder="20100" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
                   <div><label class="text-xs font-medium text-slate-500">Città</label><input x-model="form.citta" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                  <div><label class="text-xs font-medium text-slate-500">Provincia</label><input x-model="form.provincia" type="text" placeholder="MI" maxlength="2" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" /></div>
                   <div>
                     <label class="text-xs font-medium text-slate-500">Regione</label>
                     <select x-model="form.regione" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -594,6 +619,7 @@
                     </select>
                   </div>
                 </div>
+                <!-- ATECO + Settore -->
                 <div class="grid grid-cols-2 gap-3">
                   <div><label class="text-xs font-medium text-slate-500">Codice ATECO</label><input x-model="form.ateco" type="text" placeholder="Es. 56.10" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
                   <div>
@@ -606,7 +632,6 @@
                     </select>
                   </div>
                 </div>
-                <div><label class="text-xs font-medium text-slate-500">Partita IVA</label><input x-model="form.piva" type="text" placeholder="Es. 12345678901" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
                 <div><label class="text-xs font-medium text-slate-500">Note</label><textarea x-model="form.note" rows="2" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea></div>
               </div>
               <button @click="salva()" :disabled="salvando" class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl mt-5 hover:bg-blue-800 disabled:opacity-50">
