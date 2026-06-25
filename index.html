@@ -594,147 +594,162 @@
               </button>
             </div>
 
-            <!-- Contenuto -->
-            <div class="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            <!-- Contenuto — layout a 2 colonne su desktop, 1 su mobile -->
+            <div class="w-full px-4 py-6">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
-              <!-- Sezione: Anagrafica -->
-              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
-                  <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Anagrafica</p>
-                </div>
-                <div class="p-5 space-y-4">
-                  <div class="grid grid-cols-1 gap-3">
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Tipo cliente</label>
-                      <select x-model="form.tipo_cliente" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="azienda">Azienda</option>
-                        <option value="libero_professionista">Libero professionista</option>
-                        <option value="privato">Privato</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Ragione sociale / Nome *</label>
-                      <input x-model="form.nome" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                  </div>
+                <!-- Colonna sinistra: Anagrafica + Sede legale -->
+                <div class="space-y-5">
 
-                  <!-- P.IVA con pulsante VIES -->
-                  <div class="grid grid-cols-1 gap-3">
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Partita IVA</label>
-                      <div class="mt-1 flex gap-2">
-                        <input x-model="form.piva" type="text" placeholder="Es. 12345678901"
-                               class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                               @keydown.enter.prevent="cercaDaVIES()" />
-                        <button @click="cercaDaVIES()" :disabled="cercandoPIVA"
-                                title="Cerca nel VIES e autocompila"
-                                class="btn-tap shrink-0 flex items-center justify-center w-10 h-10 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 disabled:opacity-50 transition-colors">
-                          <svg x-show="!cercandoPIVA" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
-                          <svg x-show="cercandoPIVA" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                        </button>
+                  <!-- Sezione: Anagrafica -->
+                  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                      <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Anagrafica</p>
+                    </div>
+                    <div class="p-5 space-y-4">
+                      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Tipo cliente</label>
+                          <select x-model="form.tipo_cliente" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="azienda">Azienda</option>
+                            <option value="libero_professionista">Libero professionista</option>
+                            <option value="privato">Privato</option>
+                          </select>
+                        </div>
+                        <div class="sm:col-span-2">
+                          <label class="text-xs font-medium text-slate-500">Ragione sociale / Nome *</label>
+                          <input x-model="form.nome" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
                       </div>
-                      <p x-show="viesMsg" class="mt-1.5 text-xs" :class="viesMsg.startsWith('✓') ? 'text-green-600' : 'text-amber-600'" x-text="viesMsg"></p>
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Codice Fiscale</label>
-                      <input x-model="form.codice_fiscale" type="text" placeholder="Es. RSSMRA80A01H501U"
-                             class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                  </div>
-                </div>
-              </div>
 
-              <!-- Sezione: Contatti -->
-              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
-                  <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Contatti</p>
-                </div>
-                <div class="p-5 space-y-4">
-                  <div>
-                    <label class="text-xs font-medium text-slate-500">Referente</label>
-                    <input x-model="form.referente" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div class="grid grid-cols-1 gap-3">
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Email</label>
-                      <input x-model="form.email" type="email" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <!-- P.IVA con pulsante VIES -->
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Partita IVA</label>
+                          <div class="mt-1 flex gap-2">
+                            <input x-model="form.piva" type="text" placeholder="Es. 12345678901"
+                                   class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   @keydown.enter.prevent="cercaDaVIES()" />
+                            <button @click="cercaDaVIES()" :disabled="cercandoPIVA"
+                                    title="Cerca nel VIES e autocompila"
+                                    class="btn-tap shrink-0 flex items-center justify-center w-10 h-10 bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 disabled:opacity-50 transition-colors">
+                              <svg x-show="!cercandoPIVA" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+                              <svg x-show="cercandoPIVA" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                            </button>
+                          </div>
+                          <p x-show="viesMsg" class="mt-1.5 text-xs" :class="viesMsg.startsWith('✓') ? 'text-green-600' : 'text-amber-600'" x-text="viesMsg"></p>
+                        </div>
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Codice Fiscale</label>
+                          <input x-model="form.codice_fiscale" type="text" placeholder="Es. RSSMRA80A01H501U"
+                                 class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Telefono</label>
-                      <input x-model="form.telefono" type="tel" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
                   </div>
-                </div>
-              </div>
 
-              <!-- Sezione: Sede legale -->
-              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
-                  <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Sede legale</p>
-                </div>
-                <div class="p-5 space-y-4">
-                  <div class="grid grid-cols-1 gap-3">
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Indirizzo</label>
-                      <input x-model="form.indirizzo" type="text" placeholder="Via Roma" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <!-- Sezione: Sede legale -->
+                  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                      <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Sede legale</p>
                     </div>
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Civico</label>
-                      <input x-model="form.civico" type="text" placeholder="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">CAP</label>
-                      <input x-model="form.cap" type="text" placeholder="20100" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Città</label>
-                      <input x-model="form.citta" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Provincia</label>
-                      <input x-model="form.provincia" type="text" placeholder="MI" maxlength="2" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" />
+                    <div class="p-5 space-y-4">
+                      <div class="grid grid-cols-3 gap-3">
+                        <div class="col-span-2">
+                          <label class="text-xs font-medium text-slate-500">Indirizzo</label>
+                          <input x-model="form.indirizzo" type="text" placeholder="Via Roma" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Civico</label>
+                          <input x-model="form.civico" type="text" placeholder="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-3 gap-3">
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">CAP</label>
+                          <input x-model="form.cap" type="text" placeholder="20100" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Città</label>
+                          <input x-model="form.citta" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Provincia</label>
+                          <input x-model="form.provincia" type="text" placeholder="MI" maxlength="2" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase" />
+                        </div>
+                      </div>
+                      <div>
+                        <label class="text-xs font-medium text-slate-500">Regione</label>
+                        <select x-model="form.regione" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                          <template x-for="r in REGIONI_ITALIA" :key="r.id"><option :value="r.id" x-text="r.nome"></option></template>
+                        </select>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label class="text-xs font-medium text-slate-500">Regione</label>
-                    <select x-model="form.regione" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                      <template x-for="r in REGIONI_ITALIA" :key="r.id"><option :value="r.id" x-text="r.nome"></option></template>
-                    </select>
-                  </div>
-                </div>
-              </div>
 
-              <!-- Sezione: Attività -->
-              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
-                  <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Attività</p>
-                </div>
-                <div class="p-5 space-y-4">
-                  <div class="grid grid-cols-1 gap-3">
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Codice ATECO</label>
-                      <input x-model="form.ateco" type="text" placeholder="Es. 56.10" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    </div>
-                    <div>
-                      <label class="text-xs font-medium text-slate-500">Settore</label>
-                      <select x-model="form.settore" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                        <option value="ristorazione">Ristorazione</option>
-                        <option value="retail">Retail</option>
-                        <option value="grande_distribuzione">Grande distribuzione</option>
-                        <option value="altro">Altro</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="text-xs font-medium text-slate-500">Note</label>
-                    <textarea x-model="form.note" rows="3" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
-                  </div>
-                </div>
-              </div>
+                </div><!-- fine colonna sinistra -->
 
-              <!-- Bottone salva in fondo (mobile) -->
+                <!-- Colonna destra: Contatti + Attività -->
+                <div class="space-y-5">
+
+                  <!-- Sezione: Contatti -->
+                  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                      <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Contatti</p>
+                    </div>
+                    <div class="p-5 space-y-4">
+                      <div>
+                        <label class="text-xs font-medium text-slate-500">Referente</label>
+                        <input x-model="form.referente" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Email</label>
+                          <input x-model="form.email" type="email" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Telefono</label>
+                          <input x-model="form.telefono" type="tel" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sezione: Attività -->
+                  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                      <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Attività</p>
+                    </div>
+                    <div class="p-5 space-y-4">
+                      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Codice ATECO</label>
+                          <input x-model="form.ateco" type="text" placeholder="Es. 56.10" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                          <label class="text-xs font-medium text-slate-500">Settore</label>
+                          <select x-model="form.settore" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            <option value="ristorazione">Ristorazione</option>
+                            <option value="retail">Retail</option>
+                            <option value="grande_distribuzione">Grande distribuzione</option>
+                            <option value="altro">Altro</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label class="text-xs font-medium text-slate-500">Note</label>
+                        <textarea x-model="form.note" rows="3" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                      </div>
+                    </div>
+                  </div>
+
+                </div><!-- fine colonna destra -->
+
+              </div><!-- fine grid 2 colonne -->
+
+              <!-- Bottone salva in fondo -->
               <button @click="salva()" :disabled="salvando"
-                      class="btn-tap w-full bg-blue-700 text-white font-semibold py-3.5 rounded-2xl hover:bg-blue-800 disabled:opacity-50 text-sm">
+                      class="btn-tap w-full mt-5 bg-blue-700 text-white font-semibold py-3.5 rounded-2xl hover:bg-blue-800 disabled:opacity-50 text-sm">
                 <span x-text="salvando ? 'Salvataggio in corso…' : 'Salva cliente'"></span>
               </button>
 
