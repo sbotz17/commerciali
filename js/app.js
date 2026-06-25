@@ -562,7 +562,7 @@ function clientiPage() {
 
     apriNuovo() {
       this.corrente = null;
-      this.form = { nome: "", referente: "", email: "", telefono: "", citta: "", ateco: "", settore: "ristorazione", regione: "lombardia", piva: "", note: "" };
+      this.form = { tipo_cliente: "azienda", nome: "", referente: "", email: "", telefono: "", piva: "", codice_fiscale: "", indirizzo: "", civico: "", cap: "", citta: "", provincia: "", regione: "lombardia", ateco: "", settore: "ristorazione", note: "" };
       this.modaleAperto = true;
     },
     apriModifica(c) { this.corrente = c; this.form = { ...c }; this.modaleAperto = true; },
