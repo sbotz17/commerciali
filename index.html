@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="it" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Configuratore Commerciali</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="js/bandi-data.js"></script>
+  <script src="js/supabase.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+    .toast-anim { animation: slideUp .25s ease; }
+    .sidebar-anim { animation: slideInLeft .2s ease; }
+    .btn-tap { -webkit-tap-highlight-color: transparent; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+
+<body class="bg-slate-100 h-full" x-data="appShell()" x-cloak>
+
+  <!-- ======================================================
+       SCHERMATA CARICAMENTO
+  ====================================================== -->
+  <div x-show="caricamento" class="fixed inset-0 z-50 bg-white flex flex-col items-center justify-center gap-4">
+    <div class="w-10 h-10 border-4 border-blue-700 border-t-transparent rounded-full animate-spin"></div>
+    <p class="text-sm text-slate-500 font-medium">Connessione al database…</p>
+  </div>
+
+  <!-- ======================================================
+       PAGINA LOGIN
+  ====================================================== -->
+  <div x-show="!caricamento && !loggato" x-data="loginPage()"
+       class="min-h-screen bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center px-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8">
+      <div class="flex flex-col items-center mb-8">
+        <div class="w-16 h-16 bg-blue-700 rounded-2xl flex items-center justify-center mb-3">
+          <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586"/>
+          </svg>
+        </div>
+        <h1 class="text-xl font-bold text-slate-800">Configuratore Commerciali</h1>
+        <p class="text-sm text-slate-400 mt-1">Accedi alla piattaforma</p>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs font-medium text-slate-500">Username</label>
+          <input x-model="username" type="text" placeholder="admin" @keyup.enter="esegui()"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500">Password</label>
+          <input x-model="password" type="password" placeholder="••••••••" @keyup.enter="esegui()"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <template x-if="errore">
+          <p class="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg" x-text="errore"></p>
+        </template>
+        <button @click="esegui()" :disabled="caricando"
+                class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl active:bg-blue-800 disabled:opacity-50 mt-2">
+          <span x-show="!caricando">Accedi →</span>
+          <span x-show="caricando">Accesso in corso…</span>
+        </button>
+      </div>
+      <p class="text-xs text-center text-slate-400 mt-6">Default: admin / admin123</p>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       APP PRINCIPALE
+  ====================================================== -->
+  <div x-show="!caricamento && loggato" class="flex h-full min-h-screen">
+
+    <!-- ====================================================
+         OVERLAY MOBILE (chiude sidebar)
+    ==================================================== -->
+    <div x-show="sidebarAperta" @click="sidebarAperta = false"
+         class="fixed inset-0 z-30 bg-black/40 md:hidden"
+         x-transition:enter="transition-opacity duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0">
+    </div>
+
+    <!-- ====================================================
+         SIDEBAR
+    ==================================================== -->
+    <aside :class="sidebarAperta ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
+           class="fixed md:sticky top-0 left-0 z-40 h-screen w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 ease-in-out shrink-0">
+
+      <!-- Logo aziendale -->
+      <div class="flex items-center gap-3 px-4 py-4 border-b border-slate-100">
+        <!-- Logo personalizzato -->
+        <template x-if="$store.db.logo">
+          <img :src="$store.db.logo" alt="Logo" class="h-9 max-w-[120px] object-contain shrink-0" />
+        </template>
+        <!-- Fallback icona default -->
+        <template x-if="!$store.db.logo">
+          <div class="w-9 h-9 bg-blue-700 rounded-xl flex items-center justify-center shrink-0">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586"/>
+            </svg>
+          </div>
+        </template>
+        <div class="min-w-0 flex-1">
+          <p class="text-sm font-bold text-slate-800 leading-none truncate" x-text="$store.db.nomeAzienda"></p>
+          <p class="text-xs text-slate-400 mt-0.5">Commerciali</p>
+        </div>
+        <!-- Chiudi (solo mobile) -->
+        <button @click="sidebarAperta = false" class="btn-tap ml-auto text-slate-400 md:hidden">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <!-- Nav scrollabile -->
+      <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-0.5 no-scrollbar">
+
+        <!-- Sezione OPERATIVO -->
+        <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Operativo</p>
+
+        <template x-for="item in navOperativo" :key="item.pagina">
+          <button @click="vai(item.pagina)"
+                  :class="pagina === item.pagina
+                    ? 'bg-blue-700 text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100'"
+                  class="btn-tap w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors">
+            <span class="w-5 h-5 shrink-0" x-html="item.icon"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+
+        <!-- Sezione AMMINISTRAZIONE (dinamica in base ai permessi) -->
+        <template x-if="hasAdminNav">
+          <div class="mt-4 space-y-0.5">
+            <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Amministrazione</p>
+            <template x-for="item in navAdmin" :key="item.pagina">
+              <button @click="vai(item.pagina)"
+                      :class="pagina === item.pagina
+                        ? 'bg-blue-700 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100'"
+                      class="btn-tap w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors">
+                <span class="w-5 h-5 shrink-0" x-html="item.icon"></span>
+                <span x-text="item.label"></span>
+              </button>
+            </template>
+          </div>
+        </template>
+
+      </nav>
+
+      <!-- Utente + logout -->
+      <div class="border-t border-slate-100 p-3">
+        <div class="flex items-center gap-3 px-2 py-2 rounded-xl">
+          <!-- Avatar: foto se disponibile, altrimenti iniziale -->
+          <template x-if="$store.sessione.utente?.avatar">
+            <img :src="$store.sessione.utente.avatar" alt="Avatar"
+                 class="w-8 h-8 rounded-full object-cover shrink-0 border border-slate-200" />
+          </template>
+          <template x-if="!$store.sessione.utente?.avatar">
+            <div class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white text-sm font-bold shrink-0"
+                 x-text="($store.sessione.nomeUtente || 'A').charAt(0).toUpperCase()"></div>
+          </template>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-semibold text-slate-800 truncate" x-text="$store.sessione.nomeUtente"></p>
+            <span class="text-xs px-1.5 py-0.5 rounded font-medium" :class="ruoloClasse($store.sessione.ruolo)" x-text="ruoloLabel($store.sessione.ruolo)"></span>
+          </div>
+          <button @click="$store.sessione.logout()" title="Logout"
+                  class="btn-tap text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition-colors shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ====================================================
+         AREA PRINCIPALE
+    ==================================================== -->
+    <div class="flex-1 flex flex-col min-w-0 min-h-screen">
+
+      <!-- TOP BAR -->
+      <header class="sticky top-0 z-20 bg-white border-b border-slate-200 px-4 md:px-6 h-14 flex items-center justify-between gap-3">
+        <!-- Hamburger (solo mobile) -->
+        <button @click="sidebarAperta = true" class="btn-tap text-slate-500 md:hidden shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/>
+          </svg>
+        </button>
+
+        <!-- Titolo pagina -->
+        <h2 class="text-sm font-semibold text-slate-700 flex-1 truncate"
+            x-text="{dashboard:'Dashboard',catalogo:'Catalogo Prodotti',clienti:'Clienti',preventivi:'Configura richiesta','nuovo-preventivo':'Nuova richiesta',bandi:'Bandi & Agevolazioni',categorie:'Categorie',utenti:'Gestione Utenti',ruoli:'Ruoli & Permessi',importBandi:'Import Bandi',impostazioni:'Impostazioni'}[pagina] || pagina">
+        </h2>
+
+        <!-- Azioni topbar -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button @click="$store.ui.vai('nuovo-preventivo')"
+                  class="btn-tap flex items-center gap-1.5 bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-blue-800 active:bg-blue-800 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            <span class="hidden sm:inline">Preventivo</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- CONTENUTO PAGINE -->
+      <main class="flex-1 p-4 md:p-6 lg:p-8">
+
+        <!-- ================================================
+             DASHBOARD
+        ================================================ -->
+        <section x-show="pagina === 'dashboard'" x-data="dashboardPage()">
+
+          <!-- Saluto -->
+          <div class="mb-6">
+            <h1 class="text-2xl font-bold text-slate-800" x-text="'Ciao, ' + $store.sessione.nomeUtente + ' 👋'"></h1>
+            <p class="text-sm text-slate-500 mt-1">Ecco il riepilogo della tua attività.</p>
+          </div>
+
+          <!-- Stats cards -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+              <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Totale</p>
+              <p class="text-3xl font-bold text-slate-800 mt-2" x-text="totali.tutti"></p>
+              <p class="text-xs text-slate-400 mt-1">preventivi</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+              <p class="text-xs font-semibold text-amber-500 uppercase tracking-wider">In attesa</p>
+              <p class="text-3xl font-bold text-amber-600 mt-2" x-text="totali.inviati"></p>
+              <p class="text-xs text-slate-400 mt-1">da confermare</p>
+            </div>
+            <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+              <p class="text-xs font-semibold text-green-500 uppercase tracking-wider">Accettati</p>
+              <p class="text-3xl font-bold text-green-600 mt-2" x-text="totali.accettati"></p>
+              <p class="text-xs text-slate-400 mt-1">confermati</p>
+            </div>
+            <div class="bg-blue-700 rounded-2xl p-5 shadow-sm">
+              <p class="text-xs font-semibold text-blue-200 uppercase tracking-wider">Valore aperto</p>
+              <p class="text-2xl font-bold text-white mt-2" x-text="fmt(valoreAperto)"></p>
+              <p class="text-xs text-blue-200 mt-1">bozze + in attesa</p>
+            </div>
+          </div>
+
+          <!-- Griglia contenuto -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- Ultimi preventivi -->
+            <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <p class="text-sm font-semibold text-slate-700">Ultimi preventivi</p>
+                <button @click="vai('preventivi')" class="text-xs text-blue-700 font-medium hover:underline">Vedi tutti →</button>
+              </div>
+              <template x-if="ultimi.length === 0">
+                <div class="px-5 py-8 text-center text-slate-400 text-sm">Nessun preventivo — <button @click="vai('nuovo-preventivo')" class="text-blue-700 font-medium hover:underline">creane uno</button></div>
+              </template>
+              <div class="divide-y divide-slate-50">
+                <template x-for="p in ultimi" :key="p.id">
+                  <div class="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors">
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-semibold text-slate-800" x-text="p.numero"></p>
+                      <p class="text-xs text-slate-500 mt-0.5 truncate" x-text="p.cliente_nome + ' · ' + fmtData(p.data)"></p>
+                    </div>
+                    <div class="text-right ml-4 shrink-0">
+                      <p class="text-sm font-bold text-slate-800" x-text="fmt(p.totale_iva)"></p>
+                      <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="statoClasse(p.stato)" x-text="statoLabel(p.stato)"></span>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Colonna destra: azioni + utenti -->
+            <div class="space-y-4">
+              <!-- Azioni rapide -->
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-5 py-4 border-b border-slate-100"><p class="text-sm font-semibold text-slate-700">Azioni rapide</p></div>
+                <div class="p-3 space-y-1">
+                  <template x-for="az in azioniRapide" :key="az.pagina">
+                    <button @click="vai(az.pagina)" class="btn-tap w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors">
+                      <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" :class="az.bg">
+                        <span class="w-4 h-4" x-html="az.icon"></span>
+                      </div>
+                      <span class="text-sm font-medium text-slate-700" x-text="az.label"></span>
+                    </button>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Utenti attivi (solo admin) -->
+              <template x-if="isAdmin && utentiAttivi.length > 0">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                  <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                    <p class="text-sm font-semibold text-slate-700">Utenti</p>
+                    <button @click="vai('utenti')" class="text-xs text-blue-700 font-medium hover:underline">Gestisci →</button>
+                  </div>
+                  <div class="divide-y divide-slate-50">
+                    <template x-for="u in utentiAttivi" :key="u.id">
+                      <div class="flex items-center gap-3 px-5 py-3">
+                        <div class="w-8 h-8 rounded-full bg-blue-700 flex items-center justify-center text-white text-xs font-bold shrink-0"
+                             x-text="(u.nome || u.username).charAt(0).toUpperCase()"></div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-medium text-slate-800 truncate" x-text="u.nome || u.username"></p>
+                        </div>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0" :class="ruoloClasse(u.ruolo)" x-text="ruoloLabel(u.ruolo)"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ================================================
+             CATALOGO
+        ================================================ -->
+        <section x-show="pagina === 'catalogo'" x-data="catalogoPage()">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+            <div class="relative flex-1">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/></svg>
+              <input x-model="ricerca" type="search" placeholder="Cerca prodotto…" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
+            </div>
+            <button x-show="canWrite" @click="apriNuovo()" class="btn-tap flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 active:bg-blue-800 shadow-sm shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+              Nuovo prodotto
+            </button>
+          </div>
+
+          <!-- Filtri categoria -->
+          <div class="flex gap-2 mb-5 overflow-x-auto pb-1 no-scrollbar">
+            <template x-for="cat in categorie" :key="cat.id">
+              <button @click="filtro = cat.id === 'tutti' ? 'tutti' : cat.nome"
+                      :class="filtro === (cat.id === 'tutti' ? 'tutti' : cat.nome) ? 'bg-blue-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300'"
+                      class="btn-tap flex-none text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap shadow-sm transition-colors"
+                      x-text="(cat.icona ? cat.icona + ' ' : '') + cat.nome"></button>
+            </template>
+          </div>
+
+          <!-- Griglia prodotti -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <template x-for="p in prodottiFiltrati" :key="p.id">
+              <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col">
+                <div class="flex-1">
+                  <div class="flex items-start justify-between gap-2 mb-2">
+                    <p class="text-sm font-semibold text-slate-800 leading-snug" x-text="p.nome"></p>
+                    <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full shrink-0" x-text="p.categoria"></span>
+                  </div>
+                  <p class="text-xs text-slate-500 leading-relaxed" x-text="p.descrizione"></p>
+                </div>
+                <div class="flex items-center justify-between mt-4 pt-3 border-t border-slate-100">
+                  <p class="text-lg font-bold text-blue-700" x-text="fmt(p.prezzo)"></p>
+                  <div x-show="canWrite" class="flex gap-2">
+                    <button @click="apriModifica(p)" class="btn-tap text-xs text-blue-700 font-medium bg-blue-50 px-3 py-1 rounded-lg hover:bg-blue-100">Modifica</button>
+                    <button @click="elimina(p.id)"   class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-3 py-1 rounded-lg hover:bg-red-100">Elimina</button>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <template x-if="prodottiFiltrati.length === 0">
+              <div class="col-span-full text-center text-slate-400 py-12 text-sm">Nessun prodotto trovato</div>
+            </template>
+          </div>
+
+          <!-- Modale prodotto -->
+          <div x-show="modaleAperto" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" @click.self="modaleAperto = false">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl" @click.stop>
+              <div class="flex items-center justify-between mb-5">
+                <h2 class="text-base font-bold text-slate-800" x-text="corrente ? 'Modifica Prodotto' : 'Nuovo Prodotto'"></h2>
+                <button @click="modaleAperto = false" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+              <div class="space-y-4">
+                <div><label class="text-xs font-medium text-slate-500">Nome *</label><input x-model="form.nome" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="text-xs font-medium text-slate-500">Categoria</label>
+                    <select x-model="form.categoria" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <template x-for="c in $store.db.categorie" :key="c.id"><option :value="c.nome" x-text="c.nome"></option></template>
+                    </select>
+                  </div>
+                  <div><label class="text-xs font-medium text-slate-500">Prezzo (€) *</label><input x-model="form.prezzo" type="number" min="0" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                </div>
+                <div><label class="text-xs font-medium text-slate-500">Descrizione</label><textarea x-model="form.descrizione" rows="2" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea></div>
+              </div>
+              <button @click="salva()" :disabled="salvando" class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl mt-5 hover:bg-blue-800 disabled:opacity-50">
+                <span x-text="salvando ? 'Salvataggio…' : 'Salva prodotto'"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================
+             CLIENTI
+        ================================================ -->
+        <section x-show="pagina === 'clienti'" x-data="clientiPage()">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+            <div class="relative flex-1">
+              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/></svg>
+              <input x-model="ricerca" type="search" placeholder="Cerca cliente o città…" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" />
+            </div>
+            <button @click="apriNuovo()" class="btn-tap flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 shadow-sm shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+              Nuovo cliente
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="c in clientiFiltrati" :key="c.id">
+              <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between gap-2 mb-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-semibold text-slate-800 truncate" x-text="c.nome"></p>
+                    <p class="text-xs text-slate-500 mt-0.5" x-text="c.referente || '—'"></p>
+                  </div>
+                  <span class="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full shrink-0 font-medium" x-text="c.ateco || 'N/D'"></span>
+                </div>
+                <div class="space-y-1 text-xs text-slate-500 mb-4">
+                  <p x-show="c.citta" x-text="'📍 ' + c.citta + (c.regione ? ' (' + c.regione + ')' : '')"></p>
+                  <p x-show="c.email" x-text="'✉️ ' + c.email"></p>
+                  <p x-show="c.telefono" x-text="'📞 ' + c.telefono"></p>
+                  <p class="text-slate-400" x-text="countPreventivi(c.id) + ' preventivi'"></p>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
+                  <button @click="nuovoPreventivoPer(c)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-800">+ Preventivo</button>
+                  <button @click="vaBandi(c)"            class="btn-tap text-xs text-purple-700 font-medium bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100">Bandi</button>
+                  <button @click="apriModifica(c)"       class="btn-tap text-xs text-slate-600 font-medium bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200">Modifica</button>
+                  <button @click="elimina(c.id)"         class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                </div>
+              </div>
+            </template>
+            <template x-if="clientiFiltrati.length === 0">
+              <div class="col-span-full text-center text-slate-400 py-12 text-sm">Nessun cliente trovato</div>
+            </template>
+          </div>
+
+          <!-- Modale cliente -->
+          <div x-show="modaleAperto" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" @click.self="modaleAperto = false">
+            <div class="bg-white rounded-2xl w-full max-w-lg p-6 shadow-xl max-h-[90vh] overflow-y-auto" @click.stop>
+              <div class="flex items-center justify-between mb-5">
+                <h2 class="text-base font-bold text-slate-800" x-text="corrente ? 'Modifica Cliente' : 'Nuovo Cliente'"></h2>
+                <button @click="modaleAperto = false" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+              <div class="space-y-4">
+                <div><label class="text-xs font-medium text-slate-500">Ragione sociale *</label><input x-model="form.nome" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div><label class="text-xs font-medium text-slate-500">Referente</label><input x-model="form.referente" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="text-xs font-medium text-slate-500">Email</label><input x-model="form.email" type="email" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                  <div><label class="text-xs font-medium text-slate-500">Telefono</label><input x-model="form.telefono" type="tel" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="text-xs font-medium text-slate-500">Città</label><input x-model="form.citta" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                  <div>
+                    <label class="text-xs font-medium text-slate-500">Regione</label>
+                    <select x-model="form.regione" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <template x-for="r in REGIONI_ITALIA" :key="r.id"><option :value="r.id" x-text="r.nome"></option></template>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="text-xs font-medium text-slate-500">Codice ATECO</label><input x-model="form.ateco" type="text" placeholder="Es. 56.10" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                  <div>
+                    <label class="text-xs font-medium text-slate-500">Settore</label>
+                    <select x-model="form.settore" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="ristorazione">Ristorazione</option>
+                      <option value="retail">Retail</option>
+                      <option value="grande_distribuzione">Grande distrib.</option>
+                      <option value="altro">Altro</option>
+                    </select>
+                  </div>
+                </div>
+                <div><label class="text-xs font-medium text-slate-500">Note</label><textarea x-model="form.note" rows="2" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea></div>
+              </div>
+              <button @click="salva()" :disabled="salvando" class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl mt-5 hover:bg-blue-800 disabled:opacity-50">
+                <span x-text="salvando ? 'Salvataggio…' : 'Salva cliente'"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================
+             PREVENTIVI
+        ================================================ -->
+        <section x-show="pagina === 'preventivi'" x-data="preventiviPage()">
+          <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
+            <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar flex-1">
+              <template x-for="s in [{id:'tutti',l:'Tutti'},{id:'bozza',l:'Bozze'},{id:'inviato',l:'In attesa'},{id:'accettato',l:'Accettati'},{id:'rifiutato',l:'Rifiutati'}]" :key="s.id">
+                <button @click="filtroStato = s.id" :class="filtroStato === s.id ? 'bg-blue-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300'"
+                        class="btn-tap flex-none text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap shadow-sm" x-text="s.l"></button>
+              </template>
+            </div>
+            <button @click="$store.ui.vai('nuovo-preventivo')" class="btn-tap flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 shadow-sm shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+              Nuovo
+            </button>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <template x-if="preventiviFiltrati.length === 0">
+              <div class="text-center py-12 text-slate-400 text-sm">
+                <p>Nessun preventivo</p>
+                <button @click="$store.ui.vai('nuovo-preventivo')" class="btn-tap mt-2 text-blue-700 font-medium hover:underline">Crea il primo →</button>
+              </div>
+            </template>
+            <div class="divide-y divide-slate-100">
+              <template x-for="p in preventiviFiltrati" :key="p.id">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <p class="text-sm font-bold text-slate-800" x-text="p.numero"></p>
+                      <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="statoClasse(p.stato)" x-text="statoLabel(p.stato)"></span>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-0.5" x-text="p.cliente_nome + ' · ' + fmtData(p.data)"></p>
+                    <p class="text-xs text-slate-400 mt-0.5" x-show="p.utente_nome" x-text="'👤 ' + p.utente_nome"></p>
+                  </div>
+                  <div class="flex items-center justify-between sm:justify-end gap-4">
+                    <p class="text-base font-bold text-blue-700" x-text="fmt(p.totale_iva)"></p>
+                    <div class="flex gap-1.5 flex-wrap">
+                      <button @click="esportaPDF(p)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-800">📄 PDF</button>
+                      <button @click="riprendi(p)"                   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">✏️ Modifica</button>
+                      <button @click="cambiaStato(p.id,'inviato')"   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg hover:bg-amber-100">Invia</button>
+                      <button @click="cambiaStato(p.id,'accettato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100">Accetta</button>
+                      <button @click="cambiaStato(p.id,'rifiutato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Rifiuta</button>
+                      <button @click="elimina(p.id)"                                               class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================
+             NUOVO PREVENTIVO (wizard)
+        ================================================ -->
+        <section x-show="pagina === 'nuovo-preventivo'" x-data="nuovoPreventivo()">
+
+          <!-- ── MODAL SELEZIONE PRODOTTI ─────────────────────── -->
+          <div x-show="modaleAperto" x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.45)">
+            <div @click.outside="modaleAperto=false" class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+              <!-- Header modal -->
+              <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <h3 class="text-base font-bold text-slate-800">Seleziona prodotto</h3>
+                <button @click="modaleAperto=false" class="btn-tap text-slate-400 hover:text-slate-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <!-- Ricerca -->
+              <div class="px-5 py-3 border-b border-slate-100">
+                <div class="relative">
+                  <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/></svg>
+                  <input x-model="ricercaProdotto" type="search" placeholder="Cerca…" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <!-- Tabella prodotti -->
+              <div class="overflow-y-auto flex-1">
+                <table class="w-full text-sm">
+                  <thead class="sticky top-0 bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Codice</th>
+                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Prodotto</th>
+                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">Cat.</th>
+                      <th class="text-right px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Prezzo</th>
+                      <th class="px-4 py-2.5"></th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-50">
+                    <template x-for="p in prodottiFiltrati" :key="p.id">
+                      <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3">
+                          <span class="text-xs font-bold text-blue-600 font-mono" x-text="_codiceProdotto(p)"></span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <p class="font-medium text-slate-800" x-text="p.nome"></p>
+                          <p class="text-xs text-slate-400 mt-0.5" x-text="p.descrizione"></p>
+                        </td>
+                        <td class="px-4 py-3 hidden sm:table-cell text-slate-500 capitalize" x-text="p.categoria"></td>
+                        <td class="px-4 py-3 text-right font-bold text-slate-800 whitespace-nowrap" x-text="fmt(p.prezzo)"></td>
+                        <td class="px-4 py-3">
+                          <button @click="aggiungiProdotto(p)"
+                                  class="btn-tap whitespace-nowrap bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-blue-800">
+                            + Aggiungi
+                          </button>
+                        </td>
+                      </tr>
+                    </template>
+                    <template x-if="prodottiFiltrati.length === 0">
+                      <tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Nessun prodotto trovato</td></tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+              <!-- Footer modal -->
+              <div x-show="righe.length > 0" class="px-5 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50 rounded-b-2xl">
+                <span class="text-sm text-slate-600" x-text="righe.length + ' rig' + (righe.length === 1 ? 'a' : 'he') + ' aggiunte'"></span>
+                <button @click="modaleAperto=false" class="btn-tap bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-blue-800">Conferma →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Titolo sezione -->
+          <div class="flex items-center gap-3 mb-5">
+            <button @click="$store.ui.vai('preventivi')" class="btn-tap text-slate-400 hover:text-slate-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+            </button>
+            <h2 class="text-base font-bold text-slate-800"
+                x-text="preventivoId ? 'Modifica bozza' : 'Nuovo preventivo'"></h2>
+          </div>
+
+          <!-- ── LAYOUT PRINCIPALE ────────────────────────────── -->
+          <div class="flex flex-col lg:flex-row gap-6 items-start">
+
+            <!-- Colonna sinistra -->
+            <div class="flex-1 min-w-0 space-y-5">
+
+              <!-- DATI PREVENTIVO -->
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">📋 Dati preventivo</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="sm:col-span-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Titolo *</label>
+                    <input x-model="titolo" type="text" placeholder="Es. Fornitura software + installazione"
+                           class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Validità (giorni)</label>
+                    <input x-model="validita" type="number" min="1" max="365"
+                           class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- CLIENTE -->
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div class="flex items-center justify-between mb-4">
+                  <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">👤 Cliente</p>
+                  <div class="flex gap-2">
+                    <button @click="modoNuovoCliente=false; clienteId=null; ricercaCliente=''"
+                            :class="!modoNuovoCliente ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'"
+                            class="btn-tap text-xs font-semibold px-3 py-1.5 rounded-lg">Esistente</button>
+                    <button @click="attivaModalNuovoCliente()"
+                            :class="modoNuovoCliente ? 'bg-blue-700 text-white' : 'bg-slate-100 text-slate-600'"
+                            class="btn-tap text-xs font-semibold px-3 py-1.5 rounded-lg">+ Nuovo</button>
+                  </div>
+                </div>
+
+                <!-- Cerca cliente esistente -->
+                <div x-show="!modoNuovoCliente">
+                  <div class="relative">
+                    <input x-model="ricercaCliente" @focus="dropdownCliente=true" @blur="setTimeout(()=>dropdownCliente=false,150)"
+                           type="text" placeholder="Cerca per nome o referente…"
+                           class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <!-- Badge cliente selezionato -->
+                    <template x-if="clienteId && cliente">
+                      <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs bg-green-100 text-green-700 font-semibold px-2 py-0.5 rounded-full">✓ selezionato</span>
+                    </template>
+                    <!-- Dropdown -->
+                    <div x-show="dropdownCliente && clientiFiltrati.length > 0"
+                         class="absolute z-20 top-full mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                      <template x-for="c in clientiFiltrati" :key="c.id">
+                        <button @mousedown.prevent="selezionaCliente(c)"
+                                :class="clienteId===c.id ? 'bg-blue-50' : 'hover:bg-slate-50'"
+                                class="w-full text-left px-4 py-2.5 border-b border-slate-50 last:border-0">
+                          <p class="text-sm font-medium text-slate-800" x-text="c.nome"></p>
+                          <p class="text-xs text-slate-400" x-text="(c.referente||'') + (c.citta ? ' · ' + c.citta : '')"></p>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                  <template x-if="!clienteId">
+                    <p class="text-xs text-slate-400 mt-1.5">Digita per cercare oppure usa "+ Nuovo" per creare un cliente al volo</p>
+                  </template>
+                </div>
+
+                <!-- Form nuovo cliente -->
+                <div x-show="modoNuovoCliente" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div class="sm:col-span-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Nome Cliente *</label>
+                    <input x-model="formCliente.nome" type="text" placeholder="Ragione sociale o nome"
+                           class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Azienda</label>
+                    <input x-model="formCliente.azienda" type="text"
+                           class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div>
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</label>
+                    <input x-model="formCliente.email" type="email"
+                           class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div class="sm:col-span-2">
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Indirizzo</label>
+                    <input x-model="formCliente.indirizzo" type="text"
+                           class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHE PREVENTIVO -->
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                  <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">🧩 Righe preventivo</p>
+                  <button @click="modaleAperto=true; ricercaProdotto=''"
+                          class="btn-tap flex items-center gap-1.5 bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-blue-800">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                    Prodotto
+                  </button>
+                </div>
+
+                <!-- Tabella righe (scrollabile su mobile) -->
+                <template x-if="righe.length > 0">
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm min-w-[700px]">
+                      <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                          <th class="text-left px-3 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-20">Codice</th>
+                          <th class="text-left px-3 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Descrizione</th>
+                          <th class="text-center px-2 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-16">Q.tà</th>
+                          <th class="text-center px-2 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-14">UM</th>
+                          <th class="text-right px-2 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-24">Prezzo</th>
+                          <th class="text-center px-2 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-20">Sc.%</th>
+                          <th class="text-center px-2 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-24">Sc.€</th>
+                          <th class="text-center px-2 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-16">IVA%</th>
+                          <th class="text-right px-3 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-24">Totale</th>
+                          <th class="w-8"></th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-50">
+                        <template x-for="(r, i) in righe" :key="i">
+                          <tr class="hover:bg-slate-50/50">
+                            <td class="px-3 py-2.5">
+                              <span class="text-xs font-bold text-blue-600 font-mono" x-text="r.codice"></span>
+                            </td>
+                            <td class="px-3 py-2.5">
+                              <input x-model="r.nome" type="text" class="w-full border-0 bg-transparent text-sm text-slate-800 font-medium focus:outline-none focus:ring-1 focus:ring-blue-300 rounded px-1 py-0.5" />
+                            </td>
+                            <td class="px-2 py-2.5">
+                              <input x-model.number="r.qty" type="number" min="1"
+                                     class="w-full text-center border border-slate-200 rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </td>
+                            <td class="px-2 py-2.5">
+                              <input x-model="r.um" type="text"
+                                     class="w-full text-center border border-slate-200 rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </td>
+                            <td class="px-2 py-2.5">
+                              <input x-model.number="r.prezzo" type="number" min="0" step="0.01"
+                                     class="w-full text-right border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </td>
+                            <td class="px-2 py-2.5">
+                              <input x-model.number="r.scontoPerc" type="number" min="0" :max="scontoMax" step="0.1"
+                                     @change="aggiornaScontoPerc(i)"
+                                     class="w-full text-center border border-slate-200 rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </td>
+                            <td class="px-2 py-2.5">
+                              <input x-model.number="r.scontoVal" type="number" min="0" step="0.01"
+                                     @change="aggiornaScontoVal(i)"
+                                     class="w-full text-center border border-slate-200 rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </td>
+                            <td class="px-2 py-2.5">
+                              <input x-model.number="r.ivaPerc" type="number" min="0" max="100"
+                                     class="w-full text-center border border-slate-200 rounded-lg px-1 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </td>
+                            <td class="px-3 py-2.5 text-right font-bold text-slate-800 whitespace-nowrap" x-text="fmt(totaleRiga(r))"></td>
+                            <td class="px-2 py-2.5">
+                              <button @click="rimuoviRiga(i)" class="btn-tap text-red-300 hover:text-red-500">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                              </button>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+
+                <!-- Empty state -->
+                <template x-if="righe.length === 0">
+                  <div class="py-10 text-center text-slate-400">
+                    <p class="text-2xl mb-2">📦</p>
+                    <p class="text-sm">Nessun prodotto aggiunto</p>
+                    <button @click="modaleAperto=true" class="btn-tap mt-3 text-xs text-blue-600 font-medium hover:underline">+ Aggiungi prodotto</button>
+                  </div>
+                </template>
+              </div>
+
+              <!-- NOTE -->
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note al cliente</label>
+                <textarea x-model="note" rows="3" placeholder="Condizioni, termini di consegna, note aggiuntive…"
+                          class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+              </div>
+            </div>
+
+            <!-- Colonna destra -->
+            <div class="lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-4">
+
+              <!-- TOTALI -->
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">🧾 Totali</p>
+
+                <div class="space-y-3 mb-4">
+                  <div>
+                    <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sconto globale €</label>
+                    <div class="flex items-center gap-2 mt-1.5">
+                      <input x-model.number="scontoGlobaleEuro" type="number" min="0" step="0.01"
+                             :max="subtotale"
+                             class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+                      <span class="text-xs text-slate-400 whitespace-nowrap"
+                            x-text="subtotale > 0 ? '(' + ((scontoGlobaleValido/subtotale)*100).toFixed(1) + '%)' : ''"></span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1" x-text="'Max consentito: ' + fmt(subtotale * scontoMax / 100)"></p>
+                  </div>
+
+                  <label class="flex items-center gap-2.5 cursor-pointer select-none py-1">
+                    <input type="checkbox" x-model="ivaInclusa" class="w-4 h-4 rounded accent-blue-700" />
+                    <span class="text-sm text-slate-700 font-medium">Prezzi IVA inclusa</span>
+                  </label>
+                </div>
+
+                <div class="border-t border-slate-100 pt-4 space-y-2">
+                  <div class="flex justify-between text-sm text-slate-600">
+                    <span>Imponibile</span>
+                    <span x-text="fmt(imponibile)"></span>
+                  </div>
+                  <div x-show="scontoGlobaleValido > 0" class="flex justify-between text-sm text-red-500">
+                    <span>Sconto</span>
+                    <span x-text="'− ' + fmt(scontoGlobaleValido)"></span>
+                  </div>
+                  <div class="flex justify-between text-sm text-slate-600">
+                    <span x-text="ivaInclusa ? 'IVA (inclusa)' : 'IVA 22%'"></span>
+                    <span x-text="fmt(iva)"></span>
+                  </div>
+                  <div class="flex justify-between text-base font-bold text-blue-700 pt-2 border-t border-slate-100">
+                    <span>Totale</span>
+                    <span x-text="fmt(totaleIva)"></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SALVA -->
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">💾 Salva</p>
+                <div class="space-y-2">
+                  <button @click="salva('bozza')"
+                          :disabled="!clienteValido || righe.length === 0 || salvando"
+                          class="btn-tap w-full bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-40 text-sm">
+                    <span x-text="preventivoId ? '💾 Aggiorna bozza' : '💾 Salva bozza'"></span>
+                  </button>
+                  <button @click="salva('inviato')"
+                          :disabled="!clienteValido || righe.length === 0 || salvando"
+                          class="btn-tap w-full bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 disabled:opacity-40 text-sm flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                    <span x-text="salvando ? 'Salvataggio…' : 'Salva e invia'"></span>
+                  </button>
+                </div>
+                <!-- Validità cliente -->
+                <template x-if="!clienteValido">
+                  <p class="text-xs text-amber-600 mt-3 text-center">Seleziona o crea un cliente</p>
+                </template>
+                <template x-if="clienteValido && righe.length === 0">
+                  <p class="text-xs text-amber-600 mt-3 text-center">Aggiungi almeno un prodotto</p>
+                </template>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ================================================
+             BANDI
+        ================================================ -->
+        <section x-show="pagina === 'bandi'" x-data="bandiPage()">
+
+          <!-- Caricamento DB -->
+          <template x-if="caricamento">
+            <div class="flex flex-col items-center justify-center py-20 text-slate-400">
+              <svg class="animate-spin w-8 h-8 mb-3 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+              <p class="text-sm font-medium text-slate-500">Caricamento bandi da incentivi.gov.it…</p>
+            </div>
+          </template>
+
+          <!-- Errore DB -->
+          <template x-if="!caricamento && erroreDB">
+            <div class="bg-red-50 border border-red-200 rounded-2xl p-5 mb-5">
+              <p class="text-sm font-semibold text-red-700 mb-1">⚠️ Impossibile caricare i bandi</p>
+              <p class="text-xs text-red-600" x-text="erroreDB"></p>
+              <p class="text-xs text-red-500 mt-2">Verifica che la tabella <code>bandi_incentivi</code> esista su Supabase e che l'import sia stato eseguito.</p>
+            </div>
+          </template>
+
+          <!-- Contenuto principale (visibile solo dopo il caricamento) -->
+          <template x-if="!caricamento && !erroreDB">
+          <div>
+
+          <!-- Disclaimer in cima -->
+          <div class="bg-amber-50 border border-amber-300 rounded-2xl px-5 py-4 mb-5 flex gap-3">
+            <span class="text-xl shrink-0 mt-0.5">⚠️</span>
+            <div>
+              <p class="text-sm font-semibold text-amber-800">Informazioni indicative — aggiornato a <span x-text="aggiornamento"></span></p>
+              <p class="text-xs text-amber-700 mt-1 leading-relaxed">I bandi mostrati sono attivi alla data indicata. Scadenze e requisiti possono variare. <strong>Verifica sempre sui siti ufficiali</strong> prima di presentare domanda e consulta un professionista fiscale/legale.</p>
+            </div>
+          </div>
+
+          <!-- Form di ricerca -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-6">
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-sm font-bold text-slate-700">Trova agevolazioni per il tuo cliente</h3>
+              <span class="text-xs font-semibold px-2 py-1 rounded-lg"
+                    :class="tuttiBandi.length > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'"
+                    x-text="tuttiBandi.length > 0 ? tuttiBandi.length + ' bandi nel DB' : 'DB vuoto — esegui import'"></span>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">Inserisci il codice ATECO del cliente e filtra per regione o provincia per trovare i bandi disponibili.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Codice ATECO *</label>
+                <input x-model="ateco" type="text" placeholder="Es. 56.10 — Ristoranti" @input="aggiornaSettore()"
+                       class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <!-- Settore riconosciuto -->
+                <template x-if="settoreInfo">
+                  <div class="mt-1.5 flex items-center gap-1.5 text-xs text-blue-700 font-medium bg-blue-50 px-2.5 py-1.5 rounded-lg">
+                    <span x-text="settoreInfo.icona"></span>
+                    <span x-text="settoreInfo.nome + ' — ' + settoreInfo.settore"></span>
+                  </div>
+                </template>
+                <template x-if="ateco && !settoreInfo">
+                  <p class="mt-1 text-xs text-slate-400">Settore non riconosciuto — verranno mostrati i bandi trasversali</p>
+                </template>
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Regione</label>
+                <select x-model="regione" @change="onRegioneChange()"
+                        class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <template x-for="r in regioni" :key="r.id">
+                    <option :value="r.id" x-text="r.nome"></option>
+                  </template>
+                </select>
+                <p class="mt-1 text-xs text-slate-400">Filtra i bandi per regione geografica</p>
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Provincia</label>
+                <select x-model="provincia" @change="onProvinciaChange()"
+                        class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        :class="regione !== 'tutte' ? 'opacity-40' : ''">
+                  <template x-for="p in provinceFiltered" :key="p.id">
+                    <option :value="p.id" x-text="p.sigla ? p.sigla + ' — ' + p.nome : p.nome"></option>
+                  </template>
+                </select>
+                <p class="mt-1 text-xs text-slate-400">
+                  <template x-if="provinciaSelezionata?.regione">
+                    <span x-text="provinciaSelezionata.sigla + ' — ' + provinciaSelezionata.nome"></span>
+                  </template>
+                  <template x-if="!provinciaSelezionata?.regione">
+                    <span>Opzionale — raffina per provincia</span>
+                  </template>
+                </p>
+              </div>
+            </div>
+            <button @click="cerca()" :disabled="!ateco"
+                    class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl mt-4 hover:bg-blue-800 disabled:opacity-40 flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/></svg>
+              Cerca bandi disponibili
+            </button>
+          </div>
+
+          <!-- Nessun risultato -->
+          <template x-if="cercato && risultati.length === 0">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm text-center py-12 px-5">
+              <p class="text-3xl mb-3">🔎</p>
+              <p class="text-slate-600 font-semibold">Nessun bando trovato</p>
+              <p class="text-sm text-slate-400 mt-1">Prova con "Tutte le regioni" o verifica il codice ATECO inserito.</p>
+            </div>
+          </template>
+
+          <!-- Risultati -->
+          <template x-if="cercato && risultati.length > 0">
+            <div>
+              <!-- Contatore risultati -->
+              <div class="flex items-center justify-between mb-4">
+                <p class="text-sm font-semibold text-slate-700" x-text="risultati.length + ' agevolazioni disponibili'"></p>
+                <p class="text-xs text-slate-400">Solo bandi attivi al <span x-text="oggiFormattato"></span></p>
+              </div>
+
+              <div class="space-y-4">
+                <template x-for="b in risultati" :key="b.id">
+                  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+
+                    <!-- Header bando -->
+                    <div class="px-5 py-4 border-b border-slate-100">
+                      <div class="flex items-start justify-between gap-3 mb-2">
+                        <div class="flex-1 min-w-0">
+                          <p class="text-sm font-bold text-slate-800 leading-snug" x-text="b.nome"></p>
+                          <p class="text-xs text-slate-500 mt-0.5 font-medium" x-text="b.ente"></p>
+                        </div>
+                        <!-- Tipo bando -->
+                        <span class="flex-none text-xs px-2 py-0.5 rounded-full font-medium" :class="tipoBandoClasse(b.tipo)" x-text="tipoBandoLabel(b.tipo)"></span>
+                      </div>
+                      <!-- Badge stato scadenza -->
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs px-2 py-1 rounded-lg font-semibold flex items-center gap-1"
+                              :class="b._statoScadenza.classe">
+                          <span x-text="b._statoScadenza.icon"></span>
+                          <span x-text="b._statoScadenza.label"></span>
+                        </span>
+                        <span x-show="b.scadenza !== 'Permanente' && b.scadenza !== 'Variabile'"
+                              class="text-xs text-slate-500 bg-slate-50 px-2 py-1 rounded-lg"
+                              x-text="'Scadenza: ' + new Date(b.scadenza).toLocaleDateString('it-IT')"></span>
+                      </div>
+                    </div>
+
+                    <!-- Corpo bando -->
+                    <div class="px-5 py-4">
+                      <!-- Descrizione -->
+                      <p class="text-sm text-slate-600 leading-relaxed mb-4" x-text="b.descrizione"></p>
+
+                      <!-- Agevolazione -->
+                      <div class="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4 flex items-center justify-between gap-3">
+                        <div>
+                          <p class="text-xs text-blue-600 font-semibold uppercase tracking-wide">Agevolazione</p>
+                          <p class="text-sm font-bold text-blue-800 mt-0.5" x-text="b.aliquota"></p>
+                        </div>
+                        <div class="text-right" x-show="b.importoMax > 0">
+                          <p class="text-xs text-blue-500 font-medium">Importo massimo</p>
+                          <p class="text-sm font-bold text-blue-800" x-text="new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(b.importoMax)"></p>
+                        </div>
+                      </div>
+
+                      <!-- Requisiti -->
+                      <div class="mb-4">
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Requisiti principali</p>
+                        <div class="space-y-1.5">
+                          <template x-for="req in b.requisiti" :key="req">
+                            <p class="text-sm text-slate-700 flex items-start gap-2">
+                              <span class="text-green-500 font-bold mt-0.5 shrink-0">✓</span>
+                              <span x-text="req"></span>
+                            </p>
+                          </template>
+                        </div>
+                      </div>
+
+                      <!-- Nota di attenzione -->
+                      <template x-if="b.note">
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 mb-4 flex items-start gap-2">
+                          <span class="text-amber-500 shrink-0">⚠️</span>
+                          <p class="text-xs text-amber-700 leading-relaxed" x-text="b.note"></p>
+                        </div>
+                      </template>
+
+                      <!-- Footer: fonte + link -->
+                      <div class="flex items-center justify-between gap-3 pt-3 border-t border-slate-100">
+                        <p class="text-xs text-slate-400 truncate" x-text="'Fonte: ' + b.fonte"></p>
+                        <a :href="b.link" target="_blank" rel="noopener noreferrer"
+                           class="btn-tap shrink-0 flex items-center gap-1.5 text-xs text-blue-700 font-semibold bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors">
+                          Sito ufficiale
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Footer disclaimer -->
+              <div class="mt-6 bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                <p class="text-sm font-semibold text-slate-700 mb-2">📋 Prima di procedere</p>
+                <div class="space-y-1.5 text-xs text-slate-500 leading-relaxed">
+                  <p>• Le informazioni sono aggiornate a <span class="font-medium" x-text="aggiornamento"></span> e hanno carattere indicativo.</p>
+                  <p>• Verifica sempre scadenze, importi e requisiti sui <strong class="text-slate-700">siti ufficiali</strong> indicati.</p>
+                  <p>• Alcuni bandi regionali possono avere sportelli chiusi o esaurimento fondi.</p>
+                  <p>• Consulta un <strong class="text-slate-700">commercialista o consulente fiscale</strong> prima di presentare domanda.</p>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          </div>
+          </template><!-- fine !caricamento && !erroreDB -->
+
+        </section>
+
+        <!-- ================================================
+             IMPOSTAZIONI AZIENDALI (solo admin)
+        ================================================ -->
+        <section x-show="pagina === 'impostazioni'" x-data="impostazioniPage()">
+          <div class="max-w-2xl space-y-6">
+
+            <!-- LOGO AZIENDALE -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <h2 class="text-base font-bold text-slate-800 mb-1">🏢 Logo aziendale</h2>
+              <p class="text-xs text-slate-400 mb-5">Viene mostrato nel menu laterale e nei report di stampa. Formato PNG, JPG o SVG, max 500KB.</p>
+
+              <div class="flex flex-col sm:flex-row gap-6 items-start">
+                <!-- Anteprima -->
+                <div class="shrink-0 w-40 h-24 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center overflow-hidden">
+                  <template x-if="logoPreview">
+                    <img :src="logoPreview" alt="Logo" class="max-h-20 max-w-[140px] object-contain" />
+                  </template>
+                  <template x-if="!logoPreview">
+                    <span class="text-3xl text-slate-300">🏢</span>
+                  </template>
+                </div>
+
+                <!-- Controlli -->
+                <div class="flex flex-col gap-3">
+                  <label class="btn-tap cursor-pointer flex items-center gap-2 bg-blue-50 text-blue-700 font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-blue-100 w-fit">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                    Sfoglia file
+                    <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" @change="caricaLogo($event)" class="hidden" />
+                  </label>
+                  <button @click="salvaLogo()"
+                          class="btn-tap flex items-center gap-2 bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-blue-800 w-fit">
+                    💾 Salva logo
+                  </button>
+                  <button x-show="logoPreview" @click="rimuoviLogo()"
+                          class="btn-tap text-xs text-red-500 hover:underline text-left">Rimuovi logo</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- NOME AZIENDA -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+              <h2 class="text-base font-bold text-slate-800 mb-1">📝 Nome azienda</h2>
+              <p class="text-xs text-slate-400 mb-4">Appare nel menu laterale e nei documenti generati.</p>
+              <div class="flex gap-3">
+                <input x-model="nomeAzienda" type="text" placeholder="Es. Acme S.r.l."
+                       class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <button @click="salvaNomeAzienda()"
+                        class="btn-tap bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-blue-800">
+                  Salva
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ================================================
+             GESTIONE BANDI — multi-fonte automatica
+        ================================================ -->
+        <section x-show="pagina === 'importBandi'" x-data="importBandiPage()">
+          <div class="max-w-3xl space-y-6">
+
+            <!-- HEADER -->
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h2 class="text-lg font-bold text-slate-800">Sincronizzazione Bandi</h2>
+                <p class="text-sm text-slate-500 mt-0.5">Gestisci le fonti e avvia la sincronizzazione automatica. Ogni fonte viene interrogata indipendentemente.</p>
+              </div>
+              <button @click="avviaSync(null)" :disabled="!!syncingFonte || caricando"
+                      class="btn-tap shrink-0 flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 disabled:opacity-50">
+                <svg class="w-4 h-4" :class="syncingFonte === 'tutte' ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                </svg>
+                <span x-text="syncingFonte === 'tutte' ? 'Sincronizzazione…' : 'Sync tutte le fonti'"></span>
+              </button>
+            </div>
+
+            <!-- FONTI CONFIGURATE -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <p class="text-sm font-bold text-slate-700">Fonti dati</p>
+                <button @click="apriFormFonte()"
+                        class="btn-tap flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                  Aggiungi fonte
+                </button>
+              </div>
+
+              <!-- Caricamento -->
+              <div x-show="caricando" class="px-5 py-8 text-center">
+                <svg class="animate-spin w-6 h-6 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+              </div>
+
+              <!-- Lista fonti -->
+              <div x-show="!caricando">
+                <template x-if="fonti.length === 0">
+                  <p class="text-sm text-slate-400 text-center py-8">Nessuna fonte configurata. Esegui prima <code class="bg-slate-100 px-1 rounded">supabase-schema-bandi-v2.sql</code>.</p>
+                </template>
+                <template x-for="fonte in fonti" :key="fonte.id">
+                  <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                    <!-- Info fonte -->
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <p class="text-sm font-semibold text-slate-800" x-text="fonte.nome"></p>
+                        <span class="text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded" x-text="fonte.tipo"></span>
+                        <span x-show="!fonte.attiva" class="text-[10px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded font-medium">disattiva</span>
+                      </div>
+                      <p class="text-xs text-slate-400 mt-0.5 truncate" x-text="fonte.url || '(URL da Secret Supabase)'"></p>
+                    </div>
+                    <!-- Stato ultimo sync -->
+                    <div class="shrink-0 flex flex-col items-end gap-0.5 min-w-[130px]">
+                      <span class="text-xs font-semibold px-2 py-0.5 rounded-full" :class="statoFonteBadge(fonte)" x-text="statoFonteLabel(fonte)"></span>
+                      <span class="text-[10px] text-slate-400" x-text="fonte.ultimo_sync ? 'Aggiornata ' + fmtSync(fonte.ultimo_sync) : 'Non ancora sincronizzata'"></span>
+                    </div>
+                    <!-- Azioni -->
+                    <div class="shrink-0 flex items-center gap-1">
+                      <!-- Toggle attiva -->
+                      <button @click="toggleFonte(fonte)" :title="fonte.attiva ? 'Disattiva' : 'Attiva'"
+                              class="btn-tap p-2 rounded-lg transition-colors"
+                              :class="fonte.attiva ? 'text-green-600 hover:bg-green-50' : 'text-slate-300 hover:bg-slate-100'">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+                      </button>
+                      <!-- Importa dal browser (solo json_incentivi con URL) -->
+                      <template x-if="fonte.tipo === 'json_incentivi' && fonte.url">
+                        <button @click="importaDaFonte(fonte)" :disabled="uploadFase === 'fetch' || uploadFase === 'importazione'"
+                                title="Scarica e importa direttamente dal browser"
+                                class="btn-tap p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:opacity-30 transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+                        </button>
+                      </template>
+                      <!-- Sync solo questa (Edge Function) -->
+                      <button @click="avviaSync(fonte.id)" :disabled="!!syncingFonte || !fonte.attiva" title="Sincronizza tramite Edge Function"
+                              class="btn-tap p-2 rounded-lg text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-colors">
+                        <svg class="w-4 h-4" :class="syncingFonte === fonte.id ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                        </svg>
+                      </button>
+                      <!-- Modifica -->
+                      <button @click="apriFormFonte(fonte)" title="Modifica"
+                              class="btn-tap p-2 rounded-lg text-slate-400 hover:text-blue-700 hover:bg-blue-50 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
+                      </button>
+                      <!-- Elimina -->
+                      <button @click="eliminaFonte(fonte)" title="Elimina"
+                              class="btn-tap p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- STATO IMPORT BROWSER -->
+            <template x-if="uploadFase !== 'idle'">
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div class="flex items-center justify-between mb-3">
+                  <p class="text-sm font-bold text-slate-700">Importazione in corso</p>
+                  <button x-show="uploadFase === 'completato' || uploadFase === 'errore'" @click="resetUpload()" class="text-xs text-slate-400 hover:text-slate-600">✕ Chiudi</button>
+                </div>
+                <!-- In corso -->
+                <template x-if="uploadFase === 'fetch' || uploadFase === 'importazione'">
+                  <div>
+                    <p class="text-xs text-slate-500 mb-2" x-text="uploadFase === 'fetch' ? 'Download dati in corso…' : 'Importazione in Supabase: ' + uploadProgresso + '%'"></p>
+                    <div class="w-full bg-slate-100 rounded-full h-2">
+                      <div class="bg-blue-600 h-2 rounded-full transition-all" :style="'width:' + uploadProgresso + '%'"></div>
+                    </div>
+                  </div>
+                </template>
+                <!-- Completato -->
+                <template x-if="uploadFase === 'completato'">
+                  <div class="flex items-center gap-3 text-sm text-green-700 bg-green-50 rounded-xl px-4 py-3">
+                    <span class="text-lg">✅</span>
+                    <span x-text="uploadStats?.importati + ' bandi importati (' + uploadStats?.attivi + ' attivi su ' + uploadStats?.totale + ' totali)'"></span>
+                  </div>
+                </template>
+                <!-- Errore -->
+                <template x-if="uploadFase === 'errore'">
+                  <div class="text-sm text-red-700 bg-red-50 rounded-xl px-4 py-3">
+                    <p class="font-semibold mb-1">⚠️ Errore importazione</p>
+                    <p class="text-xs" x-text="uploadErrMsg"></p>
+                  </div>
+                </template>
+              </div>
+            </template>
+
+            <!-- STORICO SINCRONIZZAZIONI -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <p class="text-sm font-bold text-slate-700">Storico sincronizzazioni</p>
+                <button @click="ricarica()" class="text-xs text-blue-600 hover:underline">Aggiorna</button>
+              </div>
+              <template x-if="syncLog.length === 0">
+                <p class="text-sm text-slate-400 text-center py-6">Nessuna sincronizzazione ancora eseguita.</p>
+              </template>
+              <template x-for="log in syncLog" :key="log.id">
+                <div class="flex items-center gap-3 px-5 py-3 border-b border-slate-50 last:border-0 text-xs">
+                  <span class="w-2 h-2 rounded-full shrink-0" :class="log.stato === 'ok' ? 'bg-green-500' : 'bg-red-400'"></span>
+                  <span class="font-medium text-slate-700 w-28 shrink-0" x-text="log.bandi_fonti?.nome || log.fonte_id"></span>
+                  <span class="text-slate-500 flex-1" x-text="log.stato === 'ok' ? log.importati + ' record importati' : ('Errore: ' + (log.errore || '—'))"></span>
+                  <span class="text-slate-400 shrink-0" x-text="fmtSync(log.avviato_il)"></span>
+                </div>
+              </template>
+            </div>
+
+            <!-- SCHEDULING AUTOMATICO -->
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+              <p class="text-sm font-bold text-amber-800 mb-2">⏰ Scheduling automatico (pg_cron)</p>
+              <p class="text-xs text-amber-700 mb-3">Per sincronizzare automaticamente ogni notte senza azioni manuali, esegui questo SQL nel <strong>SQL Editor di Supabase</strong> dopo aver abilitato le estensioni <code>pg_cron</code> e <code>pg_net</code>:</p>
+              <pre class="text-[11px] bg-white border border-amber-200 rounded-xl p-3 overflow-x-auto text-slate-700 leading-relaxed">SELECT cron.schedule(
+  'sync-bandi-nightly', '0 3 * * *',
+  $$SELECT net.http_post(
+    url     := 'https://&lt;REF&gt;.supabase.co/functions/v1/sync-bandi',
+    headers := '{"Authorization":"Bearer &lt;ANON_KEY&gt;"}'::jsonb,
+    body    := '{}'::jsonb
+  );$$
+);</pre>
+              <p class="text-[11px] text-amber-600 mt-2">Sostituisci &lt;REF&gt; con il Project Reference e &lt;ANON_KEY&gt; con la tua anon key. Il file <code>supabase-schema-bandi-v2.sql</code> contiene le istruzioni complete.</p>
+            </div>
+
+            <!-- UPLOAD MANUALE (fallback) -->
+            <details class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <summary class="px-5 py-4 cursor-pointer text-sm font-semibold text-slate-600 hover:bg-slate-50 flex items-center gap-2 select-none">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                Upload manuale (fallback)
+              </summary>
+              <div class="px-5 pb-5 pt-3 border-t border-slate-100">
+                <p class="text-xs text-slate-400 mb-4">Se la Edge Function non è deployata, puoi importare manualmente il file JSON da <a href="https://www.incentivi.gov.it/it/open-data" target="_blank" class="text-blue-600 underline">incentivi.gov.it/it/open-data</a>.</p>
+
+                <template x-if="uploadFase === 'idle'">
+                  <label class="block border-2 border-dashed border-slate-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <input type="file" accept=".json" class="hidden" @change="caricaFile($event)">
+                    <div class="text-3xl mb-2">📂</div>
+                    <p class="text-sm font-semibold text-slate-700">Seleziona file JSON</p>
+                    <p class="text-xs text-slate-400 mt-1">opendata-export.json</p>
+                  </label>
+                </template>
+
+                <template x-if="uploadFase === 'lettura' || uploadFase === 'importazione'">
+                  <div class="text-center py-4">
+                    <svg class="animate-spin w-6 h-6 mx-auto mb-2 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                    <p class="text-sm text-slate-600" x-text="uploadFase === 'lettura' ? 'Lettura file…' : 'Importazione…'"></p>
+                    <div x-show="uploadFase === 'importazione'" class="mt-3">
+                      <div class="w-full bg-slate-100 rounded-full h-2"><div class="bg-blue-600 h-2 rounded-full transition-all" :style="`width:${uploadProgresso}%`"></div></div>
+                      <p class="text-xs text-slate-400 mt-1" x-text="uploadProgresso + '%'"></p>
+                    </div>
+                  </div>
+                </template>
+
+                <template x-if="uploadFase === 'completato'">
+                  <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                    <p class="text-sm font-bold text-green-800 mb-2">✓ Import completato</p>
+                    <p class="text-xs text-green-700" x-text="uploadStats.importati + ' bandi importati su ' + uploadStats.attivi + ' attivi nel file'"></p>
+                    <button @click="resetUpload()" class="btn-tap mt-3 text-xs text-green-700 underline">Nuovo import</button>
+                  </div>
+                </template>
+
+                <template x-if="uploadFase === 'errore'">
+                  <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <p class="text-xs font-semibold text-red-700 mb-1">Errore</p>
+                    <p class="text-xs text-red-600 font-mono break-all" x-text="uploadErrMsg"></p>
+                    <button @click="resetUpload()" class="btn-tap mt-2 text-xs text-red-600 underline">Riprova</button>
+                  </div>
+                </template>
+              </div>
+            </details>
+
+          </div>
+
+          <!-- MODALE nuova/modifica fonte -->
+          <div x-show="formAperto" x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" @click.self="formAperto = false">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl" @click.stop>
+              <div class="flex items-center justify-between mb-5">
+                <h2 class="text-base font-bold text-slate-800" x-text="formFonte.id ? 'Modifica fonte' : 'Nuova fonte'"></h2>
+                <button @click="formAperto = false" class="text-slate-400 hover:text-slate-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+              <div class="space-y-4">
+                <div>
+                  <label class="text-xs font-medium text-slate-500">Nome *</label>
+                  <input x-model="formFonte.nome" type="text" placeholder="Es. Invitalia" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-slate-500">URL endpoint / feed *</label>
+                  <input x-model="formFonte.url" type="url" placeholder="https://..." class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-slate-500">Tipo</label>
+                  <select x-model="formFonte.tipo" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="rss">RSS / Atom feed</option>
+                    <option value="json_incentivi">JSON (formato incentivi.gov.it)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-slate-500">Note</label>
+                  <input x-model="formFonte.note" type="text" placeholder="Note opzionali…" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <button @click="salvaFonte()" :disabled="formSalvando"
+                      class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl mt-5 hover:bg-blue-800 disabled:opacity-50">
+                <span x-text="formSalvando ? 'Salvataggio…' : 'Salva fonte'"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================
+             CATEGORIE (admin)
+        ================================================ -->
+        <section x-show="pagina === 'categorie'" x-data="categoriePage()">
+          <div class="flex justify-end mb-5">
+            <button @click="apriNuovo()" class="btn-tap flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+              Nuova categoria
+            </button>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <template x-for="c in elenco" :key="c.id">
+              <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                <div class="flex items-center gap-4">
+                  <span class="text-3xl" x-text="c.icona"></span>
+                  <div>
+                    <p class="text-sm font-semibold text-slate-800" x-text="c.nome"></p>
+                    <p class="text-xs text-slate-400 mt-0.5" x-text="'Ordine: ' + c.ordine"></p>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button @click="apriModifica(c)" class="btn-tap text-xs text-blue-700 font-medium bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
+                  <button @click="elimina(c.id)"   class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                </div>
+              </div>
+            </template>
+          </div>
+          <!-- Modale -->
+          <div x-show="modaleAperto" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" @click.self="modaleAperto = false">
+            <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl" @click.stop>
+              <div class="flex items-center justify-between mb-5">
+                <h2 class="text-base font-bold text-slate-800" x-text="corrente ? 'Modifica Categoria' : 'Nuova Categoria'"></h2>
+                <button @click="modaleAperto = false" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+              <div class="space-y-4">
+                <div><label class="text-xs font-medium text-slate-500">Nome *</label><input x-model="form.nome" type="text" placeholder="Es. Hardware" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="text-xs font-medium text-slate-500">Icona (emoji)</label><input x-model="form.icona" type="text" placeholder="📦" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                  <div><label class="text-xs font-medium text-slate-500">Ordine</label><input x-model="form.ordine" type="number" min="0" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                </div>
+              </div>
+              <button @click="salva()" :disabled="salvando" class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl mt-5 hover:bg-blue-800 disabled:opacity-50">
+                <span x-text="salvando ? 'Salvataggio…' : 'Salva'"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================
+             UTENTI (admin)
+        ================================================ -->
+        <section x-show="pagina === 'utenti'" x-data="utentiPage()">
+          <div class="flex justify-end mb-5">
+            <button @click="apriNuovo()" class="btn-tap flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 shadow-sm">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+              Nuovo utente
+            </button>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="divide-y divide-slate-100">
+              <template x-for="u in elenco" :key="u.id">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
+                  <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <!-- Avatar utente in lista -->
+                    <template x-if="u.avatar">
+                      <img :src="u.avatar" alt="" class="w-10 h-10 rounded-full object-cover shrink-0 border border-slate-200" />
+                    </template>
+                    <template x-if="!u.avatar">
+                      <div class="w-10 h-10 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-sm shrink-0"
+                           x-text="(u.nome || u.username).charAt(0).toUpperCase()"></div>
+                    </template>
+                    <div class="min-w-0">
+                      <p class="text-sm font-semibold text-slate-800 truncate" x-text="u.nome || u.username"></p>
+                      <p class="text-xs text-slate-400" x-text="'@' + u.username"></p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4 sm:gap-6">
+                    <!-- Ruolo -->
+                    <div class="flex flex-col items-center gap-1">
+                      <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Ruolo</span>
+                      <span class="text-xs px-2.5 py-1 rounded-full font-medium" :class="ruoloClasse(u.ruolo)" x-text="ruoloLabel(u.ruolo)"></span>
+                    </div>
+                    <!-- Stato -->
+                    <div class="flex flex-col items-center gap-1">
+                      <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Stato</span>
+                      <span class="flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
+                            :class="u.attivo ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-500'">
+                        <span class="w-1.5 h-1.5 rounded-full inline-block" :class="u.attivo ? 'bg-green-500' : 'bg-red-400'"></span>
+                        <span x-text="u.attivo ? 'Attivo' : 'Disabilitato'"></span>
+                      </span>
+                    </div>
+                    <!-- Azioni -->
+                    <div class="flex gap-1">
+                      <button @click="apriModifica(u)" title="Modifica"
+                              class="btn-tap p-2 rounded-xl text-slate-400 hover:text-blue-700 hover:bg-blue-50 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+                        </svg>
+                      </button>
+                      <button @click="elimina(u.id)" title="Elimina"
+                              class="btn-tap p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+          <!-- Modale -->
+          <div x-show="modaleAperto" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" @click.self="modaleAperto = false">
+            <div class="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl max-h-[90vh] overflow-y-auto" @click.stop>
+              <div class="flex items-center justify-between mb-5">
+                <h2 class="text-base font-bold text-slate-800" x-text="corrente ? 'Modifica Utente' : 'Nuovo Utente'"></h2>
+                <button @click="modaleAperto = false" class="text-slate-400 hover:text-slate-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button>
+              </div>
+              <div class="space-y-4">
+                <!-- Foto profilo -->
+                <div class="flex items-center gap-4">
+                  <div class="shrink-0">
+                    <template x-if="avatarPreview">
+                      <img :src="avatarPreview" alt="Avatar" class="w-16 h-16 rounded-full object-cover border-2 border-slate-200" />
+                    </template>
+                    <template x-if="!avatarPreview">
+                      <div class="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-2xl font-bold border-2 border-dashed border-slate-300"
+                           x-text="(form.nome || '?').charAt(0).toUpperCase()"></div>
+                    </template>
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    <label class="text-xs font-medium text-slate-500">Foto profilo</label>
+                    <label class="btn-tap cursor-pointer text-xs text-blue-700 font-medium bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 inline-block">
+                      📷 Sfoglia
+                      <input type="file" accept="image/*" @change="caricaAvatar($event)" class="hidden" />
+                    </label>
+                    <button x-show="avatarPreview" @click="rimuoviAvatar()" class="btn-tap text-xs text-red-500 hover:underline text-left">Rimuovi</button>
+                  </div>
+                </div>
+                <div><label class="text-xs font-medium text-slate-500">Nome completo *</label><input x-model="form.nome" type="text" placeholder="Mario Rossi" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div x-show="!corrente"><label class="text-xs font-medium text-slate-500">Username *</label><input x-model="form.username" type="text" placeholder="mario.rossi" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div x-show="corrente" class="bg-slate-50 rounded-xl px-3 py-2.5"><p class="text-xs text-slate-400">Username: <span class="font-medium text-slate-600" x-text="'@' + (corrente?.username || '')"></span></p></div>
+                <div>
+                  <label class="text-xs font-medium text-slate-500" x-text="corrente ? 'Nuova password (lascia vuoto per non cambiare)' : 'Password *'"></label>
+                  <input x-model="nuovaPassword" type="password" placeholder="••••••••" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label class="text-xs font-medium text-slate-500">Ruolo</label>
+                  <select x-model="form.ruolo" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <template x-for="r in ruoliList" :key="r.chiave">
+                      <option :value="r.chiave" x-text="r.nome"></option>
+                    </template>
+                    <!-- fallback se ruoli non ancora caricati -->
+                    <template x-if="ruoliList.length === 0">
+                      <option value="commerciale">Commerciale</option>
+                    </template>
+                  </select>
+                </div>
+                <!-- Menu operativo visibile -->
+                <div class="border-t border-slate-100 pt-4">
+                  <div class="flex items-center justify-between mb-1">
+                    <label class="text-xs font-semibold text-slate-600">Menu operativo visibile</label>
+                    <div class="flex gap-3">
+                      <button @click="menuVoci = voceMenuOp.filter(v => voceAbilitata(v)).map(v => v.pagina)"
+                              class="text-[10px] text-blue-600 hover:underline">Seleziona tutti</button>
+                      <button x-show="menuVoci.length > 0" @click="menuVoci = []"
+                              class="text-[10px] text-slate-400 hover:underline">Reset</button>
+                    </div>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mb-3">Seleziona le voci mostrate all'utente. Nessuna selezione = tutte quelle permesse dal ruolo.</p>
+                  <div class="grid grid-cols-1 gap-1.5">
+                    <template x-for="voce in voceMenuOp" :key="voce.pagina">
+                      <label :class="voceAbilitata(voce) ? 'cursor-pointer hover:bg-slate-50' : 'opacity-40 cursor-not-allowed'"
+                             class="flex items-center gap-3 px-3 py-2 rounded-xl border border-slate-200 transition-colors"
+                             :style="menuVoci.includes(voce.pagina) ? 'border-color:#3b82f6;background:#eff6ff' : ''">
+                        <input type="checkbox" :value="voce.pagina" x-model="menuVoci"
+                               :disabled="!voceAbilitata(voce)"
+                               class="w-4 h-4 accent-blue-700 shrink-0" />
+                        <span class="text-base leading-none" x-text="voce.emoji"></span>
+                        <span class="text-sm font-medium text-slate-700" x-text="voce.label"></span>
+                        <span x-show="!voceAbilitata(voce)" class="ml-auto text-[10px] text-slate-400 italic">non permessa dal ruolo</span>
+                      </label>
+                    </template>
+                  </div>
+                </div>
+
+                <div x-show="corrente" class="flex items-center justify-between">
+                  <label class="text-sm text-slate-600 font-medium">Utente attivo</label>
+                  <button @click="form.attivo = !form.attivo" :class="form.attivo ? 'bg-blue-700' : 'bg-slate-300'" class="btn-tap relative w-11 h-6 rounded-full transition-colors duration-200">
+                    <span :class="form.attivo ? 'translate-x-5' : 'translate-x-1'" class="absolute top-1 left-0 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200"></span>
+                  </button>
+                </div>
+              </div>
+              <button @click="salva()" :disabled="salvando" class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl mt-5 hover:bg-blue-800 disabled:opacity-50">
+                <span x-text="salvando ? 'Salvataggio…' : (corrente ? 'Aggiorna utente' : 'Crea utente')"></span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================
+             RUOLI (admin) — CRUD completo
+        ================================================ -->
+        <section x-show="pagina === 'ruoli'" x-data="ruoliPage()">
+
+          <!-- ---- LISTA RUOLI ---- -->
+          <div x-show="vista === 'lista'">
+            <div class="flex items-center justify-between mb-5">
+              <div>
+                <h2 class="text-lg font-bold text-slate-800">Ruoli</h2>
+                <p class="text-xs text-slate-400 mt-0.5" x-text="elenco.length + ' configurati'"></p>
+              </div>
+              <button @click="apriNuovo()" class="btn-tap flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                + Nuovo
+              </button>
+            </div>
+
+            <!-- Tabella ruoli -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <!-- Header tabella -->
+              <div class="hidden md:grid grid-cols-12 gap-2 px-5 py-3 border-b border-slate-100 bg-slate-50 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <div class="col-span-2">Ruolo</div>
+                <div class="col-span-3">Descrizione</div>
+                <div class="col-span-1 text-center">Sc. max</div>
+                <div class="col-span-4">Permessi</div>
+                <div class="col-span-1 text-center">Utenti</div>
+                <div class="col-span-1"></div>
+              </div>
+              <!-- Righe -->
+              <template x-if="elenco.length === 0">
+                <div class="px-5 py-10 text-center text-slate-400 text-sm">Nessun ruolo — esegui supabase-schema-v3.sql</div>
+              </template>
+              <div class="divide-y divide-slate-100">
+                <template x-for="r in elenco" :key="r.id">
+                  <div class="flex flex-col md:grid md:grid-cols-12 gap-2 px-5 py-4 hover:bg-slate-50 transition-colors">
+                    <!-- Nome + chiave -->
+                    <div class="md:col-span-2 flex items-center gap-2">
+                      <div>
+                        <p class="text-sm font-bold text-slate-800" x-text="r.nome"></p>
+                        <p class="text-xs font-mono text-slate-400" x-text="r.chiave"></p>
+                      </div>
+                      <span x-show="r.sistema" class="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-medium ml-1">sys</span>
+                    </div>
+                    <!-- Descrizione -->
+                    <div class="md:col-span-3 flex items-center">
+                      <p class="text-sm text-slate-500 leading-snug" x-text="r.descrizione || '—'"></p>
+                    </div>
+                    <!-- Sconto max -->
+                    <div class="md:col-span-1 flex items-center justify-start md:justify-center">
+                      <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium" x-text="r.sconto_max + '%'"></span>
+                    </div>
+                    <!-- Permessi badge -->
+                    <div class="md:col-span-4 flex items-center flex-wrap gap-1">
+                      <template x-for="b in permessiBadge(r.permessi)" :key="b.label">
+                        <span class="text-xs px-1.5 py-0.5 rounded-full font-medium flex items-center gap-0.5" :class="b.colore" :title="b.label + ' — ' + livelloLabel(b.livello)">
+                          <span x-text="b.emoji"></span>
+                          <span class="text-[10px] opacity-70" x-text="b.livello === 'lettura' ? 'R' : b.livello === 'scrittura' ? 'W' : 'RW'"></span>
+                        </span>
+                      </template>
+                    </div>
+                    <!-- Utenti -->
+                    <div class="md:col-span-1 flex items-center justify-start md:justify-center">
+                      <span class="text-sm font-semibold text-slate-600" x-text="utentiPerRuolo(r.chiave)"></span>
+                    </div>
+                    <!-- Azioni -->
+                    <div class="md:col-span-1 flex items-center justify-end">
+                      <button @click="apriModifica(r)" class="btn-tap text-slate-400 hover:text-blue-700 p-1.5 rounded-lg hover:bg-blue-50 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                      </button>
+                      <button @click="elimina(r)" :disabled="r.sistema" class="btn-tap text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed ml-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Legenda livelli -->
+            <div class="mt-4 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 flex flex-wrap gap-3 text-xs text-slate-500">
+              <span class="font-semibold">Legenda:</span>
+              <span><span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">R</span> = Lettura</span>
+              <span><span class="bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-mono">W</span> = Scrittura</span>
+              <span><span class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-mono">RW</span> = Entrambi</span>
+            </div>
+          </div>
+
+          <!-- ---- FORM CREA / MODIFICA ---- -->
+          <div x-show="vista === 'form'" class="max-w-2xl">
+            <div class="flex items-center gap-3 mb-6">
+              <button @click="annulla()" class="btn-tap text-slate-400 hover:text-slate-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+              </button>
+              <h2 class="text-lg font-bold text-slate-800" x-text="corrente ? 'Modifica Ruolo' : 'Nuovo Ruolo'"></h2>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-4 space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Nome ruolo *</label>
+                  <input x-model="form.nome" type="text" placeholder="Es. Supervisore"
+                         class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sconto massimo %</label>
+                  <input x-model="form.sconto_max" type="number" min="0" max="100" placeholder="0"
+                         class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
+              <div x-show="!corrente">
+                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Chiave (ID tecnico)</label>
+                <input x-model="form.chiave" type="text" placeholder="es. supervisore (auto se vuoto)"
+                       class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono" />
+              </div>
+              <div x-show="corrente" class="bg-slate-50 rounded-xl px-3 py-2.5">
+                <p class="text-xs text-slate-400">Chiave: <span class="font-mono text-slate-600" x-text="corrente?.chiave"></span></p>
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Descrizione</label>
+                <textarea x-model="form.descrizione" rows="2" placeholder="Breve descrizione del ruolo…"
+                          class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+              </div>
+            </div>
+
+            <!-- Permessi -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 mb-5">
+              <h3 class="text-sm font-bold text-slate-700 mb-4">Permessi</h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <template x-for="p in permessiDef" :key="p.id">
+                  <div class="rounded-xl border transition-colors"
+                       :class="form.permessi[p.id] ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'">
+                    <div class="flex items-center gap-3 px-3 py-2.5">
+                      <!-- Checkbox -->
+                      <input type="checkbox"
+                             :checked="!!form.permessi[p.id]"
+                             @change="togglePermesso(p.id)"
+                             class="w-4 h-4 rounded border-slate-300 text-blue-700 cursor-pointer" />
+                      <!-- Emoji + label -->
+                      <span class="text-base leading-none" x-text="p.emoji"></span>
+                      <label class="flex-1 text-sm font-medium text-slate-700 cursor-pointer" x-text="p.label"
+                             @click="togglePermesso(p.id)"></label>
+                    </div>
+                    <!-- Selettore livello (solo se abilitato) -->
+                    <div x-show="form.permessi[p.id]" class="px-3 pb-2.5 flex gap-2">
+                      <template x-for="lv in ['lettura','scrittura','entrambi']" :key="lv">
+                        <button @click="setLivello(p.id, lv)"
+                                :class="form.permessi[p.id] === lv
+                                  ? (lv==='lettura' ? 'bg-slate-600 text-white' : lv==='scrittura' ? 'bg-green-600 text-white' : 'bg-blue-700 text-white')
+                                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'"
+                                class="btn-tap flex-1 text-xs font-semibold py-1 rounded-lg transition-colors">
+                          <span x-text="lv === 'lettura' ? '👁 Lettura' : lv === 'scrittura' ? '✏️ Scrittura' : '⚡ Entrambi'"></span>
+                        </button>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div class="flex gap-3">
+              <button @click="salva()" :disabled="!form.nome || salvando"
+                      class="btn-tap flex-1 bg-blue-700 text-white font-semibold py-3 rounded-xl hover:bg-blue-800 disabled:opacity-40">
+                <span x-text="salvando ? 'Salvataggio…' : (corrente ? '💾 Salva modifiche' : '💾 Crea ruolo')"></span>
+              </button>
+              <button @click="annulla()" class="btn-tap px-5 bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-200">
+                Annulla
+              </button>
+            </div>
+          </div>
+
+        </section>
+
+      </main>
+    </div><!-- fine area principale -->
+
+  </div><!-- fine app loggato -->
+
+  <!-- TOAST -->
+  <div x-data x-show="$store.ui.toast" x-cloak class="fixed bottom-6 right-6 z-50 pointer-events-none">
+    <div class="toast-anim rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3 min-w-[220px]"
+         :class="$store.ui.toast?.tipo === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'">
+      <span x-text="$store.ui.toast?.tipo === 'error' ? '❌' : '✅'"></span>
+      <p class="text-sm font-medium" x-text="$store.ui.toast?.msg"></p>
+    </div>
+  </div>
+
+</body>
+</html>
