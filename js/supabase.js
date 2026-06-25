@@ -418,6 +418,26 @@ const SP = {
     return true;
   },
 
+  async scriviLogManuale(importati, totale) {
+    const { error } = await _sb.from("bandi_sync_log").insert({
+      fonte_id:      "incentivi_gov",
+      stato:         "ok",
+      importati,
+      totale_fonte:  totale,
+      errore:        null,
+      avviato_il:    new Date().toISOString(),
+      completato_il: new Date().toISOString(),
+    });
+    if (error) console.warn("scriviLogManuale:", error.message);
+    // Aggiorna anche bandi_fonti
+    await _sb.from("bandi_fonti").update({
+      sync_stato:     "ok",
+      ultimo_sync:    new Date().toISOString(),
+      sync_importati: importati,
+      sync_errore:    null,
+    }).eq("id", "incentivi_gov");
+  },
+
   async getSyncLog(fonteId = null, limit = 20) {
     let q = _sb
       .from("bandi_sync_log")
@@ -461,6 +481,30 @@ const SP = {
       return json;
     } catch (e) {
       console.error("avviaSyncBandi errore:", e.message);
+      return { ok: false, error: e.message };
+    }
+  },
+
+  // ----------------------------------------------------------
+  // CREDITSAFE — verifica P.IVA
+  // ----------------------------------------------------------
+  async verificaPIVA(piva) {
+    try {
+      const res = await fetch(SUPABASE_URL + "/functions/v1/creditsafe", {
+        method:  "POST",
+        headers: {
+          "Authorization": "Bearer " + SUPABASE_ANON,
+          "Content-Type":  "application/json",
+        },
+        body: JSON.stringify({ piva }),
+      });
+      const testo = await res.text();
+      try {
+        return JSON.parse(testo);
+      } catch (_) {
+        return { ok: false, error: `HTTP ${res.status} — ${testo.substring(0, 300)}` };
+      }
+    } catch (e) {
       return { ok: false, error: e.message };
     }
   },

@@ -440,6 +440,7 @@
                 <div class="flex flex-wrap gap-2 pt-3 border-t border-slate-100">
                   <button @click="nuovoPreventivoPer(c)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-800">+ Preventivo</button>
                   <button @click="vaBandi(c)"            class="btn-tap text-xs text-purple-700 font-medium bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100">Bandi</button>
+                  <button @click="verificaPIVA(c)"       class="btn-tap text-xs text-teal-700 font-medium bg-teal-50 px-3 py-1.5 rounded-lg hover:bg-teal-100">Verifica P.IVA</button>
                   <button @click="apriModifica(c)"       class="btn-tap text-xs text-slate-600 font-medium bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200">Modifica</button>
                   <button @click="elimina(c.id)"         class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
                 </div>
@@ -448,6 +449,125 @@
             <template x-if="clientiFiltrati.length === 0">
               <div class="col-span-full text-center text-slate-400 py-12 text-sm">Nessun cliente trovato</div>
             </template>
+          </div>
+
+          <!-- ── Modal Creditsafe ──────────────────────────── -->
+          <div x-show="csModale" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+               class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4" @click.self="csModale = false">
+            <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-2xl shadow-2xl max-h-[92vh] overflow-y-auto" @click.stop>
+
+              <!-- Header -->
+              <div class="sticky top-0 bg-white flex items-center justify-between px-5 py-4 border-b border-slate-100 z-10">
+                <div class="flex items-center gap-2">
+                  <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.955 11.955 0 01.59 14.204M21.41 14.204A11.956 11.956 0 0120.402 6 11.959 11.959 0 0112 2.964m0 18.072A11.956 11.956 0 0121.41 14.204"/></svg>
+                  <p class="text-sm font-bold text-slate-800">Verifica Creditsafe</p>
+                </div>
+                <button @click="csModale = false" class="text-slate-400 hover:text-slate-600">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+
+              <!-- Caricamento -->
+              <div x-show="csCaricando" class="flex flex-col items-center justify-center py-16 gap-3">
+                <svg class="animate-spin w-8 h-8 text-teal-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                <p class="text-sm text-slate-500">Interrogazione Creditsafe in corso…</p>
+              </div>
+
+              <!-- Errore -->
+              <div x-show="!csCaricando && csErrore" class="p-6">
+                <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+                  <p class="font-semibold mb-1">Verifica non riuscita</p>
+                  <p x-text="csErrore"></p>
+                </div>
+              </div>
+
+              <!-- Risultato -->
+              <div x-show="!csCaricando && csDati" class="p-5 space-y-5">
+
+                <!-- Intestazione azienda -->
+                <div class="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 class="text-base font-bold text-slate-800" x-text="csDati?.ragioneSociale"></h3>
+                    <p class="text-xs text-slate-400 mt-0.5" x-text="(csDati?.formaGiuridica ? csDati.formaGiuridica + ' · ' : '') + 'P.IVA IT' + csDati?.piva"></p>
+                  </div>
+                  <!-- Score badge -->
+                  <div x-show="csDati?.score" class="shrink-0 text-center">
+                    <span class="text-2xl font-black px-4 py-2 rounded-xl" :class="csScoreColore(csDati?.score)" x-text="csDati?.score"></span>
+                    <p class="text-[10px] text-slate-400 mt-1">Credit Score</p>
+                  </div>
+                </div>
+
+                <!-- Stato + descrizione score -->
+                <div class="flex flex-wrap gap-2">
+                  <span class="text-xs font-semibold px-2.5 py-1 rounded-full"
+                        :class="csDati?.stato?.toLowerCase().includes('active') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'"
+                        x-text="csDati?.stato || 'Stato sconosciuto'"></span>
+                  <span x-show="csDati?.scoreDescrizione" class="text-xs text-slate-500 px-2.5 py-1 bg-slate-100 rounded-full" x-text="csDati?.scoreDescrizione"></span>
+                  <span x-show="csDati?.segnaliNegativi > 0" class="text-xs font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full" x-text="csDati?.segnaliNegativi + ' segnali negativi'"></span>
+                </div>
+
+                <!-- Griglia dati principali -->
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide">Limite di credito</p>
+                    <p class="text-sm font-bold text-slate-800 mt-0.5" x-text="fmt(csDati?.limiteCreditizio, csDati?.valutaCreditizio)"></p>
+                  </div>
+                  <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide">Fatturato</p>
+                    <p class="text-sm font-bold text-slate-800 mt-0.5" x-text="fmt(csDati?.fatturato)"></p>
+                  </div>
+                  <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide">Utile netto</p>
+                    <p class="text-sm font-bold mt-0.5" :class="(csDati?.utile ?? 0) >= 0 ? 'text-green-700' : 'text-red-600'" x-text="fmt(csDati?.utile)"></p>
+                  </div>
+                  <div class="bg-slate-50 rounded-xl p-3">
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wide">Dipendenti</p>
+                    <p class="text-sm font-bold text-slate-800 mt-0.5" x-text="csDati?.dipendenti ?? '—'"></p>
+                  </div>
+                </div>
+
+                <!-- Sede + Attività -->
+                <div class="space-y-2">
+                  <div x-show="csDati?.indirizzo" class="flex items-start gap-2 text-xs text-slate-600">
+                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                    <span x-text="[csDati?.indirizzo, csDati?.cap, csDati?.citta, csDati?.provincia].filter(Boolean).join(' ')"></span>
+                  </div>
+                  <div x-show="csDati?.ateco" class="flex items-center gap-2 text-xs text-slate-600">
+                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"/></svg>
+                    <span x-text="'ATECO ' + csDati?.ateco + (csDati?.settore ? ' — ' + csDati?.settore : '')"></span>
+                  </div>
+                  <div x-show="csDati?.dataCostituzione" class="flex items-center gap-2 text-xs text-slate-600">
+                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5"/></svg>
+                    <span x-text="'Costituita il ' + new Date(csDati?.dataCostituzione).toLocaleDateString('it-IT')"></span>
+                  </div>
+                  <div x-show="csDati?.telefono" class="flex items-center gap-2 text-xs text-slate-600">
+                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
+                    <span x-text="csDati?.telefono"></span>
+                  </div>
+                  <div x-show="csDati?.sito" class="flex items-center gap-2 text-xs text-slate-600">
+                    <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918"/></svg>
+                    <a :href="csDati?.sito" target="_blank" class="text-blue-600 underline" x-text="csDati?.sito"></a>
+                  </div>
+                </div>
+
+                <!-- Amministratori -->
+                <div x-show="csDati?.amministratori?.length > 0">
+                  <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Amministratori</p>
+                  <div class="space-y-1">
+                    <template x-for="a in csDati?.amministratori" :key="a.nome">
+                      <div class="flex items-center gap-2 text-xs text-slate-700 bg-slate-50 rounded-lg px-3 py-2">
+                        <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+                        <span class="font-medium" x-text="a.nome"></span>
+                        <span class="text-slate-400" x-text="a.ruolo"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Footer powered by -->
+                <p class="text-center text-[10px] text-slate-300 pt-2">Dati forniti da Creditsafe · Solo a scopo informativo</p>
+              </div>
+            </div>
           </div>
 
           <!-- Modale cliente -->
@@ -486,6 +606,7 @@
                     </select>
                   </div>
                 </div>
+                <div><label class="text-xs font-medium text-slate-500">Partita IVA</label><input x-model="form.piva" type="text" placeholder="Es. 12345678901" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
                 <div><label class="text-xs font-medium text-slate-500">Note</label><textarea x-model="form.note" rows="2" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea></div>
               </div>
               <button @click="salva()" :disabled="salvando" class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl mt-5 hover:bg-blue-800 disabled:opacity-50">
@@ -1154,197 +1275,164 @@
           <div class="max-w-3xl space-y-6">
 
             <!-- HEADER -->
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <h2 class="text-lg font-bold text-slate-800">Sincronizzazione Bandi</h2>
-                <p class="text-sm text-slate-500 mt-0.5">Gestisci le fonti e avvia la sincronizzazione automatica. Ogni fonte viene interrogata indipendentemente.</p>
-              </div>
-              <button @click="avviaSync(null)" :disabled="!!syncingFonte || caricando"
-                      class="btn-tap shrink-0 flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 disabled:opacity-50">
-                <svg class="w-4 h-4" :class="syncingFonte === 'tutte' ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
-                </svg>
-                <span x-text="syncingFonte === 'tutte' ? 'Sincronizzazione…' : 'Sync tutte le fonti'"></span>
-              </button>
+            <div>
+              <h2 class="text-lg font-bold text-slate-800">Import Bandi</h2>
+              <p class="text-sm text-slate-500 mt-0.5">Aggiorna il database dei bandi caricando il file JSON da incentivi.gov.it.</p>
             </div>
 
-            <!-- FONTI CONFIGURATE -->
+            <!-- AGGIORNAMENTO MANUALE -->
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                <p class="text-sm font-bold text-slate-700">Fonti dati</p>
-                <button @click="apriFormFonte()"
-                        class="btn-tap flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-                  Aggiungi fonte
-                </button>
+              <div class="px-5 py-4 border-b border-slate-100">
+                <p class="text-sm font-bold text-slate-700">Aggiornamento manuale</p>
+                <p class="text-xs text-slate-400 mt-0.5">Scarica il file open data dal sito ufficiale, poi caricalo qui per importare i bandi aggiornati.</p>
               </div>
+              <div class="px-5 py-5 space-y-5">
 
-              <!-- Caricamento -->
-              <div x-show="caricando" class="px-5 py-8 text-center">
-                <svg class="animate-spin w-6 h-6 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                <!-- Step 1 -->
+                <div class="flex items-start gap-3">
+                  <span class="shrink-0 w-6 h-6 rounded-full bg-blue-700 text-white text-xs font-bold flex items-center justify-center mt-0.5">1</span>
+                  <div>
+                    <p class="text-sm font-semibold text-slate-700">Scarica il file da incentivi.gov.it</p>
+                    <p class="text-xs text-slate-400 mt-0.5 mb-2">Vai alla pagina Open Data, cerca il dataset in formato JSON e scaricalo sul computer.</p>
+                    <a href="https://www.incentivi.gov.it/it/open-data" target="_blank"
+                       class="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+                      Apri incentivi.gov.it/it/open-data
+                    </a>
+                  </div>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="flex items-start gap-3">
+                  <span class="shrink-0 w-6 h-6 rounded-full bg-blue-700 text-white text-xs font-bold flex items-center justify-center mt-0.5">2</span>
+                  <div class="flex-1">
+                    <p class="text-sm font-semibold text-slate-700">Carica il file JSON</p>
+                    <p class="text-xs text-slate-400 mt-0.5 mb-3">Seleziona il file appena scaricato. I bandi vengono importati direttamente nel database.</p>
+
+                    <!-- Area upload idle -->
+                    <template x-if="uploadFase === 'idle'">
+                      <label class="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                        <input type="file" accept=".json" class="hidden" @change="caricaFile($event)">
+                        <svg class="w-8 h-8 text-slate-300 mb-2" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+                        <p class="text-sm font-semibold text-slate-600">Clicca per selezionare il file</p>
+                        <p class="text-xs text-slate-400 mt-1">File JSON da incentivi.gov.it</p>
+                      </label>
+                    </template>
+
+                    <!-- In corso -->
+                    <template x-if="uploadFase === 'lettura' || uploadFase === 'importazione'">
+                      <div class="border border-slate-200 rounded-xl p-4">
+                        <div class="flex items-center gap-3 mb-3">
+                          <svg class="animate-spin w-5 h-5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                          <p class="text-sm text-slate-600 font-medium" x-text="uploadFase === 'lettura' ? 'Lettura file in corso…' : 'Importazione in Supabase…'"></p>
+                        </div>
+                        <div x-show="uploadFase === 'importazione'">
+                          <div class="w-full bg-slate-100 rounded-full h-2">
+                            <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" :style="`width:${uploadProgresso}%`"></div>
+                          </div>
+                          <p class="text-xs text-slate-400 mt-1.5 text-right" x-text="uploadProgresso + '%'"></p>
+                        </div>
+                      </div>
+                    </template>
+
+                    <!-- Completato -->
+                    <template x-if="uploadFase === 'completato'">
+                      <div class="bg-green-50 border border-green-200 rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-1">
+                          <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          <p class="text-sm font-bold text-green-800">Import completato</p>
+                        </div>
+                        <p class="text-xs text-green-700 mb-3" x-text="uploadStats.importati + ' bandi importati · ' + uploadStats.attivi + ' attivi su ' + uploadStats.totale + ' totali nel file'"></p>
+                        <button @click="resetUpload()" class="btn-tap text-xs font-semibold text-green-700 bg-white border border-green-300 px-3 py-1.5 rounded-lg hover:bg-green-50 transition-colors">
+                          Carica altro file
+                        </button>
+                      </div>
+                    </template>
+
+                    <!-- Errore -->
+                    <template x-if="uploadFase === 'errore'">
+                      <div class="bg-red-50 border border-red-200 rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-1">
+                          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+                          <p class="text-sm font-bold text-red-700">Errore durante l'import</p>
+                        </div>
+                        <p class="text-xs text-red-600 mb-3" x-text="uploadErrMsg"></p>
+                        <button @click="resetUpload()" class="btn-tap text-xs font-semibold text-red-700 bg-white border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors">
+                          Riprova
+                        </button>
+                      </div>
+                    </template>
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <!-- Lista fonti -->
+            <!-- STORICO AGGIORNAMENTI -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <p class="text-sm font-bold text-slate-700">Storico aggiornamenti</p>
+                <button @click="ricarica()" class="text-xs text-blue-600 hover:underline">Aggiorna</button>
+              </div>
+              <div x-show="caricando" class="px-5 py-6 text-center">
+                <svg class="animate-spin w-5 h-5 mx-auto text-blue-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+              </div>
               <div x-show="!caricando">
+                <template x-if="syncLog.length === 0">
+                  <p class="text-sm text-slate-400 text-center py-6">Nessun aggiornamento ancora eseguito.</p>
+                </template>
+                <template x-for="log in syncLog" :key="log.id">
+                  <div class="flex items-center gap-3 px-5 py-3 border-b border-slate-50 last:border-0 text-xs">
+                    <span class="w-2 h-2 rounded-full shrink-0" :class="log.stato === 'ok' ? 'bg-green-500' : 'bg-red-400'"></span>
+                    <span class="font-medium text-slate-700 w-28 shrink-0" x-text="log.bandi_fonti?.nome || log.fonte_id"></span>
+                    <span class="text-slate-500 flex-1" x-text="log.stato === 'ok' ? log.importati + ' bandi importati' : ('Errore: ' + (log.errore || '—'))"></span>
+                    <span class="text-slate-400 shrink-0" x-text="fmtSync(log.completato_il || log.avviato_il)"></span>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- FONTI (secondario, collassato) -->
+            <details class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <summary class="px-5 py-4 cursor-pointer text-sm font-semibold text-slate-600 hover:bg-slate-50 flex items-center justify-between select-none">
+                <span>Fonti dati configurate</span>
+                <button @click.stop="apriFormFonte()" class="btn-tap flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg hover:bg-blue-100">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+                  Aggiungi
+                </button>
+              </summary>
+              <div class="border-t border-slate-100">
                 <template x-if="fonti.length === 0">
-                  <p class="text-sm text-slate-400 text-center py-8">Nessuna fonte configurata. Esegui prima <code class="bg-slate-100 px-1 rounded">supabase-schema-bandi-v2.sql</code>.</p>
+                  <p class="text-sm text-slate-400 text-center py-6">Nessuna fonte configurata.</p>
                 </template>
                 <template x-for="fonte in fonti" :key="fonte.id">
                   <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                    <!-- Info fonte -->
                     <div class="flex-1 min-w-0">
                       <div class="flex items-center gap-2 flex-wrap">
                         <p class="text-sm font-semibold text-slate-800" x-text="fonte.nome"></p>
                         <span class="text-[10px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded" x-text="fonte.tipo"></span>
                         <span x-show="!fonte.attiva" class="text-[10px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded font-medium">disattiva</span>
                       </div>
-                      <p class="text-xs text-slate-400 mt-0.5 truncate" x-text="fonte.url || '(URL da Secret Supabase)'"></p>
+                      <p class="text-xs text-slate-400 mt-0.5 truncate" x-text="fonte.url || '—'"></p>
                     </div>
-                    <!-- Stato ultimo sync -->
                     <div class="shrink-0 flex flex-col items-end gap-0.5 min-w-[130px]">
                       <span class="text-xs font-semibold px-2 py-0.5 rounded-full" :class="statoFonteBadge(fonte)" x-text="statoFonteLabel(fonte)"></span>
-                      <span class="text-[10px] text-slate-400" x-text="fonte.ultimo_sync ? 'Aggiornata ' + fmtSync(fonte.ultimo_sync) : 'Non ancora sincronizzata'"></span>
+                      <span class="text-[10px] text-slate-400" x-text="fonte.ultimo_sync ? 'Aggiornata ' + fmtSync(fonte.ultimo_sync) : 'Mai sincronizzata'"></span>
                     </div>
-                    <!-- Azioni -->
                     <div class="shrink-0 flex items-center gap-1">
-                      <!-- Toggle attiva -->
                       <button @click="toggleFonte(fonte)" :title="fonte.attiva ? 'Disattiva' : 'Attiva'"
                               class="btn-tap p-2 rounded-lg transition-colors"
                               :class="fonte.attiva ? 'text-green-600 hover:bg-green-50' : 'text-slate-300 hover:bg-slate-100'">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
                       </button>
-                      <!-- Sync solo questa (Edge Function) -->
-                      <button @click="avviaSync(fonte.id)" :disabled="!!syncingFonte || !fonte.attiva" title="Sincronizza tramite Edge Function"
-                              class="btn-tap p-2 rounded-lg text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-colors">
-                        <svg class="w-4 h-4" :class="syncingFonte === fonte.id ? 'animate-spin' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
-                        </svg>
-                      </button>
-                      <!-- Modifica -->
                       <button @click="apriFormFonte(fonte)" title="Modifica"
                               class="btn-tap p-2 rounded-lg text-slate-400 hover:text-blue-700 hover:bg-blue-50 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"/></svg>
                       </button>
-                      <!-- Elimina -->
                       <button @click="eliminaFonte(fonte)" title="Elimina"
                               class="btn-tap p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
                       </button>
                     </div>
-                  </div>
-                </template>
-              </div>
-            </div>
-
-            <!-- STATO IMPORT BROWSER -->
-            <template x-if="uploadFase !== 'idle'">
-              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                <div class="flex items-center justify-between mb-3">
-                  <p class="text-sm font-bold text-slate-700">Importazione in corso</p>
-                  <button x-show="uploadFase === 'completato' || uploadFase === 'errore'" @click="resetUpload()" class="text-xs text-slate-400 hover:text-slate-600">✕ Chiudi</button>
-                </div>
-                <!-- In corso -->
-                <template x-if="uploadFase === 'fetch' || uploadFase === 'importazione'">
-                  <div>
-                    <p class="text-xs text-slate-500 mb-2" x-text="uploadFase === 'fetch' ? 'Download dati in corso…' : 'Importazione in Supabase: ' + uploadProgresso + '%'"></p>
-                    <div class="w-full bg-slate-100 rounded-full h-2">
-                      <div class="bg-blue-600 h-2 rounded-full transition-all" :style="'width:' + uploadProgresso + '%'"></div>
-                    </div>
-                  </div>
-                </template>
-                <!-- Completato -->
-                <template x-if="uploadFase === 'completato'">
-                  <div class="flex items-center gap-3 text-sm text-green-700 bg-green-50 rounded-xl px-4 py-3">
-                    <span class="text-lg">✅</span>
-                    <span x-text="uploadStats?.importati + ' bandi importati (' + uploadStats?.attivi + ' attivi su ' + uploadStats?.totale + ' totali)'"></span>
-                  </div>
-                </template>
-                <!-- Errore -->
-                <template x-if="uploadFase === 'errore'">
-                  <div class="text-sm text-red-700 bg-red-50 rounded-xl px-4 py-3">
-                    <p class="font-semibold mb-1">⚠️ Errore importazione</p>
-                    <p class="text-xs" x-text="uploadErrMsg"></p>
-                  </div>
-                </template>
-              </div>
-            </template>
-
-            <!-- STORICO SINCRONIZZAZIONI -->
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                <p class="text-sm font-bold text-slate-700">Storico sincronizzazioni</p>
-                <button @click="ricarica()" class="text-xs text-blue-600 hover:underline">Aggiorna</button>
-              </div>
-              <template x-if="syncLog.length === 0">
-                <p class="text-sm text-slate-400 text-center py-6">Nessuna sincronizzazione ancora eseguita.</p>
-              </template>
-              <template x-for="log in syncLog" :key="log.id">
-                <div class="flex items-center gap-3 px-5 py-3 border-b border-slate-50 last:border-0 text-xs">
-                  <span class="w-2 h-2 rounded-full shrink-0" :class="log.stato === 'ok' ? 'bg-green-500' : 'bg-red-400'"></span>
-                  <span class="font-medium text-slate-700 w-28 shrink-0" x-text="log.bandi_fonti?.nome || log.fonte_id"></span>
-                  <span class="text-slate-500 flex-1" x-text="log.stato === 'ok' ? log.importati + ' record importati' : ('Errore: ' + (log.errore || '—'))"></span>
-                  <span class="text-slate-400 shrink-0" x-text="fmtSync(log.avviato_il)"></span>
-                </div>
-              </template>
-            </div>
-
-            <!-- SCHEDULING AUTOMATICO -->
-            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-              <p class="text-sm font-bold text-amber-800 mb-2">⏰ Scheduling automatico (pg_cron)</p>
-              <p class="text-xs text-amber-700 mb-3">Per sincronizzare automaticamente ogni notte senza azioni manuali, esegui questo SQL nel <strong>SQL Editor di Supabase</strong> dopo aver abilitato le estensioni <code>pg_cron</code> e <code>pg_net</code>:</p>
-              <pre class="text-[11px] bg-white border border-amber-200 rounded-xl p-3 overflow-x-auto text-slate-700 leading-relaxed">SELECT cron.schedule(
-  'sync-bandi-nightly', '0 3 * * *',
-  $$SELECT net.http_post(
-    url     := 'https://&lt;REF&gt;.supabase.co/functions/v1/sync-bandi',
-    headers := '{"Authorization":"Bearer &lt;ANON_KEY&gt;"}'::jsonb,
-    body    := '{}'::jsonb
-  );$$
-);</pre>
-              <p class="text-[11px] text-amber-600 mt-2">Sostituisci &lt;REF&gt; con il Project Reference e &lt;ANON_KEY&gt; con la tua anon key. Il file <code>supabase-schema-bandi-v2.sql</code> contiene le istruzioni complete.</p>
-            </div>
-
-            <!-- UPLOAD MANUALE (fallback) -->
-            <details class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <summary class="px-5 py-4 cursor-pointer text-sm font-semibold text-slate-600 hover:bg-slate-50 flex items-center gap-2 select-none">
-                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
-                Upload manuale (fallback)
-              </summary>
-              <div class="px-5 pb-5 pt-3 border-t border-slate-100">
-                <p class="text-xs text-slate-400 mb-4">Se la Edge Function non è deployata, puoi importare manualmente il file JSON da <a href="https://www.incentivi.gov.it/it/open-data" target="_blank" class="text-blue-600 underline">incentivi.gov.it/it/open-data</a>.</p>
-
-                <template x-if="uploadFase === 'idle'">
-                  <label class="block border-2 border-dashed border-slate-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
-                    <input type="file" accept=".json" class="hidden" @change="caricaFile($event)">
-                    <div class="text-3xl mb-2">📂</div>
-                    <p class="text-sm font-semibold text-slate-700">Seleziona file JSON</p>
-                    <p class="text-xs text-slate-400 mt-1">opendata-export.json</p>
-                  </label>
-                </template>
-
-                <template x-if="uploadFase === 'lettura' || uploadFase === 'importazione'">
-                  <div class="text-center py-4">
-                    <svg class="animate-spin w-6 h-6 mx-auto mb-2 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                    <p class="text-sm text-slate-600" x-text="uploadFase === 'lettura' ? 'Lettura file…' : 'Importazione…'"></p>
-                    <div x-show="uploadFase === 'importazione'" class="mt-3">
-                      <div class="w-full bg-slate-100 rounded-full h-2"><div class="bg-blue-600 h-2 rounded-full transition-all" :style="`width:${uploadProgresso}%`"></div></div>
-                      <p class="text-xs text-slate-400 mt-1" x-text="uploadProgresso + '%'"></p>
-                    </div>
-                  </div>
-                </template>
-
-                <template x-if="uploadFase === 'completato'">
-                  <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
-                    <p class="text-sm font-bold text-green-800 mb-2">✓ Import completato</p>
-                    <p class="text-xs text-green-700" x-text="uploadStats.importati + ' bandi importati su ' + uploadStats.attivi + ' attivi nel file'"></p>
-                    <button @click="resetUpload()" class="btn-tap mt-3 text-xs text-green-700 underline">Nuovo import</button>
-                  </div>
-                </template>
-
-                <template x-if="uploadFase === 'errore'">
-                  <div class="bg-red-50 border border-red-200 rounded-xl p-4">
-                    <p class="text-xs font-semibold text-red-700 mb-1">Errore</p>
-                    <p class="text-xs text-red-600 font-mono break-all" x-text="uploadErrMsg"></p>
-                    <button @click="resetUpload()" class="btn-tap mt-2 text-xs text-red-600 underline">Riprova</button>
                   </div>
                 </template>
               </div>
