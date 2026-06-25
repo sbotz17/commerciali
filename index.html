@@ -2020,31 +2020,3 @@
   </div>
 </body>
 </html>
-"
-                      class="btn-tap flex-1 bg-blue-700 text-white font-semibold py-3 rounded-xl hover:bg-blue-800 disabled:opacity-40">
-                <span x-text="salvando ? 'Salvataggio…' : (corrente ? '💾 Salva modifiche' : '💾 Crea ruolo')"></span>
-              </button>
-              <button @click="annulla()" class="btn-tap px-5 bg-slate-100 text-slate-700 font-semibold py-3 rounded-xl hover:bg-slate-200">
-                Annulla
-              </button>
-            </div>
-          </div>
-
-        </section>
-
-      </main>
-    </div><!-- fine area principale -->
-
-  </div><!-- fine app loggato -->
-
-  <!-- TOAST -->
-  <div x-data x-show="$store.ui.toast" x-cloak class="fixed bottom-6 right-6 z-50 pointer-events-none">
-    <div class="toast-anim rounded-2xl px-4 py-3 shadow-xl flex items-center gap-3 min-w-[220px]"
-         :class="$store.ui.toast?.tipo === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'">
-      <span x-text="$store.ui.toast?.tipo === 'error' ? '❌' : '✅'"></span>
-      <p class="text-sm font-medium" x-text="$store.ui.toast?.msg"></p>
-    </div>
-  </div>
-
-</body>
-</html>
