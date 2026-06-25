@@ -1213,14 +1213,6 @@
                               :class="fonte.attiva ? 'text-green-600 hover:bg-green-50' : 'text-slate-300 hover:bg-slate-100'">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
                       </button>
-                      <!-- Importa dal browser (solo json_incentivi con URL) -->
-                      <template x-if="fonte.tipo === 'json_incentivi' && fonte.url">
-                        <button @click="importaDaFonte(fonte)" :disabled="uploadFase === 'fetch' || uploadFase === 'importazione'"
-                                title="Scarica e importa direttamente dal browser"
-                                class="btn-tap p-2 rounded-lg text-emerald-600 hover:bg-emerald-50 disabled:opacity-30 transition-colors">
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
-                        </button>
-                      </template>
                       <!-- Sync solo questa (Edge Function) -->
                       <button @click="avviaSync(fonte.id)" :disabled="!!syncingFonte || !fonte.attiva" title="Sincronizza tramite Edge Function"
                               class="btn-tap p-2 rounded-lg text-blue-600 hover:bg-blue-50 disabled:opacity-30 transition-colors">
