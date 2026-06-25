@@ -79,6 +79,27 @@ const SP = {
     return data;
   },
 
+  // Ritorna il primo cliente trovato che è un duplicato, o null
+  async cercaDuplicatoCliente({ piva, nome, cf, escludiId }) {
+    let query = _sb.from("clienti").select("id, nome, piva").limit(1);
+
+    if (piva) {
+      // Cerca per P.IVA (case-insensitive, normalizzata senza prefisso IT)
+      const pivaClean = piva.toUpperCase().replace(/^IT/, "");
+      query = query.or(`piva.ilike.${pivaClean},piva.ilike.IT${pivaClean}`);
+    } else if (nome) {
+      query = query.ilike("nome", nome.trim());
+      if (cf) query = query.or(`codice_fiscale.ilike.${cf.trim()}`);
+    } else {
+      return null;
+    }
+
+    if (escludiId) query = query.neq("id", escludiId);
+
+    const { data } = await query;
+    return data?.[0] ?? null;
+  },
+
   async inserisciCliente(dati) {
     const { data, error } = await _sb
       .from("clienti")
