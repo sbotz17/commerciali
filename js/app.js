@@ -178,12 +178,12 @@ document.addEventListener("alpine:init", () => {
     // --- Clienti ---
     async aggiungiCliente(dati) {
       const c = await SP.inserisciCliente(dati);
-      if (c) this.clienti.push(c);
+      if (c && !c.__errDuplicato) this.clienti.push(c);
       return c;
     },
     async modificaCliente(id, dati) {
       const c = await SP.aggiornaCliente(id, dati);
-      if (c) { const i = this.clienti.findIndex(x => x.id === id); if (i !== -1) this.clienti[i] = c; }
+      if (c && !c.__errDuplicato) { const i = this.clienti.findIndex(x => x.id === id); if (i !== -1) this.clienti[i] = c; }
       return c;
     },
     async eliminaCliente(id) {
@@ -629,25 +629,28 @@ function clientiPage() {
         return;
       }
 
-      // ── Controllo duplicati ─────────────────────────────────
-      const escludiId = this.corrente?.id ?? null;
-      let duplicato = null;
+      // ── Controllo duplicati (usa clienti già in memoria, no query RLS) ──
+      const tuttiClienti = Alpine.store("db").clienti || [];
+      const altriClienti = this.corrente?.id
+        ? tuttiClienti.filter(c => c.id !== this.corrente.id)
+        : tuttiClienti;
 
       if (tipo === "azienda" || tipo === "libero_professionista") {
-        duplicato = await SP.cercaDuplicatoCliente({ piva, escludiId });
-        if (duplicato) {
-          Alpine.store("ui").mostraToast(
-            `Esiste già un cliente con P.IVA ${piva}: ${duplicato.nome}`, "error"
-          );
+        const p = piva.toUpperCase().replace(/^IT/, "");
+        const dup = altriClienti.find(c => {
+          const cp = (c.piva || "").toUpperCase().replace(/^IT/, "");
+          return cp !== "" && cp === p;
+        });
+        if (dup) {
+          Alpine.store("ui").mostraToast(`P.IVA ${piva} già presente: ${dup.nome}`, "error");
           return;
         }
       } else {
-        // privato: controlla nome (e CF se inserito)
-        duplicato = await SP.cercaDuplicatoCliente({ nome, cf: cf || null, escludiId });
-        if (duplicato) {
-          Alpine.store("ui").mostraToast(
-            `Esiste già un cliente con questo nome: ${duplicato.nome}`, "error"
-          );
+        const n = nome.trim().toLowerCase();
+        let dup = altriClienti.find(c => (c.nome || "").trim().toLowerCase() === n);
+        if (!dup && cf) dup = altriClienti.find(c => (c.codice_fiscale || "").trim().toLowerCase() === cf.toLowerCase());
+        if (dup) {
+          Alpine.store("ui").mostraToast(`Cliente già presente: ${dup.nome}`, "error");
           return;
         }
       }
@@ -655,13 +658,16 @@ function clientiPage() {
       this.salvando = true;
       try {
         if (this.corrente) {
-          await Alpine.store("db").modificaCliente(this.corrente.id, this.form);
-          Alpine.store("ui").mostraToast("Cliente aggiornato");
+          const ok = await Alpine.store("db").modificaCliente(this.corrente.id, this.form);
+          if (ok?.__errDuplicato) Alpine.store("ui").mostraToast("P.IVA o CF già presenti nel database", "error");
+          else if (ok) { Alpine.store("ui").mostraToast("Cliente aggiornato"); this.modaleAperto = false; }
+          else Alpine.store("ui").mostraToast("Errore nel salvataggio", "error");
         } else {
-          await Alpine.store("db").aggiungiCliente(this.form);
-          Alpine.store("ui").mostraToast("Cliente aggiunto");
+          const ok = await Alpine.store("db").aggiungiCliente(this.form);
+          if (ok?.__errDuplicato) Alpine.store("ui").mostraToast("P.IVA o CF già presenti nel database", "error");
+          else if (ok) { Alpine.store("ui").mostraToast("Cliente aggiunto"); this.modaleAperto = false; }
+          else Alpine.store("ui").mostraToast("Errore nel salvataggio", "error");
         }
-        this.modaleAperto = false;
       } finally { this.salvando = false; }
     },
     async elimina(id) {
