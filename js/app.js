@@ -612,6 +612,46 @@ function clientiPage() {
     },
     async salva() {
       if (!this.form.nome || this.salvando) return;
+
+      const tipo = this.form.tipo_cliente || "azienda";
+      const piva = (this.form.piva || "").trim();
+      const cf   = (this.form.codice_fiscale || "").trim();
+      const nome = (this.form.nome || "").trim();
+
+      // ── Validazione campi obbligatori ──────────────────────
+      if ((tipo === "azienda" || tipo === "libero_professionista") && !piva) {
+        Alpine.store("ui").mostraToast(
+          tipo === "azienda"
+            ? "La Partita IVA è obbligatoria per le aziende"
+            : "La Partita IVA è obbligatoria per i liberi professionisti",
+          "error"
+        );
+        return;
+      }
+
+      // ── Controllo duplicati ─────────────────────────────────
+      const escludiId = this.corrente?.id ?? null;
+      let duplicato = null;
+
+      if (tipo === "azienda" || tipo === "libero_professionista") {
+        duplicato = await SP.cercaDuplicatoCliente({ piva, escludiId });
+        if (duplicato) {
+          Alpine.store("ui").mostraToast(
+            `Esiste già un cliente con P.IVA ${piva}: ${duplicato.nome}`, "error"
+          );
+          return;
+        }
+      } else {
+        // privato: controlla nome (e CF se inserito)
+        duplicato = await SP.cercaDuplicatoCliente({ nome, cf: cf || null, escludiId });
+        if (duplicato) {
+          Alpine.store("ui").mostraToast(
+            `Esiste già un cliente con questo nome: ${duplicato.nome}`, "error"
+          );
+          return;
+        }
+      }
+
       this.salvando = true;
       try {
         if (this.corrente) {

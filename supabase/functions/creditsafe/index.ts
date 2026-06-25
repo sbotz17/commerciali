@@ -26,8 +26,8 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const body = await req.json() as { piva: string; action?: string };
-    const { piva, action } = body;
+    const body = await req.json() as { piva: string; action?: string; debug?: boolean };
+    const { piva, action, debug } = body;
 
     // ── Modalità VIES-only (autocompila form cliente) ────────
     if (action === "vies") {
@@ -72,43 +72,111 @@ Deno.serve(async (req: Request) => {
     // Normalizza P.IVA: rimuovi spazi e prefisso IT se presente
     const pivaClean = piva.trim().toUpperCase().replace(/^IT/, "");
 
-    // 2. Ricerca azienda per P.IVA (regNo)
-    const searchUrl = `${CREDITSAFE_BASE}/companies?countries=IT&language=EN&page=1&pageSize=5&regNo=IT${pivaClean}`;
-    const searchRes = await fetch(searchUrl, { headers: authHeader });
-    if (!searchRes.ok) {
-      const txt = await searchRes.text();
-      return json({ ok: false, error: `Ricerca fallita: ${searchRes.status} — ${txt.substring(0, 200)}` }, 502);
+    // 2. Ricerca azienda — prova più strategie in sequenza
+    let aziende: any[] = [];
+
+    const searchStrategies = [
+      // vatNo senza prefisso (più comune per IT)
+      `${CREDITSAFE_BASE}/companies?countries=IT&language=EN&page=1&pageSize=5&vatNo=${pivaClean}`,
+      // vatNo con prefisso IT
+      `${CREDITSAFE_BASE}/companies?countries=IT&language=EN&page=1&pageSize=5&vatNo=IT${pivaClean}`,
+      // regNo senza prefisso
+      `${CREDITSAFE_BASE}/companies?countries=IT&language=EN&page=1&pageSize=5&regNo=${pivaClean}`,
+      // regNo con prefisso IT
+      `${CREDITSAFE_BASE}/companies?countries=IT&language=EN&page=1&pageSize=5&regNo=IT${pivaClean}`,
+    ];
+
+    for (const searchUrl of searchStrategies) {
+      const searchRes = await fetch(searchUrl, { headers: authHeader });
+      if (!searchRes.ok) continue;
+      const searchData = await searchRes.json() as { companies?: any[], totalSize?: number };
+      aziende = searchData.companies ?? [];
+      if (aziende.length > 0) break;
     }
-    const searchData = await searchRes.json() as { companies?: any[], totalSize?: number };
-    const aziende = searchData.companies ?? [];
 
     if (aziende.length === 0) {
-      return json({ ok: false, error: "Nessuna azienda trovata con questa Partita IVA" });
+      return json({ ok: false, error: `Nessuna azienda trovata con P.IVA ${pivaClean} — verifica che sia attiva nel registro imprese` });
     }
 
     const azienda = aziende[0];
     const connectId = azienda.id;
 
-    // 3. Report completo (score creditizio, dati finanziari, ecc.)
-    const reportRes = await fetch(`${CREDITSAFE_BASE}/companies/${connectId}?language=EN`, {
-      headers: authHeader,
-    });
-
+    // 3. Report completo — prova più template fino a trovarne uno con dati
     let report: any = null;
-    if (reportRes.ok) {
-      const reportData = await reportRes.json() as { report?: any };
-      report = reportData.report ?? null;
+    let rawReportData: any = null;
+    const reportTemplates = ["", "full", "standard", "companyProfile"];
+    for (const tpl of reportTemplates) {
+      const tplParam = tpl ? `&template=${tpl}` : "";
+      const url = `${CREDITSAFE_BASE}/companies/${connectId}?language=EN${tplParam}`;
+      const res = await fetch(url, { headers: authHeader });
+      if (!res.ok) continue;
+      const body = await res.json() as { report?: any };
+      if (!rawReportData) rawReportData = body;
+      if (body.report && Object.keys(body.report).length > 0) {
+        rawReportData = body;
+        report = body.report;
+        break;
+      }
+    }
+
+    // Modalità debug: restituisce tutto il grezzo per diagnostica
+    if (debug) {
+      return json({ ok: true, _rawReportData: rawReportData, _azienda: azienda });
+    }
+
+    if (!report || Object.keys(report).length === 0) {
+      // Report vuoto: restituiamo solo i dati dalla ricerca (senza bilanci/score)
+      return json({
+        ok: true,
+        connectId,
+        ragioneSociale:  azienda.name ?? "",
+        piva:            pivaClean,
+        stato:           azienda.status ?? "",
+        formaGiuridica:  azienda.type ?? "",
+        indirizzo:       azienda.address?.simpleValue ?? `${azienda.address?.street ?? ""} ${azienda.address?.city ?? ""}`.trim(),
+        provincia:       azienda.address?.province ?? "",
+        cap:             azienda.address?.postCode ?? "",
+        citta:           azienda.address?.city ?? "",
+        ateco:           azienda.activityCode ?? "",
+        settore:         azienda.activity?.description ?? "",
+        dipendenti: null, score: null, scoreDescrizione: null,
+        limiteCreditizio: null, valutaCreditizio: "EUR",
+        fatturato: null, utile: null, patrimonio: null,
+        segnaliNegativi: 0, telefono: "", email: "", sito: "",
+        amministratori: [],
+        _avviso: "Report completo non disponibile per questa azienda nel piano corrente",
+      });
     }
 
     // 4. Costruisci risposta strutturata
     const creditScore  = report?.creditScore?.currentCreditRating ?? null;
-    const financials   = report?.financialStatements?.[0]?.profitAndLoss ?? null;
-    const directors    = (report?.directors?.currentDirectors ?? []).slice(0, 5);
-    const negativeSig  = report?.negativeInformation?.count ?? 0;
+
+    // Bilanci: prendi il primo disponibile, prova più path
+    const stmts = report?.financialStatements ?? [];
+    const stmt0 = stmts[0] ?? null;
+    const pnl   = stmt0?.profitAndLoss ?? stmt0?.localFinancials?.profitAndLoss ?? null;
+    const bal   = stmt0?.balanceSheet   ?? stmt0?.localFinancials?.balanceSheet   ?? null;
+
+    const directors   = (report?.directors?.currentDirectors ?? []).slice(0, 5);
+    const negativeSig = report?.negativeInformation?.count ?? report?.negativeInformation?.totalCount ?? 0;
+
+    // Dipendenti: può essere numero diretto o oggetto {value, date}
+    const empRaw = report?.companyIdentification?.basicInformation?.numberOfEmployees;
+    const dipendenti = typeof empRaw === "number" ? empRaw : (empRaw?.value ?? null);
+
+    // Limite credito: può essere oggetto o valore diretto
+    const creditLimitRaw = creditScore?.creditLimit;
+    const limiteCreditizio = typeof creditLimitRaw === "number"
+      ? creditLimitRaw
+      : (creditLimitRaw?.value ?? null);
 
     const risultato = {
       ok:              true,
       connectId,
+      // Debug: struttura raw per diagnostica (rimovibile in prod)
+      _rawKeys: report ? Object.keys(report) : [],
+      _stmtKeys: stmt0 ? Object.keys(stmt0) : [],
+      _pnlKeys:  pnl   ? Object.keys(pnl)   : [],
       // Dati base
       ragioneSociale:  azienda.name ?? report?.companyIdentification?.basicInformation?.registeredCompanyName ?? "",
       piva:            pivaClean,
@@ -124,15 +192,16 @@ Deno.serve(async (req: Request) => {
       // Attività
       ateco:           azienda.activityCode ?? "",
       settore:         azienda.activity?.description ?? "",
-      dipendenti:      report?.companyIdentification?.basicInformation?.numberOfEmployees?.value ?? null,
+      dipendenti,
       // Score creditizio
-      score:           creditScore?.commonValue ?? null,           // AAA / AA / A / BB / B / C / D
-      scoreDescrizione: creditScore?.commonDescription ?? null,
-      limiteCreditizio: creditScore?.creditLimit?.value ?? null,
-      valutaCreditizio: creditScore?.creditLimit?.currency ?? "EUR",
-      // Finanziari (ultimo bilancio disponibile)
-      fatturato:       financials?.totalRevenue ?? null,
-      utile:           financials?.netProfit ?? null,
+      score:            creditScore?.commonValue ?? creditScore?.providerValue?.value ?? null,
+      scoreDescrizione: creditScore?.commonDescription ?? creditScore?.providerValue?.maxValue ?? null,
+      limiteCreditizio,
+      valutaCreditizio: creditLimitRaw?.currency ?? "EUR",
+      // Finanziari — prova più nomi campo
+      fatturato: pnl?.totalRevenue ?? pnl?.revenue ?? pnl?.turnover ?? pnl?.netSales ?? null,
+      utile:     pnl?.netProfit ?? pnl?.profitAfterTax ?? pnl?.profitBeforeTax ?? null,
+      patrimonio: bal?.totalShareholdersEquity ?? bal?.equity ?? null,
       // Segnali negativi
       segnaliNegativi: negativeSig,
       // Contatti
