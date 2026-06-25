@@ -81,39 +81,30 @@ const SP = {
 
   // Ritorna il primo cliente trovato che è un duplicato, o null
   async cercaDuplicatoCliente({ piva, nome, cf, escludiId }) {
-    const escludi = escludiId || "00000000-0000-0000-0000-000000000000";
+    // Carica tutti i clienti e filtra in JS — evita problemi di sintassi PostgREST
+    const { data: tutti } = await _sb
+      .from("clienti")
+      .select("id, nome, piva, codice_fiscale");
+
+    if (!tutti) return null;
+
+    const altri = escludiId ? tutti.filter(c => c.id !== escludiId) : tutti;
 
     if (piva) {
-      // Cerca per P.IVA normalizzata (con o senza prefisso IT)
       const p = piva.toUpperCase().replace(/^IT/, "");
-      const { data } = await _sb
-        .from("clienti")
-        .select("id, nome, piva")
-        .or(`piva.eq.${p},piva.eq.IT${p}`)
-        .neq("id", escludi)
-        .limit(1);
-      return data?.[0] ?? null;
+      return altri.find(c => {
+        const cp = (c.piva || "").toUpperCase().replace(/^IT/, "");
+        return cp === p && cp !== "";
+      }) ?? null;
     }
 
     if (nome) {
-      // Per i privati: controlla nome (case-insensitive, esatto)
-      // Se è presente anche il CF, controlla anche quello separatamente
-      const { data: byNome } = await _sb
-        .from("clienti")
-        .select("id, nome, piva")
-        .ilike("nome", nome.trim())
-        .neq("id", escludi)
-        .limit(1);
-      if (byNome?.[0]) return byNome[0];
-
+      const n = nome.trim().toLowerCase();
+      const trovato = altri.find(c => (c.nome || "").trim().toLowerCase() === n);
+      if (trovato) return trovato;
       if (cf && cf.trim()) {
-        const { data: byCF } = await _sb
-          .from("clienti")
-          .select("id, nome, codice_fiscale")
-          .ilike("codice_fiscale", cf.trim())
-          .neq("id", escludi)
-          .limit(1);
-        if (byCF?.[0]) return byCF[0];
+        const f = cf.trim().toLowerCase();
+        return altri.find(c => (c.codice_fiscale || "").trim().toLowerCase() === f) ?? null;
       }
       return null;
     }
