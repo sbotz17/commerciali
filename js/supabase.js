@@ -135,7 +135,11 @@ const SP = {
       }])
       .select()
       .single();
-    if (error) { console.error("inserisciCliente:", error.message); return null; }
+    if (error) {
+      if (error.code === "23505") return { __errDuplicato: true };
+      console.error("inserisciCliente:", error.message);
+      return null;
+    }
     return data;
   },
 
@@ -163,7 +167,11 @@ const SP = {
       .eq("id", id)
       .select()
       .single();
-    if (error) { console.error("aggiornaCliente:", error.message); return null; }
+    if (error) {
+      if (error.code === "23505") return { __errDuplicato: true };
+      console.error("aggiornaCliente:", error.message);
+      return null;
+    }
     return data;
   },
 
