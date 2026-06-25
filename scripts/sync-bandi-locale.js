@@ -134,8 +134,14 @@ async function main() {
   log(`Download da ${INCENTIVI_URL.substring(0, 60)}…`);
   let raw;
   try {
-    const res = await fetch(INCENTIVI_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(INCENTIVI_URL, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "it-IT,it;q=0.9",
+      },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
     const parsed = await res.json();
     raw = Array.isArray(parsed) ? parsed : (parsed?.response?.docs ?? []);
     log(`Ricevuti ${raw.length} record totali`);
