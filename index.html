@@ -603,7 +603,7 @@
                   <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Anagrafica</p>
                 </div>
                 <div class="p-5 space-y-4">
-                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div class="grid grid-cols-1 gap-3">
                     <div>
                       <label class="text-xs font-medium text-slate-500">Tipo cliente</label>
                       <select x-model="form.tipo_cliente" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
@@ -612,14 +612,14 @@
                         <option value="privato">Privato</option>
                       </select>
                     </div>
-                    <div class="sm:col-span-2">
+                    <div>
                       <label class="text-xs font-medium text-slate-500">Ragione sociale / Nome *</label>
                       <input x-model="form.nome" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
                   </div>
 
                   <!-- P.IVA con pulsante VIES -->
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="grid grid-cols-1 gap-3">
                     <div>
                       <label class="text-xs font-medium text-slate-500">Partita IVA</label>
                       <div class="mt-1 flex gap-2">
@@ -654,7 +654,7 @@
                     <label class="text-xs font-medium text-slate-500">Referente</label>
                     <input x-model="form.referente" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="grid grid-cols-1 gap-3">
                     <div>
                       <label class="text-xs font-medium text-slate-500">Email</label>
                       <input x-model="form.email" type="email" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -673,8 +673,8 @@
                   <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Sede legale</p>
                 </div>
                 <div class="p-5 space-y-4">
-                  <div class="grid grid-cols-3 gap-3">
-                    <div class="col-span-2">
+                  <div class="grid grid-cols-1 gap-3">
+                    <div>
                       <label class="text-xs font-medium text-slate-500">Indirizzo</label>
                       <input x-model="form.indirizzo" type="text" placeholder="Via Roma" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
@@ -682,8 +682,6 @@
                       <label class="text-xs font-medium text-slate-500">Civico</label>
                       <input x-model="form.civico" type="text" placeholder="1" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </div>
-                  </div>
-                  <div class="grid grid-cols-3 gap-3">
                     <div>
                       <label class="text-xs font-medium text-slate-500">CAP</label>
                       <input x-model="form.cap" type="text" placeholder="20100" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -712,7 +710,7 @@
                   <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Attività</p>
                 </div>
                 <div class="p-5 space-y-4">
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div class="grid grid-cols-1 gap-3">
                     <div>
                       <label class="text-xs font-medium text-slate-500">Codice ATECO</label>
                       <input x-model="form.ateco" type="text" placeholder="Es. 56.10" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
