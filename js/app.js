@@ -560,12 +560,56 @@ function clientiPage() {
       return Alpine.store("db").preventivi.filter(p => p.cliente_id === clienteId).length;
     },
 
+    cercandoPIVA: false,
+    viesMsg: "",
+
     apriNuovo() {
       this.corrente = null;
       this.form = { tipo_cliente: "azienda", nome: "", referente: "", email: "", telefono: "", piva: "", codice_fiscale: "", indirizzo: "", civico: "", cap: "", citta: "", provincia: "", regione: "lombardia", ateco: "", settore: "ristorazione", note: "" };
+      this.viesMsg = "";
       this.modaleAperto = true;
     },
-    apriModifica(c) { this.corrente = c; this.form = { ...c }; this.modaleAperto = true; },
+    apriModifica(c) { this.corrente = c; this.form = { ...c }; this.viesMsg = ""; this.modaleAperto = true; },
+
+    async cercaDaVIES() {
+      const piva = (this.form.piva || "").trim().replace(/^IT/i, "");
+      if (!piva || piva.length < 11) {
+        this.viesMsg = "Inserisci una Partita IVA valida (11 cifre)";
+        return;
+      }
+      this.cercandoPIVA = true; this.viesMsg = "";
+      try {
+        const d = await SP.cercaVIES(piva);
+        if (!d.ok) {
+          this.viesMsg = "⚠️ " + (d.error || "Partita IVA non trovata nel VIES");
+          return;
+        }
+        // Autocompila nome
+        if (d.name && d.name !== "---") this.form.nome = d.name;
+        // Parse indirizzo: formato tipico "VIA ROMA 1\n20100 MILANO MI"
+        if (d.address && d.address !== "---") {
+          const righe = d.address.split(/\n/).map(r => r.trim()).filter(Boolean);
+          if (righe.length >= 1) {
+            const m = righe[0].match(/^(.+?)[,\s]+(\d+\w*)$/);
+            if (m) { this.form.indirizzo = m[1].trim(); this.form.civico = m[2]; }
+            else { this.form.indirizzo = righe[0]; }
+          }
+          if (righe.length >= 2) {
+            const m2 = righe[1].match(/^(\d{5})\s+(.+?)(?:\s+\(?([A-Z]{2})\)?)?$/);
+            if (m2) {
+              this.form.cap   = m2[1];
+              this.form.citta = m2[2].trim();
+              if (m2[3]) this.form.provincia = m2[3];
+            }
+          }
+        }
+        this.viesMsg = "✓ Dati trovati e compilati dal VIES";
+      } catch (e) {
+        this.viesMsg = "Errore: " + e.message;
+      } finally {
+        this.cercandoPIVA = false;
+      }
+    },
     async salva() {
       if (!this.form.nome || this.salvando) return;
       this.salvando = true;

@@ -26,7 +26,22 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { piva } = await req.json() as { piva: string };
+    const body = await req.json() as { piva: string; action?: string };
+    const { piva, action } = body;
+
+    // ── Modalità VIES-only (autocompila form cliente) ────────
+    if (action === "vies") {
+      if (!piva) return json({ ok: false, error: "Parametro 'piva' mancante" }, 400);
+      const pivaClean = piva.trim().replace(/^IT/i, "");
+      const viesRes = await fetch(
+        `https://ec.europa.eu/taxation_customs/vies/rest-api/ms/IT/vat/${pivaClean}`,
+        { headers: { "Accept": "application/json" } }
+      );
+      if (!viesRes.ok) return json({ ok: false, error: `VIES HTTP ${viesRes.status}` }, 502);
+      const d = await viesRes.json() as { valid: boolean; name?: string; address?: string };
+      if (!d.valid) return json({ ok: false, error: "Partita IVA non valida o non attiva nel VIES" });
+      return json({ ok: true, valid: true, name: d.name ?? "", address: d.address ?? "" });
+    }
     if (!piva) {
       return json({ ok: false, error: "Parametro 'piva' mancante" }, 400);
     }

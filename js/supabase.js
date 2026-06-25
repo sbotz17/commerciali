@@ -488,6 +488,18 @@ const SP = {
   // ----------------------------------------------------------
   // CREDITSAFE — verifica P.IVA
   // ----------------------------------------------------------
+  async cercaVIES(piva) {
+    try {
+      const res = await fetch(SUPABASE_URL + "/functions/v1/creditsafe", {
+        method:  "POST",
+        headers: { "Authorization": "Bearer " + SUPABASE_ANON, "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "vies", piva }),
+      });
+      const testo = await res.text();
+      try { return JSON.parse(testo); } catch (_) { return { ok: false, error: testo.substring(0, 200) }; }
+    } catch (e) { return { ok: false, error: e.message }; }
+  },
+
   async verificaPIVA(piva) {
     try {
       const res = await fetch(SUPABASE_URL + "/functions/v1/creditsafe", {
