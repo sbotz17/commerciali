@@ -38,9 +38,13 @@ Deno.serve(async (req: Request) => {
         { headers: { "Accept": "application/json" } }
       );
       if (!viesRes.ok) return json({ ok: false, error: `VIES HTTP ${viesRes.status}` }, 502);
-      const d = await viesRes.json() as { valid: boolean; name?: string; address?: string };
-      if (!d.valid) return json({ ok: false, error: "Partita IVA non valida o non attiva nel VIES" });
-      return json({ ok: true, valid: true, name: d.name ?? "", address: d.address ?? "" });
+      const d = await viesRes.json() as { isValid?: boolean; valid?: boolean; name?: string; address?: string; userError?: string };
+      const isValid = d.isValid ?? d.valid ?? false;
+      if (!isValid) return json({ ok: false, error: "Partita IVA non valida o non attiva nel VIES" });
+      // VIES può restituire "---" quando l'azienda non espone i dati
+      const name    = (d.name    && d.name    !== "---") ? d.name    : "";
+      const address = (d.address && d.address !== "---") ? d.address : "";
+      return json({ ok: true, valid: true, name, address });
     }
     if (!piva) {
       return json({ ok: false, error: "Parametro 'piva' mancante" }, 400);
