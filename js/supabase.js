@@ -81,23 +81,44 @@ const SP = {
 
   // Ritorna il primo cliente trovato che è un duplicato, o null
   async cercaDuplicatoCliente({ piva, nome, cf, escludiId }) {
-    let query = _sb.from("clienti").select("id, nome, piva").limit(1);
+    const escludi = escludiId || "00000000-0000-0000-0000-000000000000";
 
     if (piva) {
-      // Cerca per P.IVA (case-insensitive, normalizzata senza prefisso IT)
-      const pivaClean = piva.toUpperCase().replace(/^IT/, "");
-      query = query.or(`piva.ilike.${pivaClean},piva.ilike.IT${pivaClean}`);
-    } else if (nome) {
-      query = query.ilike("nome", nome.trim());
-      if (cf) query = query.or(`codice_fiscale.ilike.${cf.trim()}`);
-    } else {
+      // Cerca per P.IVA normalizzata (con o senza prefisso IT)
+      const p = piva.toUpperCase().replace(/^IT/, "");
+      const { data } = await _sb
+        .from("clienti")
+        .select("id, nome, piva")
+        .or(`piva.eq.${p},piva.eq.IT${p}`)
+        .neq("id", escludi)
+        .limit(1);
+      return data?.[0] ?? null;
+    }
+
+    if (nome) {
+      // Per i privati: controlla nome (case-insensitive, esatto)
+      // Se è presente anche il CF, controlla anche quello separatamente
+      const { data: byNome } = await _sb
+        .from("clienti")
+        .select("id, nome, piva")
+        .ilike("nome", nome.trim())
+        .neq("id", escludi)
+        .limit(1);
+      if (byNome?.[0]) return byNome[0];
+
+      if (cf && cf.trim()) {
+        const { data: byCF } = await _sb
+          .from("clienti")
+          .select("id, nome, codice_fiscale")
+          .ilike("codice_fiscale", cf.trim())
+          .neq("id", escludi)
+          .limit(1);
+        if (byCF?.[0]) return byCF[0];
+      }
       return null;
     }
 
-    if (escludiId) query = query.neq("id", escludiId);
-
-    const { data } = await query;
-    return data?.[0] ?? null;
+    return null;
   },
 
   async inserisciCliente(dati) {
