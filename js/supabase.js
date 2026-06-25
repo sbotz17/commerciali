@@ -83,15 +83,22 @@ const SP = {
     const { data, error } = await _sb
       .from("clienti")
       .insert([{
-        nome:      dati.nome,
-        referente: dati.referente  || "",
-        email:     dati.email      || "",
-        telefono:  dati.telefono   || "",
-        citta:     dati.citta      || "",
-        ateco:     dati.ateco      || "",
-        settore:   dati.settore    || "ristorazione",
-        regione:   dati.regione    || "lombardia",
-        note:      dati.note       || "",
+        tipo_cliente:    dati.tipo_cliente    || "azienda",
+        nome:            dati.nome,
+        referente:       dati.referente       || "",
+        email:           dati.email           || "",
+        telefono:        dati.telefono        || "",
+        piva:            dati.piva            || "",
+        codice_fiscale:  dati.codice_fiscale  || "",
+        indirizzo:       dati.indirizzo       || "",
+        civico:          dati.civico          || "",
+        cap:             dati.cap             || "",
+        citta:           dati.citta           || "",
+        provincia:       dati.provincia       || "",
+        ateco:           dati.ateco           || "",
+        settore:         dati.settore         || "ristorazione",
+        regione:         dati.regione         || "lombardia",
+        note:            dati.note            || "",
       }])
       .select()
       .single();
@@ -103,15 +110,22 @@ const SP = {
     const { data, error } = await _sb
       .from("clienti")
       .update({
-        nome:      dati.nome,
-        referente: dati.referente  || "",
-        email:     dati.email      || "",
-        telefono:  dati.telefono   || "",
-        citta:     dati.citta      || "",
-        ateco:     dati.ateco      || "",
-        settore:   dati.settore    || "ristorazione",
-        regione:   dati.regione    || "lombardia",
-        note:      dati.note       || "",
+        tipo_cliente:    dati.tipo_cliente    || "azienda",
+        nome:            dati.nome,
+        referente:       dati.referente       || "",
+        email:           dati.email           || "",
+        telefono:        dati.telefono        || "",
+        piva:            dati.piva            || "",
+        codice_fiscale:  dati.codice_fiscale  || "",
+        indirizzo:       dati.indirizzo       || "",
+        civico:          dati.civico          || "",
+        cap:             dati.cap             || "",
+        citta:           dati.citta           || "",
+        provincia:       dati.provincia       || "",
+        ateco:           dati.ateco           || "",
+        settore:         dati.settore         || "ristorazione",
+        regione:         dati.regione         || "lombardia",
+        note:            dati.note            || "",
       })
       .eq("id", id)
       .select()
