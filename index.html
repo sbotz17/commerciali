@@ -214,7 +214,7 @@
           <button @click="$store.ui.vai('nuovo-preventivo')"
                   class="btn-tap flex items-center gap-1.5 bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-blue-800 active:bg-blue-800 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-            <span class="hidden sm:inline">Preventivo</span>
+            <span class="hidden sm:inline">Nuova richiesta</span>
           </button>
         </div>
       </header>
@@ -267,7 +267,7 @@
                 <button @click="vai('preventivi')" class="text-xs text-blue-700 font-medium hover:underline">Vedi tutti →</button>
               </div>
               <template x-if="ultimi.length === 0">
-                <div class="px-5 py-8 text-center text-slate-400 text-sm">Nessun preventivo — <button @click="vai('nuovo-preventivo')" class="text-blue-700 font-medium hover:underline">creane uno</button></div>
+                <div class="px-5 py-8 text-center text-slate-400 text-sm">Nessuna richiesta — <button @click="vai('nuovo-preventivo')" class="text-blue-700 font-medium hover:underline">creane uno</button></div>
               </template>
               <div class="divide-y divide-slate-50">
                 <template x-for="p in ultimi" :key="p.id">
@@ -506,16 +506,12 @@
                         class="btn-tap flex-none text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap shadow-sm" x-text="s.l"></button>
               </template>
             </div>
-            <button @click="$store.ui.vai('nuovo-preventivo')" class="btn-tap flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 shadow-sm shrink-0">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-              Nuovo
-            </button>
           </div>
 
           <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <template x-if="preventiviFiltrati.length === 0">
               <div class="text-center py-12 text-slate-400 text-sm">
-                <p>Nessun preventivo</p>
+                <p>Nessuna richiesta</p>
                 <button @click="$store.ui.vai('nuovo-preventivo')" class="btn-tap mt-2 text-blue-700 font-medium hover:underline">Crea il primo →</button>
               </div>
             </template>
