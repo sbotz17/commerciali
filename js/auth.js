@@ -1,19 +1,18 @@
 // ============================================================
-// auth.js — Login, sessione utente, hash password
+// auth.js — Autenticazione tramite Supabase Auth (email + password)
+//           + profilo utente (ruolo, menu, permessi) dalla tabella "utenti"
+// ============================================================
+// Il login NON usa più l'hash SHA-256 in tabella: le password sono
+// gestite in modo sicuro (bcrypt + salt) da Supabase Auth e non sono
+// mai esposte. La tabella "utenti" conserva solo il profilo, collegato
+// all'account di login tramite l'email.
 // ============================================================
 
 const AUTH_KEY = "configuratore_utente";
 
-// Hash SHA-256 della password (browser crypto API)
-async function hashPassword(password) {
-  const data    = new TextEncoder().encode(password);
-  const buffer  = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-// Legge l'utente dalla sessione (sessionStorage — dura finché il tab è aperto)
+// ------------------------------------------------------------
+// Cache locale del profilo (per un rendering immediato)
+// ------------------------------------------------------------
 function getUtenteSessione() {
   try {
     const raw = sessionStorage.getItem(AUTH_KEY);
@@ -23,50 +22,146 @@ function getUtenteSessione() {
   }
 }
 
-// Salva l'utente in sessione
 function salvaSessione(utente) {
   sessionStorage.setItem(AUTH_KEY, JSON.stringify({
     id:          utente.id,
     username:    utente.username,
     nome:        utente.nome,
     ruolo:       utente.ruolo,
+    email:       utente.email       || null,
     avatar:      utente.avatar      || null,
     menu_utente: utente.menu_utente || null,
   }));
 }
 
-// Cancella sessione (logout)
 function cancellaSessione() {
   sessionStorage.removeItem(AUTH_KEY);
 }
 
-// Login: verifica username + password contro tabella utenti Supabase
-async function login(username, password) {
-  const hash = await hashPassword(password);
+// Hash SHA-256 — mantenuto solo per compatibilità con vecchi record.
+// NON è più usato per il login (lo gestisce Supabase Auth).
+async function hashPassword(password) {
+  const data   = new TextEncoder().encode(password);
+  const buffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(buffer))
+    .map(b => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+// ------------------------------------------------------------
+// Profilo utente (ruolo, menu, ecc.) letto dalla tabella "utenti"
+// in base all'email dell'account autenticato.
+// ------------------------------------------------------------
+async function caricaProfilo(email) {
+  const em = (email || "").trim().toLowerCase();
+  if (!em) return null;
   const { data, error } = await _sb
     .from("utenti")
-    .select("id, username, nome, ruolo, attivo, avatar, menu_utente")
-    .eq("username", username.trim().toLowerCase())
-    .eq("password_hash", hash)
-    .eq("attivo", true)
-    .single();
-
-  if (error || !data) return null;
-  salvaSessione(data);
+    .select("id, username, nome, ruolo, attivo, avatar, menu_utente, email")
+    .eq("email", em)
+    .maybeSingle();
+  if (error) { console.error("caricaProfilo:", error.message); return null; }
   return data;
 }
 
-// Cambio password (aggiorna hash nel DB)
-async function cambiaPassword(utenteId, nuovaPassword) {
-  const hash = await hashPassword(nuovaPassword);
-  const { error } = await _sb
-    .from("utenti")
-    .update({ password_hash: hash })
-    .eq("id", utenteId);
-  return !error;
+// ------------------------------------------------------------
+// Login con email + password (Supabase Auth)
+// ------------------------------------------------------------
+async function login(email, password) {
+  const em = (email || "").trim().toLowerCase();
+  const { data, error } = await _sb.auth.signInWithPassword({ email: em, password });
+  if (error || !data?.session) return null;
+
+  const prof = await caricaProfilo(em);
+  if (!prof || prof.attivo === false) {
+    // Account valido ma nessun profilo attivo → nega l'accesso
+    await _sb.auth.signOut();
+    return null;
+  }
+  salvaSessione(prof);
+  return prof;
 }
 
-// Permessi per ruolo
+// ------------------------------------------------------------
+// Ripristino sessione all'avvio (se già autenticato in precedenza)
+// ------------------------------------------------------------
+async function ripristinaSessione() {
+  const { data } = await _sb.auth.getSession();
+  const session = data?.session;
+  if (!session?.user?.email) { cancellaSessione(); return null; }
+
+  const prof = await caricaProfilo(session.user.email);
+  if (!prof || prof.attivo === false) {
+    await _sb.auth.signOut();
+    cancellaSessione();
+    return null;
+  }
+  salvaSessione(prof);
+  return prof;
+}
+
+// ------------------------------------------------------------
+// Logout
+// ------------------------------------------------------------
+async function authLogout() {
+  try { await _sb.auth.signOut(); } catch (_) {}
+  cancellaSessione();
+}
+
+// ------------------------------------------------------------
+// Recupero password: invia l'email con il link per reimpostarla
+// ------------------------------------------------------------
+async function richiediRecuperoPassword(email) {
+  const em = (email || "").trim().toLowerCase();
+  const redirectTo = window.location.origin + window.location.pathname;
+  const { error } = await _sb.auth.resetPasswordForEmail(em, { redirectTo });
+  if (error) console.error("richiediRecuperoPassword:", error.message);
+  // Ritorna comunque true: non riveliamo se l'email è registrata (anti-enumerazione).
+  return true;
+}
+
+// ------------------------------------------------------------
+// Imposta una nuova password per l'utente attualmente autenticato.
+// Usato sia dopo il link di recupero, sia dal cambio password.
+// ------------------------------------------------------------
+async function impostaNuovaPassword(nuovaPassword) {
+  const { error } = await _sb.auth.updateUser({ password: nuovaPassword });
+  if (error) { console.error("impostaNuovaPassword:", error.message); return false; }
+  return true;
+}
+
+// True se la pagina è stata aperta dal link di recupero password.
+// Usa il flag catturato in modo sincrono all'avvio (vedi supabase.js),
+// perché la libreria Supabase ripulisce l'hash dall'URL subito dopo l'init.
+function inRecuperoPassword() {
+  return (typeof _RECOVERY_FLAG !== "undefined" && _RECOVERY_FLAG)
+    || (window.location.hash || "").includes("type=recovery");
+}
+
+// ------------------------------------------------------------
+// Crea un account di login (Supabase Auth) SENZA sloggare l'admin,
+// usando un client secondario. Best-effort: se i signup sono
+// disabilitati o serve conferma email, ritorna il messaggio.
+// ------------------------------------------------------------
+async function creaAccountLogin(email, password) {
+  const em = (email || "").trim().toLowerCase();
+  if (!em || !password) return { ok: false, msg: "Email e password obbligatorie" };
+  try {
+    const tmp = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    const { error } = await tmp.auth.signUp({ email: em, password });
+    if (error) { console.error("creaAccountLogin:", error.message); return { ok: false, msg: error.message }; }
+    return { ok: true };
+  } catch (e) {
+    console.error("creaAccountLogin:", e);
+    return { ok: false, msg: String(e) };
+  }
+}
+
+// ------------------------------------------------------------
+// Permessi per ruolo (fallback legacy usato in altre parti) — invariato
+// ------------------------------------------------------------
 const PERMESSI = {
   admin: ["dashboard", "catalogo", "preventivi", "nuovo-preventivo", "clienti", "bandi",
           "gestione-prodotti", "categorie", "utenti", "ruoli"],

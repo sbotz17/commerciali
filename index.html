@@ -56,15 +56,16 @@
         <h1 class="text-xl font-bold text-slate-800">Configuratore Commerciali</h1>
         <p class="text-sm text-slate-400 mt-1">Accedi alla piattaforma</p>
       </div>
-      <div class="space-y-4">
+      <!-- Form di accesso -->
+      <div class="space-y-4" x-show="!modoRecupero">
         <div>
-          <label class="text-xs font-medium text-slate-500">Username</label>
-          <input x-model="username" type="text" placeholder="admin" @keyup.enter="esegui()"
+          <label class="text-xs font-medium text-slate-500">Email</label>
+          <input x-model="email" type="email" placeholder="nome@esempio.it" autocomplete="username" @keyup.enter="esegui()"
                  class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
           <label class="text-xs font-medium text-slate-500">Password</label>
-          <input x-model="password" type="password" placeholder="••••••••" @keyup.enter="esegui()"
+          <input x-model="password" type="password" placeholder="••••••••" autocomplete="current-password" @keyup.enter="esegui()"
                  class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <template x-if="errore">
@@ -75,8 +76,73 @@
           <span x-show="!caricando">Accedi →</span>
           <span x-show="caricando">Accesso in corso…</span>
         </button>
+        <button type="button" @click="apriRecupero()"
+                class="btn-tap w-full text-xs text-blue-700 font-medium mt-1 py-1">
+          Password dimenticata?
+        </button>
       </div>
-      <p class="text-xs text-center text-slate-400 mt-6">Default: admin / admin123</p>
+
+      <!-- Form recupero password -->
+      <div class="space-y-4" x-show="modoRecupero" x-cloak>
+        <p class="text-sm text-slate-600">Inserisci la tua email: ti invieremo un link per reimpostare la password.</p>
+        <div>
+          <label class="text-xs font-medium text-slate-500">Email</label>
+          <input x-model="emailRecupero" type="email" placeholder="nome@esempio.it" @keyup.enter="inviaRecupero()"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <template x-if="msgRecupero">
+          <p class="text-xs text-slate-700 bg-blue-50 px-3 py-2 rounded-lg" x-text="msgRecupero"></p>
+        </template>
+        <button @click="inviaRecupero()" :disabled="inviando"
+                class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl active:bg-blue-800 disabled:opacity-50">
+          <span x-show="!inviando">Invia link di recupero</span>
+          <span x-show="inviando">Invio in corso…</span>
+        </button>
+        <button type="button" @click="chiudiRecupero()"
+                class="btn-tap w-full text-xs text-slate-500 font-medium py-1">
+          ← Torna all'accesso
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       SCHERMATA REIMPOSTA PASSWORD (dal link email di recupero)
+  ====================================================== -->
+  <div x-data="resetPasswordPage()" x-show="attivo" x-cloak
+       class="fixed inset-0 z-[60] min-h-screen bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center px-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8">
+      <h1 class="text-xl font-bold text-slate-800 mb-1">Reimposta password</h1>
+      <p class="text-sm text-slate-400 mb-6">Scegli una nuova password per il tuo account.</p>
+
+      <div class="space-y-4" x-show="!ok">
+        <div>
+          <label class="text-xs font-medium text-slate-500">Nuova password</label>
+          <input x-model="nuova" type="password" placeholder="almeno 8 caratteri" autocomplete="new-password"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500">Conferma password</label>
+          <input x-model="conferma" type="password" placeholder="ripeti la password" autocomplete="new-password" @keyup.enter="salva()"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <template x-if="errore">
+          <p class="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg" x-text="errore"></p>
+        </template>
+        <button @click="salva()" :disabled="salvando"
+                class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl active:bg-blue-800 disabled:opacity-50">
+          <span x-show="!salvando">Salva nuova password</span>
+          <span x-show="salvando">Salvataggio…</span>
+        </button>
+      </div>
+
+      <div class="space-y-4" x-show="ok" x-cloak>
+        <p class="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">Password aggiornata! Ora puoi accedere con la nuova password.</p>
+        <button @click="vaiAlLogin()"
+                class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl active:bg-blue-800">
+          Vai all'accesso →
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1776,6 +1842,12 @@
                   <div>
                     <label class="text-xs font-medium text-slate-500">Nome *</label>
                     <input x-model="form.nome" type="text" placeholder="Nome Cognome"
+                           class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <!-- Email (solo nuovo — serve per il login e il recupero password) -->
+                  <div x-show="!corrente">
+                    <label class="text-xs font-medium text-slate-500">Email * <span class="text-slate-400 font-normal">(per il login)</span></label>
+                    <input x-model="form.email" type="email" placeholder="nome@esempio.it" autocomplete="off"
                            class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                   <!-- Username (solo nuovo) -->

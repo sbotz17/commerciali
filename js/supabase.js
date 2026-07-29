@@ -9,6 +9,10 @@
 const SUPABASE_URL  = "https://segbfdfoqxrnitboeyof.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2JmZGZvcXhybml0Ym9leW9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzIxNzksImV4cCI6MjA5NzcwODE3OX0.v5ZGCkqTduegxFaa6GOYUIIHrQ5cQe0JFB7PGO93XNo";
 
+// Cattura SUBITO (in modo sincrono) se stiamo arrivando da un link di recupero
+// password: la libreria Supabase ripulisce l'hash dall'URL poco dopo l'init.
+const _RECOVERY_FLAG = (window.location.hash || "").includes("type=recovery");
+
 // Inizializza client (CDN carica la libreria come window.supabase)
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
@@ -304,7 +308,7 @@ const SP = {
   async getUtenti() {
     const { data, error } = await _sb
       .from("utenti")
-      .select("id, username, nome, ruolo, attivo, avatar, menu_utente, created_at")
+      .select("id, username, email, nome, ruolo, attivo, avatar, menu_utente, created_at")
       .order("nome");
     if (error) { console.error("getUtenti:", error.message); return []; }
     return data;
@@ -315,6 +319,7 @@ const SP = {
       .from("utenti")
       .insert([{
         username:      dati.username.trim().toLowerCase(),
+        email:         (dati.email || "").trim().toLowerCase() || null,
         password_hash: passwordHash,
         nome:          dati.nome        || "",
         ruolo:         dati.ruolo       || "commerciale",
@@ -322,7 +327,7 @@ const SP = {
         menu_utente:   dati.menu_utente || null,
         attivo:        true,
       }])
-      .select("id, username, nome, ruolo, attivo, avatar, menu_utente")
+      .select("id, username, email, nome, ruolo, attivo, avatar, menu_utente")
       .single();
     if (error) { console.error("inserisciUtente:", error.message); return null; }
     return data;
@@ -346,7 +351,7 @@ const SP = {
       .from("utenti")
       .update(aggiornamenti)
       .eq("id", id)
-      .select("id, username, nome, ruolo, attivo, avatar, menu_utente")
+      .select("id, username, email, nome, ruolo, attivo, avatar, menu_utente")
       .single();
     if (error) { console.error("aggiornaUtente:", error.message); return null; }
     return data;
