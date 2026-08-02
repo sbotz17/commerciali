@@ -122,6 +122,16 @@ document.addEventListener("alpine:init", () => {
     get logo()        { return this.impostazioni.logo || null; },
     get nomeAzienda() { return this.impostazioni.nome_azienda || "Configuratore"; },
 
+    // Preventivi visibili all'utente corrente:
+    // chi ha il permesso "preventivi_tutti" (es. amministratore) li vede tutti;
+    // gli altri commerciali vedono SOLO i preventivi emessi da loro stessi.
+    get preventiviVisibili() {
+      const sess = Alpine.store("sessione");
+      if (!sess.loggato) return [];
+      if (sess.haPermesso("preventivi_tutti")) return this.preventivi;
+      return this.preventivi.filter(p => p.utente_id === sess.utente?.id);
+    },
+
     async init() {
       // Carica impostazioni da localStorage (sincrono, sempre disponibile)
       try {
@@ -142,8 +152,10 @@ document.addEventListener("alpine:init", () => {
         try { this.ruoli = await SP.getRuoli(); } catch (_) { /* schema v3 non ancora eseguito */ }
 
         const sess = Alpine.store("sessione");
+        // I commerciali scaricano solo i propri preventivi; chi ha "preventivi_tutti" (admin) li scarica tutti
+        const soloMiei = sess.haPermesso("preventivi_tutti") ? null : (sess.utente?.id || "__nessuno__");
         const fetches = [
-          SP.getProdotti(), SP.getClienti(), SP.getPreventivi(), SP.getCategorie(),
+          SP.getProdotti(), SP.getClienti(), SP.getPreventivi(soloMiei), SP.getCategorie(),
         ];
         if (sess.haPermesso("gestione_utenti")) fetches.push(SP.getUtenti());
         else fetches.push(Promise.resolve([]));
@@ -482,7 +494,7 @@ function resetPasswordPage() {
 function dashboardPage() {
   return {
     get totali() {
-      const pp = Alpine.store("db").preventivi;
+      const pp = Alpine.store("db").preventiviVisibili;
       return {
         tutti:     pp.length,
         bozze:     pp.filter(p => p.stato === "bozza").length,
@@ -492,11 +504,11 @@ function dashboardPage() {
       };
     },
     get valoreAperto() {
-      return Alpine.store("db").preventivi
+      return Alpine.store("db").preventiviVisibili
         .filter(p => p.stato === "inviato" || p.stato === "bozza")
         .reduce((s, p) => s + (p.totale_iva || 0), 0);
     },
-    get ultimi()       { return Alpine.store("db").preventivi.slice(0, 5); },
+    get ultimi()       { return Alpine.store("db").preventiviVisibili.slice(0, 5); },
     get utentiAttivi() { return Alpine.store("db").utenti.filter(u => u.attivo); },
     vai(p) { Alpine.store("ui").vai(p); },
 
@@ -626,7 +638,7 @@ function clientiPage() {
     },
 
     countPreventivi(clienteId) {
-      return Alpine.store("db").preventivi.filter(p => p.cliente_id === clienteId).length;
+      return Alpine.store("db").preventiviVisibili.filter(p => p.cliente_id === clienteId).length;
     },
 
     cercandoPIVA: false,
@@ -762,12 +774,8 @@ function preventiviPage() {
   return {
     filtroStato: "tutti",
     get preventiviFiltrati() {
-      const sess = Alpine.store("sessione");
-      const tutti = Alpine.store("db").preventivi;
-      // Se ha "preventivi_tutti" → vede tutti; altrimenti solo i suoi
-      const base = sess.haPermesso("preventivi_tutti")
-        ? tutti
-        : tutti.filter(p => !p.utente_id || p.utente_id === sess.utente?.id);
+      // Base già filtrata per proprietà (admin vede tutto, commerciale solo i propri)
+      const base = Alpine.store("db").preventiviVisibili;
       return base.filter(p => this.filtroStato === "tutti" || p.stato === this.filtroStato);
     },
     get canApprova() { return Alpine.store("sessione").haPermesso("approva_preventivi", "scrittura"); },
