@@ -86,14 +86,20 @@ document.addEventListener("alpine:init", () => {
     // Shortcut: ha accesso alle sezioni di amministrazione
     get isAdmin() { return this.haPermesso("gestione_ruoli"); },
 
-    async eseguiLogin(username, password) {
-      const u = await login(username, password);
+    async eseguiLogin(email, password) {
+      const u = await login(email, password);
       if (u) { this.utente = u; return true; }
       return false;
     },
 
-    logout() {
-      cancellaSessione();
+    // Ripristina la sessione autenticata all'avvio (async)
+    async ripristina() {
+      const prof = await ripristinaSessione();
+      this.utente = prof || null;
+    },
+
+    async logout() {
+      await authLogout();
       this.utente = null;
       Alpine.store("ui").vai("dashboard");
     },
@@ -123,6 +129,9 @@ document.addEventListener("alpine:init", () => {
         const nome = localStorage.getItem("cfg_nome_azienda") || "";
         this.impostazioni = { logo, nome_azienda: nome };
       } catch (_) {}
+
+      // Ripristina la sessione Supabase Auth (async) prima di decidere cosa mostrare
+      try { await Alpine.store("sessione").ripristina(); } catch (_) {}
 
       if (!Alpine.store("sessione").loggato) {
         this.caricamento = false;
@@ -386,23 +395,83 @@ function appShell() {
 // ==========================================================
 function loginPage() {
   return {
-    username:  "",
+    email:     "",
     password:  "",
     errore:    "",
     caricando: false,
 
+    // Recupero password
+    modoRecupero:  false,
+    emailRecupero: "",
+    msgRecupero:   "",
+    inviando:      false,
+
     async esegui() {
-      if (!this.username || !this.password) { this.errore = "Inserisci username e password"; return; }
+      if (!this.email || !this.password) { this.errore = "Inserisci email e password"; return; }
       this.caricando = true;
       this.errore    = "";
-      const ok = await Alpine.store("sessione").eseguiLogin(this.username, this.password);
+      const ok = await Alpine.store("sessione").eseguiLogin(this.email, this.password);
       if (ok) {
         await Alpine.store("db").ricarica();
         Alpine.store("ui").pagina = "dashboard";
       } else {
-        this.errore = "Credenziali non valide o utente disabilitato";
+        this.errore = "Email o password non validi, oppure utente disabilitato";
       }
       this.caricando = false;
+    },
+
+    apriRecupero() {
+      this.modoRecupero  = true;
+      this.emailRecupero = this.email;
+      this.msgRecupero   = "";
+    },
+    chiudiRecupero() {
+      this.modoRecupero = false;
+    },
+    async inviaRecupero() {
+      if (!this.emailRecupero) { this.msgRecupero = "Inserisci la tua email"; return; }
+      this.inviando    = true;
+      this.msgRecupero = "";
+      await richiediRecuperoPassword(this.emailRecupero);
+      this.inviando    = false;
+      this.msgRecupero = "Se l'email è registrata riceverai a breve un link per reimpostare la password. Controlla anche la cartella spam.";
+    },
+  };
+}
+
+// ==========================================================
+// COMPONENTE: resetPasswordPage
+// Mostrata quando si arriva dal link di recupero (#type=recovery)
+// ==========================================================
+function resetPasswordPage() {
+  return {
+    attivo:   inRecuperoPassword(),
+    nuova:    "",
+    conferma: "",
+    errore:   "",
+    ok:       false,
+    salvando: false,
+
+    async salva() {
+      if (this.nuova.length < 8) { this.errore = "La password deve avere almeno 8 caratteri"; return; }
+      if (this.nuova !== this.conferma) { this.errore = "Le due password non coincidono"; return; }
+      this.salvando = true;
+      this.errore   = "";
+      const ok = await impostaNuovaPassword(this.nuova);
+      this.salvando = false;
+      if (ok) {
+        this.ok = true;
+        await authLogout();
+        // Rimuove il token di recupero dall'URL
+        history.replaceState(null, "", window.location.pathname);
+      } else {
+        this.errore = "Impossibile aggiornare la password: il link potrebbe essere scaduto. Richiedine uno nuovo dalla pagina di accesso.";
+      }
+    },
+
+    async vaiAlLogin() {
+      this.attivo = false;
+      await Alpine.store("db").ricarica();
     },
   };
 }
@@ -989,7 +1058,7 @@ function utentiPage() {
 
     apriNuovo() {
       this.corrente      = null;
-      this.form          = { username: "", nome: "", ruolo: "commerciale", attivo: true, avatar: null };
+      this.form          = { username: "", email: "", nome: "", ruolo: "commerciale", attivo: true, avatar: null };
       this.nuovaPassword = "";
       this.avatarPreview = null;
       this.menuVoci      = [];
@@ -1026,7 +1095,11 @@ function utentiPage() {
 
     async salva() {
       if (!this.form.nome || this.salvando) return;
-      if (!this.corrente && !this.nuovaPassword) { Alpine.store("ui").mostraToast("Inserisci una password", "error"); return; }
+      if (!this.corrente) {
+        if (!this.form.email) { Alpine.store("ui").mostraToast("Inserisci l'email (serve per il login)", "error"); return; }
+        if (!this.nuovaPassword) { Alpine.store("ui").mostraToast("Inserisci una password", "error"); return; }
+        if (this.nuovaPassword.length < 8) { Alpine.store("ui").mostraToast("La password deve avere almeno 8 caratteri", "error"); return; }
+      }
       this.salvando = true;
       try {
         const db = Alpine.store("db");
@@ -1034,10 +1107,18 @@ function utentiPage() {
         const menu_utente = this.menuVoci.length > 0 ? [...this.menuVoci] : null;
         if (this.corrente) {
           const dati = { ...this.form, menu_utente };
-          if (this.nuovaPassword) dati._nuovaPasswordHash = await hashPassword(this.nuovaPassword);
+          // Il cambio password è consentito solo per il proprio account (Supabase Auth)
+          const sess = Alpine.store("sessione");
+          if (this.nuovaPassword) {
+            if (sess.utente?.id === this.corrente.id) {
+              const ok = await impostaNuovaPassword(this.nuovaPassword);
+              if (!ok) { Alpine.store("ui").mostraToast("Password non aggiornata", "error"); return; }
+            } else {
+              Alpine.store("ui").mostraToast("La password di un altro utente si cambia solo con 'Password dimenticata?' dal login", "error");
+            }
+          }
           const aggiornato = await db.modificaUtente(this.corrente.id, dati);
           if (aggiornato) {
-            const sess = Alpine.store("sessione");
             if (sess.utente?.id === this.corrente.id) {
               sess.utente.avatar = aggiornato.avatar;
               sess.utente.menu_utente = aggiornato.menu_utente;
@@ -1045,9 +1126,16 @@ function utentiPage() {
           }
           Alpine.store("ui").mostraToast("Utente aggiornato");
         } else {
+          // 1) Crea l'account di login (Supabase Auth) senza sloggare l'admin
+          const res = await creaAccountLogin(this.form.email, this.nuovaPassword);
+          // 2) Crea comunque il profilo (ruolo, menu, ecc.)
           const hash = await hashPassword(this.nuovaPassword);
           await db.aggiungiUtente({ ...this.form, menu_utente }, hash);
-          Alpine.store("ui").mostraToast("Utente creato");
+          if (res.ok) {
+            Alpine.store("ui").mostraToast("Utente creato");
+          } else {
+            Alpine.store("ui").mostraToast("Profilo creato, ma il login va completato su Supabase (" + (res.msg || "signup non riuscito") + ")", "error");
+          }
         }
         this.modaleAperto = false;
       } finally { this.salvando = false; }
