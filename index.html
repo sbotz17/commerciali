@@ -275,8 +275,10 @@
             x-text="{dashboard:'Dashboard',catalogo:'Catalogo Prodotti',clienti:'Clienti',preventivi:'Configura richiesta','nuovo-preventivo':'Nuova richiesta',bandi:'Bandi & Agevolazioni',categorie:'Categorie',utenti:'Gestione Utenti',ruoli:'Ruoli & Permessi',importBandi:'Import Bandi',impostazioni:'Impostazioni'}[pagina] || pagina">
         </h2>
 
-        <!-- Azioni topbar -->
-        <div class="flex items-center gap-2 shrink-0">
+        <!-- Azioni topbar: pulsante "Nuova richiesta" solo nelle pagine operative
+             e solo a chi può creare preventivi (nascosto su ruoli/utenti/impostazioni, ecc.) -->
+        <div class="flex items-center gap-2 shrink-0"
+             x-show="['dashboard','preventivi','clienti','catalogo','bandi'].includes(pagina) && puoLeggere('preventivi_propri')">
           <button @click="$store.ui.vai('nuovo-preventivo')"
                   class="btn-tap flex items-center gap-1.5 bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-blue-800 active:bg-blue-800 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
