@@ -168,6 +168,7 @@
          SIDEBAR
     ==================================================== -->
     <aside :class="sidebarAperta ? 'translate-x-0' : '-translate-x-full md:translate-x-0'"
+           style="height:100vh; height:100dvh;"
            class="fixed md:sticky top-0 left-0 z-40 h-screen w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-200 ease-in-out shrink-0">
 
       <!-- Logo aziendale -->
@@ -231,7 +232,7 @@
       </nav>
 
       <!-- Utente + logout -->
-      <div class="border-t border-slate-100 p-3">
+      <div class="border-t border-slate-100 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-slate-50/60">
         <div class="flex items-center gap-3 px-2 py-2 rounded-xl">
           <!-- Avatar: foto se disponibile, altrimenti iniziale -->
           <template x-if="$store.sessione.utente?.avatar">
