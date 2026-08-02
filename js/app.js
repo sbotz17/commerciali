@@ -185,12 +185,12 @@ document.addEventListener("alpine:init", () => {
     // --- Prodotti ---
     async aggiungiProdotto(dati) {
       const p = await SP.inserisciProdotto(dati);
-      if (p) this.prodotti.push(p);
+      if (p && !p.__errore) this.prodotti.push(p);
       return p;
     },
     async modificaProdotto(id, dati) {
       const p = await SP.aggiornaProdotto(id, dati);
-      if (p) { const i = this.prodotti.findIndex(x => x.id === id); if (i !== -1) this.prodotti[i] = p; }
+      if (p && !p.__errore) { const i = this.prodotti.findIndex(x => x.id === id); if (i !== -1) this.prodotti[i] = p; }
       return p;
     },
     async eliminaProdotto(id) {
@@ -560,31 +560,52 @@ function catalogoPage() {
       this.modaleAperto = true;
     },
 
-    // Immagine articolo (base64, max 500KB come il logo/avatar)
+    // Immagine articolo: ridimensiona/comprimi nel browser così qualsiasi
+    // foto (anche da smartphone, diversi MB) diventa piccola e salvabile.
     caricaImmagine(event) {
       const file = event.target.files[0];
       if (!file) return;
-      if (file.size > 500 * 1024) {
-        Alpine.store("ui").mostraToast("Immagine troppo grande (max 500KB)", "error");
+      if (!file.type.startsWith("image/")) {
+        Alpine.store("ui").mostraToast("Il file selezionato non è un'immagine", "error");
         event.target.value = "";
         return;
       }
       const reader = new FileReader();
-      reader.onload = (e) => { this.form.immagine = e.target.result; };
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 800;                 // lato massimo in px
+          let w = img.width, h = img.height;
+          if (w > MAX || h > MAX) {
+            if (w >= h) { h = Math.round(h * MAX / w); w = MAX; }
+            else        { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          // JPEG compresso ~0.82: tipicamente 50–150 KB
+          this.form.immagine = canvas.toDataURL("image/jpeg", 0.82);
+        };
+        img.onerror = () => Alpine.store("ui").mostraToast("Immagine non valida o danneggiata", "error");
+        img.src = e.target.result;
+      };
+      reader.onerror = () => Alpine.store("ui").mostraToast("Impossibile leggere il file", "error");
       reader.readAsDataURL(file);
+      event.target.value = "";
     },
     rimuoviImmagine() { this.form.immagine = null; },
     async salva() {
       if (!this.form.nome || !this.form.prezzo || this.salvando) return;
       this.salvando = true;
       try {
-        if (this.corrente) {
-          await Alpine.store("db").modificaProdotto(this.corrente.id, this.form);
-          Alpine.store("ui").mostraToast("Prodotto aggiornato");
-        } else {
-          await Alpine.store("db").aggiungiProdotto(this.form);
-          Alpine.store("ui").mostraToast("Prodotto aggiunto");
+        const res = this.corrente
+          ? await Alpine.store("db").modificaProdotto(this.corrente.id, this.form)
+          : await Alpine.store("db").aggiungiProdotto(this.form);
+        if (!res || res.__errore) {
+          Alpine.store("ui").mostraToast("Errore salvataggio: " + ((res && res.__errore) || "nessuna risposta dal database"), "error");
+          return; // NON chiude il modale, così non si perde il lavoro
         }
+        Alpine.store("ui").mostraToast(this.corrente ? "Prodotto aggiornato" : "Prodotto aggiunto");
         this.modaleAperto = false;
       } finally { this.salvando = false; }
     },

@@ -46,7 +46,7 @@ const SP = {
       }])
       .select()
       .single();
-    if (error) { console.error("inserisciProdotto:", error.message); return null; }
+    if (error) { console.error("inserisciProdotto:", error.message); return { __errore: error.message }; }
     return data;
   },
 
@@ -63,7 +63,7 @@ const SP = {
       .eq("id", id)
       .select()
       .single();
-    if (error) { console.error("aggiornaProdotto:", error.message); return null; }
+    if (error) { console.error("aggiornaProdotto:", error.message); return { __errore: error.message }; }
     return data;
   },
 
