@@ -121,6 +121,8 @@ document.addEventListener("alpine:init", () => {
     // Getter impostazioni — leggono dalla store reattiva (aggiornata al save)
     get logo()        { return this.impostazioni.logo || null; },
     get nomeAzienda() { return this.impostazioni.nome_azienda || "Configuratore"; },
+    // Flag: mostra le immagini degli articoli nei preventivi (default: attivo)
+    get mostraImmaginiPreventivi() { return this.impostazioni.mostra_immagini_preventivi !== false; },
 
     // Preventivi visibili all'utente corrente:
     // chi ha il permesso "preventivi_tutti" (es. amministratore) li vede tutti;
@@ -137,7 +139,8 @@ document.addEventListener("alpine:init", () => {
       try {
         const logo = JSON.parse(localStorage.getItem("cfg_logo") || "null");
         const nome = localStorage.getItem("cfg_nome_azienda") || "";
-        this.impostazioni = { logo, nome_azienda: nome };
+        const mostraImg = localStorage.getItem("cfg_mostra_immagini_preventivi") !== "false"; // default true
+        this.impostazioni = { logo, nome_azienda: nome, mostra_immagini_preventivi: mostraImg };
       } catch (_) {}
 
       // Ripristina la sessione Supabase Auth (async) prima di decidere cosa mostrare
@@ -547,7 +550,7 @@ function catalogoPage() {
     apriNuovo() {
       if (!this.canWrite) return;
       this.corrente = null;
-      this.form = { nome: "", categoria: Alpine.store("db").categorie[0]?.nome || "", prezzo: "", descrizione: "" };
+      this.form = { nome: "", categoria: Alpine.store("db").categorie[0]?.nome || "", prezzo: "", descrizione: "", immagine: null };
       this.modaleAperto = true;
     },
     apriModifica(p) {
@@ -556,6 +559,21 @@ function catalogoPage() {
       this.form = { ...p };
       this.modaleAperto = true;
     },
+
+    // Immagine articolo (base64, max 500KB come il logo/avatar)
+    caricaImmagine(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (file.size > 500 * 1024) {
+        Alpine.store("ui").mostraToast("Immagine troppo grande (max 500KB)", "error");
+        event.target.value = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => { this.form.immagine = e.target.result; };
+      reader.readAsDataURL(file);
+    },
+    rimuoviImmagine() { this.form.immagine = null; },
     async salva() {
       if (!this.form.nome || !this.form.prezzo || this.salvando) return;
       this.salvando = true;
@@ -776,7 +794,9 @@ function preventiviPage() {
     get preventiviFiltrati() {
       // Base già filtrata per proprietà (admin vede tutto, commerciale solo i propri)
       const base = Alpine.store("db").preventiviVisibili;
-      return base.filter(p => this.filtroStato === "tutti" || p.stato === this.filtroStato);
+      if (this.filtroStato === "tutti") return base;
+      const f = this.filtroStato;
+      return base.filter(p => (p.stato || "").toLowerCase().trim() === f);
     },
     get canApprova() { return Alpine.store("sessione").haPermesso("approva_preventivi", "scrittura"); },
     async cambiaStato(id, stato) {
@@ -904,7 +924,7 @@ function nuovoPreventivo() {
       } else {
         this.righe.push({
           prodottoId: p.id, codice: this._codiceProdotto(p),
-          nome: p.nome, prezzo: p.prezzo,
+          nome: p.nome, prezzo: p.prezzo, immagine: p.immagine || null,
           qty: 1, um: "pz",
           scontoPerc: 0, scontoVal: 0, ivaPerc: 22,
         });
@@ -1167,10 +1187,22 @@ function impostazioniPage() {
     logoPreview: null,
     nomeAzienda: "",
 
+    mostraImmaginiPreventivi: true,
+
     init() {
       // Lettura diretta da localStorage — sincrono, zero dipendenze
       try { this.logoPreview = JSON.parse(localStorage.getItem("cfg_logo") || "null"); } catch (_) {}
       this.nomeAzienda = localStorage.getItem("cfg_nome_azienda") || "";
+      this.mostraImmaginiPreventivi = localStorage.getItem("cfg_mostra_immagini_preventivi") !== "false"; // default true
+    },
+
+    // Salva il flag "mostra immagini nei preventivi"
+    salvaMostraImmagini() {
+      localStorage.setItem("cfg_mostra_immagini_preventivi", this.mostraImmaginiPreventivi ? "true" : "false");
+      const _db = Alpine.store("db");
+      _db.impostazioni = { ..._db.impostazioni, mostra_immagini_preventivi: this.mostraImmaginiPreventivi };
+      SP.salvaImpostazione("mostra_immagini_preventivi", this.mostraImmaginiPreventivi ? "true" : "false").catch(() => {});
+      Alpine.store("ui").mostraToast(this.mostraImmaginiPreventivi ? "Immagini nei preventivi attivate" : "Immagini nei preventivi disattivate");
     },
 
     caricaLogo(event) {
