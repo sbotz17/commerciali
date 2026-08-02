@@ -188,11 +188,14 @@ const SP = {
   // ----------------------------------------------------------
   // PREVENTIVI
   // ----------------------------------------------------------
-  async getPreventivi() {
-    const { data, error } = await _sb
+  async getPreventivi(soloUtenteId = null) {
+    let query = _sb
       .from("preventivi")
       .select("*")
       .order("created_at", { ascending: false });
+    // Se richiesto, scarica solo i preventivi di un dato commerciale
+    if (soloUtenteId) query = query.eq("utente_id", soloUtenteId);
+    const { data, error } = await query;
     if (error) { console.error("getPreventivi:", error.message); return []; }
     // Normalizza: mappa created_at → data per compatibilità con il resto del codice
     return data.map(p => ({ ...p, data: p.created_at }));
@@ -205,6 +208,7 @@ const SP = {
       .insert([{
         cliente_id:   dati.clienteId   || null,
         cliente_nome: dati.clienteNome || "",
+        utente_id:    (typeof getUtenteSessione === "function" ? getUtenteSessione()?.id : null) || null,
         righe:        dati.righe       || [],
         sconto:       dati.sconto      || 0,
         note:         dati.note        || "",
