@@ -41,6 +41,7 @@ const SP = {
         categoria:   dati.categoria || "software",
         prezzo:      parseFloat(dati.prezzo) || 0,
         descrizione: dati.descrizione || "",
+        immagine:    dati.immagine || null,
         attivo:      true,
       }])
       .select()
@@ -57,6 +58,7 @@ const SP = {
         categoria:   dati.categoria,
         prezzo:      parseFloat(dati.prezzo) || 0,
         descrizione: dati.descrizione || "",
+        immagine:    dati.immagine || null,
       })
       .eq("id", id)
       .select()
