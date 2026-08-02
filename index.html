@@ -12,10 +12,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=9"></script>
-  <script src="js/supabase.js?v=9"></script>
-  <script src="js/auth.js?v=9"></script>
-  <script src="js/app.js?v=9"></script>
+  <script src="js/bandi-data.js?v=10"></script>
+  <script src="js/supabase.js?v=10"></script>
+  <script src="js/auth.js?v=10"></script>
+  <script src="js/app.js?v=10"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -937,43 +937,34 @@
                   <input x-model="ricercaProdotto" type="search" placeholder="Cerca…" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
                 </div>
               </div>
-              <!-- Tabella prodotti -->
-              <div class="overflow-y-auto flex-1">
-                <table class="w-full text-sm">
-                  <thead class="sticky top-0 bg-slate-50 border-b border-slate-100">
-                    <tr>
-                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Codice</th>
-                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Prodotto</th>
-                      <th class="text-left px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider hidden sm:table-cell">Cat.</th>
-                      <th class="text-right px-4 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">Prezzo</th>
-                      <th class="px-4 py-2.5"></th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-50">
-                    <template x-for="p in prodottiFiltrati" :key="p.id">
-                      <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="px-4 py-3">
-                          <span class="text-xs font-bold text-blue-600 font-mono" x-text="_codiceProdotto(p)"></span>
-                        </td>
-                        <td class="px-4 py-3">
-                          <p class="font-medium text-slate-800" x-text="p.nome"></p>
-                          <p class="text-xs text-slate-400 mt-0.5" x-text="p.descrizione"></p>
-                        </td>
-                        <td class="px-4 py-3 hidden sm:table-cell text-slate-500 capitalize" x-text="p.categoria"></td>
-                        <td class="px-4 py-3 text-right font-bold text-slate-800 whitespace-nowrap" x-text="fmt(p.prezzo)"></td>
-                        <td class="px-4 py-3">
-                          <button @click="aggiungiProdotto(p)"
-                                  class="btn-tap whitespace-nowrap bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg hover:bg-blue-800">
-                            + Aggiungi
-                          </button>
-                        </td>
-                      </tr>
-                    </template>
-                    <template x-if="prodottiFiltrati.length === 0">
-                      <tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Nessun prodotto trovato</td></tr>
-                    </template>
-                  </tbody>
-                </table>
+              <!-- Lista prodotti (schede responsive: tocca una riga per aggiungerla) -->
+              <div class="overflow-y-auto flex-1 divide-y divide-slate-100">
+                <template x-for="p in prodottiFiltrati" :key="p.id">
+                  <button @click="aggiungiProdotto(p)" type="button"
+                          class="btn-tap w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-slate-50 active:bg-slate-100 transition-colors">
+                    <!-- Immagine prodotto -->
+                    <img x-show="p.immagine" :src="p.immagine" :alt="p.nome"
+                         class="w-12 h-12 rounded-lg object-contain bg-slate-50 border border-slate-100 shrink-0" />
+                    <div x-show="!p.immagine" class="w-12 h-12 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-xl text-slate-300 shrink-0">📦</div>
+                    <!-- Info -->
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-[11px] font-bold text-blue-600 font-mono shrink-0" x-text="_codiceProdotto(p)"></span>
+                        <span class="text-[11px] text-slate-400 capitalize truncate" x-text="p.categoria"></span>
+                      </div>
+                      <p class="font-medium text-slate-800 text-sm truncate" x-text="p.nome"></p>
+                      <p class="text-xs text-slate-400 truncate" x-text="p.descrizione"></p>
+                    </div>
+                    <!-- Prezzo + azione -->
+                    <div class="shrink-0 text-right">
+                      <p class="text-sm font-bold text-slate-800 whitespace-nowrap" x-text="fmt(p.prezzo)"></p>
+                      <span class="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-white bg-blue-700 px-2.5 py-1 rounded-lg">+ Aggiungi</span>
+                    </div>
+                  </button>
+                </template>
+                <template x-if="prodottiFiltrati.length === 0">
+                  <div class="text-center py-8 text-slate-400 text-sm">Nessun prodotto trovato</div>
+                </template>
               </div>
               <!-- Footer modal -->
               <div x-show="righe.length > 0" class="px-5 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50 rounded-b-2xl">
