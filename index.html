@@ -1058,10 +1058,12 @@
                   </button>
                 </div>
 
-                <!-- Tabella righe (scrollabile su mobile) -->
+                <!-- Righe preventivo: tabella su desktop/tablet, schede su mobile -->
                 <template x-if="righe.length > 0">
-                  <div class="overflow-x-auto">
-                    <table class="w-full text-sm min-w-[700px]">
+                  <div>
+                    <!-- Desktop / tablet: tabella con scroll orizzontale -->
+                    <div class="hidden sm:block overflow-x-auto">
+                    <table class="w-full text-sm min-w-[640px]">
                       <thead class="bg-slate-50 border-b border-slate-100">
                         <tr>
                           <th class="text-left px-3 py-2.5 text-xs font-semibold text-slate-400 uppercase tracking-wider w-20">Codice</th>
@@ -1121,6 +1123,66 @@
                         </template>
                       </tbody>
                     </table>
+                    </div>
+
+                    <!-- Mobile: una scheda per riga -->
+                    <div class="sm:hidden divide-y divide-slate-100">
+                      <template x-for="(r, i) in righe" :key="i">
+                        <div class="p-4 space-y-3">
+                          <!-- Codice + descrizione + rimuovi -->
+                          <div class="flex items-start gap-2">
+                            <div class="flex-1 min-w-0">
+                              <span class="text-[10px] font-bold text-blue-600 font-mono" x-text="r.codice"></span>
+                              <input x-model="r.nome" type="text" placeholder="Descrizione"
+                                     class="mt-0.5 w-full border border-slate-200 rounded-lg px-2 py-2 text-sm font-medium text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </div>
+                            <button @click="rimuoviRiga(i)" class="btn-tap shrink-0 p-2 -mr-1 text-red-300 hover:text-red-500">
+                              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                          </div>
+                          <!-- Campi -->
+                          <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                              <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Q.tà</label>
+                              <input x-model.number="r.qty" type="number" min="1" inputmode="numeric"
+                                     class="mt-0.5 w-full text-center border border-slate-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </div>
+                            <div>
+                              <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">UM</label>
+                              <input x-model="r.um" type="text"
+                                     class="mt-0.5 w-full text-center border border-slate-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </div>
+                            <div>
+                              <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Prezzo €</label>
+                              <input x-model.number="r.prezzo" type="number" min="0" step="0.01" inputmode="decimal"
+                                     class="mt-0.5 w-full text-right border border-slate-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </div>
+                            <div>
+                              <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">IVA %</label>
+                              <input x-model.number="r.ivaPerc" type="number" min="0" max="100" inputmode="numeric"
+                                     class="mt-0.5 w-full text-center border border-slate-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </div>
+                            <div>
+                              <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Sconto %</label>
+                              <input x-model.number="r.scontoPerc" type="number" min="0" :max="scontoMax" step="0.1" inputmode="decimal"
+                                     @change="aggiornaScontoPerc(i)"
+                                     class="mt-0.5 w-full text-center border border-slate-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </div>
+                            <div>
+                              <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Sconto €</label>
+                              <input x-model.number="r.scontoVal" type="number" min="0" step="0.01" inputmode="decimal"
+                                     @change="aggiornaScontoVal(i)"
+                                     class="mt-0.5 w-full text-center border border-slate-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </div>
+                          </div>
+                          <!-- Totale riga -->
+                          <div class="flex items-center justify-between border-t border-slate-100 pt-2.5">
+                            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Totale riga</span>
+                            <span class="text-sm font-bold text-slate-800" x-text="fmt(totaleRiga(r))"></span>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
                   </div>
                 </template>
 
