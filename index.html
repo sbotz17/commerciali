@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=21"></script>
-  <script src="js/supabase.js?v=21"></script>
-  <script src="js/auth.js?v=21"></script>
-  <script src="js/app.js?v=21"></script>
+  <script src="js/bandi-data.js?v=22"></script>
+  <script src="js/supabase.js?v=22"></script>
+  <script src="js/auth.js?v=22"></script>
+  <script src="js/app.js?v=22"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -965,6 +965,13 @@
                           <span class="text-xs text-slate-400" x-text="dettaglioP.stato === 'revisionato' ? '🔒 sola lettura (versione superata)' : '🔒 sola lettura'"></span>
                         </div>
                       </template>
+                    </div>
+                    <!-- Modifica (solo stati autorizzati: Bozza / In attesa) -->
+                    <div x-show="['bozza','inviato'].includes(dettaglioP.stato)">
+                      <button @click="dettaglioAperto=false; riprendi(dettaglioP)"
+                              class="btn-tap w-full flex items-center justify-center gap-2 bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-blue-800">
+                        ✏️ Modifica preventivo
+                      </button>
                     </div>
                     <!-- Revisione (In attesa / Accettato / Rifiutato) -->
                     <div x-show="['inviato','accettato','rifiutato'].includes(dettaglioP.stato)">
