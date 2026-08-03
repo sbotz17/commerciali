@@ -2,6 +2,34 @@
 // app.js — Store Alpine.js + logica componenti + utilities
 // ============================================================
 
+// ============================================================
+// AUTO-AGGIORNAMENTO
+// Se online è disponibile una versione più nuova dell'app (numero ?v=
+// diverso da quello caricato), ricarica automaticamente la pagina con
+// un indirizzo "fresco" per bypassare la cache del browser.
+// Attivo dalla prima volta che questo file viene caricato.
+// ============================================================
+(function () {
+  try {
+    const src = (document.currentScript && document.currentScript.src) || "";
+    const cur = src.match(/[?&]v=(\d+)/);
+    const APP_VERSION = cur ? cur[1] : null;
+    if (!APP_VERSION) return;
+    fetch(location.pathname + "?_check=" + Date.now(), { cache: "no-store" })
+      .then(r => r.text())
+      .then(html => {
+        const m = html.match(/app\.js\?v=(\d+)/);
+        if (!m) return;
+        const live = m[1];
+        if (live !== APP_VERSION && sessionStorage.getItem("cfg_reload_v") !== live) {
+          sessionStorage.setItem("cfg_reload_v", live); // evita loop
+          location.replace(location.pathname + "?_v=" + live);
+        }
+      })
+      .catch(() => {});
+  } catch (_) {}
+})();
+
 // ==========================================================
 // PERMESSI_DEF — definizione centralizzata di tutti i permessi
 // ==========================================================
