@@ -273,6 +273,12 @@ const SP = {
       .eq("id", vecchio.id);
     if (e1) { console.error("creaRevisione (vecchio):", e1.message); return { __errore: e1.message }; }
 
+    // Numero univoco che mantiene la parentela: base + "-R" + numero revisione
+    // (la colonna numero ha un vincolo UNIQUE, quindi non si può riusare lo stesso)
+    const baseNum  = (vecchio.numero || "").replace(/-R\d+$/, "");
+    const nuovaRev = (vecchio.revisione || 0) + 1;
+    const nuovoNumero = baseNum ? `${baseNum}-R${nuovaRev}` : null;
+
     const { data, error } = await _sb
       .from("preventivi")
       .insert([{
@@ -288,8 +294,8 @@ const SP = {
         iva:          vecchio.iva          || 0,
         totale_iva:   vecchio.totale_iva   || 0,
         stato:        "inviato",
-        numero:       vecchio.numero       || null,
-        revisione:    (vecchio.revisione || 0) + 1,
+        numero:       nuovoNumero,
+        revisione:    nuovaRev,
       }])
       .select()
       .single();
