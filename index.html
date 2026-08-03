@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=20"></script>
-  <script src="js/supabase.js?v=20"></script>
-  <script src="js/auth.js?v=20"></script>
-  <script src="js/app.js?v=20"></script>
+  <script src="js/bandi-data.js?v=21"></script>
+  <script src="js/supabase.js?v=21"></script>
+  <script src="js/auth.js?v=21"></script>
+  <script src="js/app.js?v=21"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -909,7 +909,7 @@
                     <p class="text-base font-bold text-blue-700" x-text="fmt(p.totale_iva)"></p>
                     <div class="flex gap-1.5 flex-wrap">
                       <button @click.stop="esportaPDF(p)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-800">📄 PDF</button>
-                      <button @click.stop="riprendi(p)"                   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">✏️ Modifica</button>
+                      <button @click.stop="riprendi(p)"                   x-show="p.stato==='bozza' || p.stato==='inviato'"   class="btn-tap text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">✏️ Modifica</button>
                       <button @click.stop="cambiaStato(p.id,'inviato')"   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg hover:bg-amber-100">Invia</button>
                       <button @click.stop="cambiaStato(p.id,'accettato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100">Accetta</button>
                       <button @click.stop="cambiaStato(p.id,'rifiutato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Rifiuta</button>
@@ -945,15 +945,8 @@
                     <!-- Stato -->
                     <div>
                       <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Stato</label>
-                      <!-- Revisionato: SOLA LETTURA (non modificabile) -->
-                      <template x-if="dettaglioP.stato === 'revisionato'">
-                        <div class="mt-1.5 flex items-center gap-2">
-                          <span class="text-xs px-2 py-1 rounded-full font-medium" :class="statoClasse(dettaglioP.stato)" x-text="statoLabel(dettaglioP.stato)"></span>
-                          <span class="text-xs text-slate-400">🔒 sola lettura (versione superata)</span>
-                        </div>
-                      </template>
-                      <!-- Altri stati: modificabile -->
-                      <template x-if="dettaglioP.stato !== 'revisionato'">
+                      <!-- Bozza / In attesa: stato modificabile -->
+                      <template x-if="['bozza','inviato'].includes(dettaglioP.stato)">
                         <div class="mt-1.5 flex items-center gap-3">
                           <select x-model="dettaglioP.stato" @change="cambiaStato(dettaglioP.id, dettaglioP.stato)"
                                   class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
@@ -965,9 +958,16 @@
                           <span class="text-xs px-2 py-1 rounded-full font-medium shrink-0" :class="statoClasse(dettaglioP.stato)" x-text="statoLabel(dettaglioP.stato)"></span>
                         </div>
                       </template>
+                      <!-- Accettato / Rifiutato / Revisionato: SOLA LETTURA -->
+                      <template x-if="!['bozza','inviato'].includes(dettaglioP.stato)">
+                        <div class="mt-1.5 flex items-center gap-2">
+                          <span class="text-xs px-2 py-1 rounded-full font-medium" :class="statoClasse(dettaglioP.stato)" x-text="statoLabel(dettaglioP.stato)"></span>
+                          <span class="text-xs text-slate-400" x-text="dettaglioP.stato === 'revisionato' ? '🔒 sola lettura (versione superata)' : '🔒 sola lettura'"></span>
+                        </div>
+                      </template>
                     </div>
-                    <!-- Revisione (solo se In attesa) -->
-                    <div x-show="dettaglioP.stato === 'inviato'">
+                    <!-- Revisione (In attesa / Accettato / Rifiutato) -->
+                    <div x-show="['inviato','accettato','rifiutato'].includes(dettaglioP.stato)">
                       <button @click="revisiona(dettaglioP)"
                               class="btn-tap w-full flex items-center justify-center gap-2 bg-purple-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-purple-700">
                         🔁 Crea nuova revisione

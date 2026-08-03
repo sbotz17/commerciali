@@ -857,9 +857,9 @@ function preventiviPage() {
     dettaglioP:      null,
     apriDettaglio(p) { this.dettaglioP = p; this.dettaglioAperto = true; },
 
-    // Revisione: disponibile per i preventivi "In attesa" (inviato)
+    // Revisione: disponibile per "In attesa", "Accettato" e "Rifiutato"
     async revisiona(p) {
-      if (!p || p.stato !== "inviato") return;
+      if (!p || !["inviato", "accettato", "rifiutato"].includes(p.stato)) return;
       if (!confirm("Creare una nuova revisione?\nIl preventivo attuale verrà segnato come 'Revisionato' e potrai modificare la nuova versione (Rev. " + ((p.revisione || 0) + 1) + ").")) return;
       const nuovo = await Alpine.store("db").revisiona(p);
       if (!nuovo || nuovo.__errore) {
