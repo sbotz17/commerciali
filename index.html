@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=14"></script>
-  <script src="js/supabase.js?v=14"></script>
-  <script src="js/auth.js?v=14"></script>
-  <script src="js/app.js?v=14"></script>
+  <script src="js/bandi-data.js?v=15"></script>
+  <script src="js/supabase.js?v=15"></script>
+  <script src="js/auth.js?v=15"></script>
+  <script src="js/app.js?v=15"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -877,7 +877,7 @@
         <section x-show="pagina === 'preventivi'" x-data="preventiviPage()">
           <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-5">
             <div class="flex gap-2 overflow-x-auto pb-1 no-scrollbar flex-1">
-              <template x-for="s in [{id:'tutti',l:'Tutti'},{id:'bozza',l:'Bozze'},{id:'inviato',l:'In attesa'},{id:'accettato',l:'Accettati'},{id:'rifiutato',l:'Rifiutati'}]" :key="s.id">
+              <template x-for="s in [{id:'tutti',l:'Tutti'},{id:'bozza',l:'Bozze'},{id:'inviato',l:'In attesa'},{id:'accettato',l:'Accettati'},{id:'rifiutato',l:'Rifiutati'},{id:'revisionato',l:'Revisionati'}]" :key="s.id">
                 <button @click="filtroStato = s.id" :class="filtroStato === s.id ? 'bg-blue-700 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:border-blue-300'"
                         class="btn-tap flex-none text-xs font-medium px-3 py-1.5 rounded-full whitespace-nowrap shadow-sm" x-text="s.l"></button>
               </template>
@@ -898,6 +898,7 @@
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
                       <p class="text-sm font-bold text-slate-800" x-text="p.numero"></p>
+                      <span x-show="p.revisione > 0" class="text-xs font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded" x-text="'Rev. ' + p.revisione"></span>
                       <span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="statoClasse(p.stato)" x-text="statoLabel(p.stato)"></span>
                     </div>
                     <p class="text-xs text-slate-500 mt-0.5" x-text="p.cliente_nome + ' · ' + fmtData(p.data)"></p>
@@ -928,7 +929,10 @@
                   <!-- Header -->
                   <div class="flex items-start justify-between px-5 py-4 border-b border-slate-100">
                     <div class="min-w-0">
-                      <h3 class="text-base font-bold text-slate-800 truncate" x-text="dettaglioP.numero"></h3>
+                      <div class="flex items-center gap-2">
+                        <h3 class="text-base font-bold text-slate-800 truncate" x-text="dettaglioP.numero"></h3>
+                        <span x-show="dettaglioP.revisione > 0" class="text-xs font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded shrink-0" x-text="'Rev. ' + dettaglioP.revisione"></span>
+                      </div>
                       <p class="text-xs text-slate-500 mt-0.5 truncate" x-text="dettaglioP.cliente_nome + ' · ' + fmtData(dettaglioP.data)"></p>
                     </div>
                     <button @click="dettaglioAperto=false" class="btn-tap shrink-0 text-slate-400 hover:text-slate-600">
@@ -947,9 +951,18 @@
                           <option value="inviato">In attesa</option>
                           <option value="accettato">Accettato</option>
                           <option value="rifiutato">Rifiutato</option>
+                          <option value="revisionato">Revisionato</option>
                         </select>
                         <span class="text-xs px-2 py-1 rounded-full font-medium shrink-0" :class="statoClasse(dettaglioP.stato)" x-text="statoLabel(dettaglioP.stato)"></span>
                       </div>
+                    </div>
+                    <!-- Revisione (solo se In attesa) -->
+                    <div x-show="dettaglioP.stato === 'inviato'">
+                      <button @click="revisiona(dettaglioP)"
+                              class="btn-tap w-full flex items-center justify-center gap-2 bg-purple-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-purple-700">
+                        🔁 Crea nuova revisione
+                      </button>
+                      <p class="text-[11px] text-slate-400 mt-1 text-center">Segna questo come "Revisionato" e crea una nuova versione modificabile (Rev. successiva).</p>
                     </div>
                     <!-- Articoli -->
                     <div>

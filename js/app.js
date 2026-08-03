@@ -227,6 +227,16 @@ document.addEventListener("alpine:init", () => {
       if (ok) { const i = this.preventivi.findIndex(p => p.id === id); if (i !== -1) this.preventivi[i].stato = stato; }
       return ok;
     },
+    // Crea una revisione: il vecchio diventa "revisionato", il nuovo (Rev. N) viene aggiunto
+    async revisiona(preventivo) {
+      const nuovo = await SP.creaRevisione(preventivo);
+      if (nuovo && !nuovo.__errore) {
+        const i = this.preventivi.findIndex(p => p.id === preventivo.id);
+        if (i !== -1) this.preventivi[i].stato = "revisionato";
+        this.preventivi.unshift(nuovo);
+      }
+      return nuovo;
+    },
     async modificaPreventivo(id, dati) {
       const p = await SP.aggiornaPreventivo(id, dati);
       if (p) { const i = this.preventivi.findIndex(x => x.id === id); if (i !== -1) this.preventivi[i] = p; }
@@ -817,6 +827,20 @@ function preventiviPage() {
     dettaglioAperto: false,
     dettaglioP:      null,
     apriDettaglio(p) { this.dettaglioP = p; this.dettaglioAperto = true; },
+
+    // Revisione: disponibile per i preventivi "In attesa" (inviato)
+    async revisiona(p) {
+      if (!p || p.stato !== "inviato") return;
+      if (!confirm("Creare una nuova revisione?\nIl preventivo attuale verrà segnato come 'Revisionato' e potrai modificare la nuova versione (Rev. " + ((p.revisione || 0) + 1) + ").")) return;
+      const nuovo = await Alpine.store("db").revisiona(p);
+      if (!nuovo || nuovo.__errore) {
+        Alpine.store("ui").mostraToast("Errore revisione: " + ((nuovo && nuovo.__errore) || "nessuna risposta dal database"), "error");
+        return;
+      }
+      this.dettaglioAperto = false;
+      Alpine.store("ui").mostraToast("Creata Revisione " + nuovo.revisione);
+      this.riprendi(nuovo); // apre la nuova revisione in modifica
+    },
 
     get preventiviFiltrati() {
       // Base già filtrata per proprietà (admin vede tutto, commerciale solo i propri)
@@ -1792,15 +1816,16 @@ function fmtData(iso) {
   return new Date(iso).toLocaleDateString("it-IT");
 }
 function statoLabel(stato) {
-  return { bozza: "Bozza", inviato: "In attesa", accettato: "Accettato", rifiutato: "Rifiutato", annullato: "Annullato" }[stato] || stato;
+  return { bozza: "Bozza", inviato: "In attesa", accettato: "Accettato", rifiutato: "Rifiutato", revisionato: "Revisionato", annullato: "Annullato" }[stato] || stato;
 }
 function statoClasse(stato) {
   return {
-    bozza:     "bg-slate-100 text-slate-600",
-    inviato:   "bg-amber-100 text-amber-700",
-    accettato: "bg-green-100 text-green-700",
-    rifiutato: "bg-red-100 text-red-600",
-    annullato: "bg-red-50 text-red-400",
+    bozza:       "bg-slate-100 text-slate-600",
+    inviato:     "bg-amber-100 text-amber-700",
+    accettato:   "bg-green-100 text-green-700",
+    rifiutato:   "bg-red-100 text-red-600",
+    revisionato: "bg-purple-100 text-purple-700",
+    annullato:   "bg-red-50 text-red-400",
   }[stato] || "bg-slate-100 text-slate-600";
 }
 function tipoBandoLabel(tipo) {

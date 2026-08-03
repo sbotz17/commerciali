@@ -263,6 +263,40 @@ const SP = {
     return true;
   },
 
+  // Crea una nuova revisione di un preventivo:
+  // 1) segna il vecchio come "revisionato"
+  // 2) inserisce una copia con lo stesso numero base e revisione +1
+  async creaRevisione(vecchio) {
+    const { error: e1 } = await _sb
+      .from("preventivi")
+      .update({ stato: "revisionato" })
+      .eq("id", vecchio.id);
+    if (e1) { console.error("creaRevisione (vecchio):", e1.message); return { __errore: e1.message }; }
+
+    const { data, error } = await _sb
+      .from("preventivi")
+      .insert([{
+        cliente_id:   vecchio.cliente_id   || null,
+        cliente_nome: vecchio.cliente_nome || "",
+        utente_id:    (typeof getUtenteSessione === "function" ? getUtenteSessione()?.id : null) || vecchio.utente_id || null,
+        righe:        vecchio.righe        || [],
+        sconto:       vecchio.sconto       || 0,
+        note:         vecchio.note         || "",
+        subtotale:    vecchio.subtotale    || 0,
+        imp_sconto:   vecchio.imp_sconto   || 0,
+        imponibile:   vecchio.imponibile   || 0,
+        iva:          vecchio.iva          || 0,
+        totale_iva:   vecchio.totale_iva   || 0,
+        stato:        "inviato",
+        numero:       vecchio.numero       || null,
+        revisione:    (vecchio.revisione || 0) + 1,
+      }])
+      .select()
+      .single();
+    if (error) { console.error("creaRevisione (nuovo):", error.message); return { __errore: error.message }; }
+    return { ...data, data: data.created_at };
+  },
+
   async eliminaPreventivo(id) {
     const { error } = await _sb.from("preventivi").delete().eq("id", id);
     if (error) { console.error("eliminaPreventivo:", error.message); return false; }
