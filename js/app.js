@@ -812,6 +812,12 @@ function clientiPage() {
 function preventiviPage() {
   return {
     filtroStato: "tutti",
+
+    // Dettaglio preventivo (da qui si può cambiare liberamente lo stato)
+    dettaglioAperto: false,
+    dettaglioP:      null,
+    apriDettaglio(p) { this.dettaglioP = p; this.dettaglioAperto = true; },
+
     get preventiviFiltrati() {
       // Base già filtrata per proprietà (admin vede tutto, commerciale solo i propri)
       const base = Alpine.store("db").preventiviVisibili;
