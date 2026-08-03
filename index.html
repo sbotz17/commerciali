@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <!-- Best-effort per ridurre la cache della pagina (gli aggiornamenti HTML compaiono prima) -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
   <title>Configuratore Commerciali</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -12,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=13"></script>
-  <script src="js/supabase.js?v=13"></script>
-  <script src="js/auth.js?v=13"></script>
-  <script src="js/app.js?v=13"></script>
+  <script src="js/bandi-data.js?v=14"></script>
+  <script src="js/supabase.js?v=14"></script>
+  <script src="js/auth.js?v=14"></script>
+  <script src="js/app.js?v=14"></script>
 
   <style>
     [x-cloak] { display: none !important; }
