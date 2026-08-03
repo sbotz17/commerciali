@@ -821,8 +821,9 @@ function preventiviPage() {
     },
     get canApprova() { return Alpine.store("sessione").haPermesso("approva_preventivi", "scrittura"); },
     async cambiaStato(id, stato) {
-      await Alpine.store("db").aggiornaStato(id, stato);
-      Alpine.store("ui").mostraToast("Stato aggiornato");
+      const ok = await Alpine.store("db").aggiornaStato(id, stato);
+      if (ok) Alpine.store("ui").mostraToast("Stato aggiornato: " + statoLabel(stato));
+      else    Alpine.store("ui").mostraToast("Errore: stato non aggiornato (permessi database?)", "error");
     },
     riprendi(p) {
       Alpine.store("ui").vai("nuovo-preventivo");
