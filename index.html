@@ -12,10 +12,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=12"></script>
-  <script src="js/supabase.js?v=12"></script>
-  <script src="js/auth.js?v=12"></script>
-  <script src="js/app.js?v=12"></script>
+  <script src="js/bandi-data.js?v=13"></script>
+  <script src="js/supabase.js?v=13"></script>
+  <script src="js/auth.js?v=13"></script>
+  <script src="js/app.js?v=13"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -889,7 +889,8 @@
             </template>
             <div class="divide-y divide-slate-100">
               <template x-for="p in preventiviFiltrati" :key="p.id">
-                <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
+                <div @click="apriDettaglio(p)" role="button" tabindex="0"
+                     class="btn-tap cursor-pointer flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
                       <p class="text-sm font-bold text-slate-800" x-text="p.numero"></p>
@@ -901,13 +902,12 @@
                   <div class="flex items-center justify-between sm:justify-end gap-4">
                     <p class="text-base font-bold text-blue-700" x-text="fmt(p.totale_iva)"></p>
                     <div class="flex gap-1.5 flex-wrap">
-                      <button @click="esportaPDF(p)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-800">📄 PDF</button>
-                      <button @click="apriDettaglio(p)" class="btn-tap text-xs text-slate-700 font-medium bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200">🔍 Dettaglio</button>
-                      <button @click="riprendi(p)"                   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">✏️ Modifica</button>
-                      <button @click="cambiaStato(p.id,'inviato')"   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg hover:bg-amber-100">Invia</button>
-                      <button @click="cambiaStato(p.id,'accettato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100">Accetta</button>
-                      <button @click="cambiaStato(p.id,'rifiutato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Rifiuta</button>
-                      <button @click="elimina(p.id)"                                               class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                      <button @click.stop="esportaPDF(p)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-800">📄 PDF</button>
+                      <button @click.stop="riprendi(p)"                   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">✏️ Modifica</button>
+                      <button @click.stop="cambiaStato(p.id,'inviato')"   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg hover:bg-amber-100">Invia</button>
+                      <button @click.stop="cambiaStato(p.id,'accettato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100">Accetta</button>
+                      <button @click.stop="cambiaStato(p.id,'rifiutato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Rifiuta</button>
+                      <button @click.stop="elimina(p.id)"                                               class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
                     </div>
                   </div>
                 </div>
