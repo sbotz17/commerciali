@@ -1013,7 +1013,12 @@ function nuovoPreventivo() {
         });
       }
     },
-    rimuoviRiga(i) { this.righe.splice(i, 1); },
+    rimuoviRiga(i) {
+      const r = this.righe[i];
+      const nome = r && r.nome ? ` "${r.nome}"` : "";
+      if (!confirm(`Rimuovere la riga${nome} dal preventivo?`)) return;
+      this.righe.splice(i, 1);
+    },
 
     // ── Sconto riga (bidirezionale) ───────────────────────────
     aggiornaScontoPerc(i) {
