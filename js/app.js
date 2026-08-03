@@ -879,6 +879,7 @@ function nuovoPreventivo() {
 
     // ID preventivo in modifica (null = nuovo)
     preventivoId: null,
+    revisione:    0,
 
     // Cliente
     clienteId:        null,
@@ -911,6 +912,7 @@ function nuovoPreventivo() {
     carica(p) {
       this._reset();
       this.preventivoId     = p.id;
+      this.revisione        = p.revisione || 0;
       this.note             = p.note || "";
       this.scontoGlobaleEuro = p.imp_sconto || 0;
       this.righe            = (p.righe || []).map(r => ({ ...r }));
@@ -1064,7 +1066,7 @@ function nuovoPreventivo() {
     _reset() {
       Object.assign(this, {
         titolo:"", validita:30, note:"",
-        preventivoId: null,
+        preventivoId: null, revisione: 0,
         clienteId:null, ricercaCliente:"", dropdownCliente:false,
         modoNuovoCliente:false, formCliente:{nome:"",azienda:"",email:"",indirizzo:""},
         righe:[], scontoGlobaleEuro:0, ivaInclusa:false,
