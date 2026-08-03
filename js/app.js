@@ -14,6 +14,7 @@
     const src = (document.currentScript && document.currentScript.src) || "";
     const cur = src.match(/[?&]v=(\d+)/);
     const APP_VERSION = cur ? cur[1] : null;
+    window.APP_VERSION = APP_VERSION; // mostrato nel menu per diagnosticare la versione
     if (!APP_VERSION) return;
     fetch(location.pathname + "?_check=" + Date.now(), { cache: "no-store" })
       .then(r => r.text())

@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=19"></script>
-  <script src="js/supabase.js?v=19"></script>
-  <script src="js/auth.js?v=19"></script>
-  <script src="js/app.js?v=19"></script>
+  <script src="js/bandi-data.js?v=20"></script>
+  <script src="js/supabase.js?v=20"></script>
+  <script src="js/auth.js?v=20"></script>
+  <script src="js/app.js?v=20"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -259,6 +259,7 @@
             </svg>
           </button>
         </div>
+        <p class="text-[10px] text-slate-300 text-center mt-1" x-text="'versione ' + (window.APP_VERSION || '?')"></p>
       </div>
     </aside>
 
