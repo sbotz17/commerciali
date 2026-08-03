@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=17"></script>
-  <script src="js/supabase.js?v=17"></script>
-  <script src="js/auth.js?v=17"></script>
-  <script src="js/app.js?v=17"></script>
+  <script src="js/bandi-data.js?v=18"></script>
+  <script src="js/supabase.js?v=18"></script>
+  <script src="js/auth.js?v=18"></script>
+  <script src="js/app.js?v=18"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -1053,7 +1053,15 @@
                     <!-- Prezzo + azione -->
                     <div class="shrink-0 text-right">
                       <p class="text-sm font-bold text-slate-800 whitespace-nowrap" x-text="fmt(p.prezzo)"></p>
-                      <span class="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-white bg-blue-700 px-2.5 py-1 rounded-lg">+ Aggiungi</span>
+                      <!-- Non ancora aggiunto → "+ Aggiungi" -->
+                      <span x-show="!righe.some(r => r.prodottoId === p.id)"
+                            class="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-white bg-blue-700 px-2.5 py-1 rounded-lg">+ Aggiungi</span>
+                      <!-- Già aggiunto → baffo verde (con quantità) -->
+                      <span x-show="righe.some(r => r.prodottoId === p.id)"
+                            class="inline-flex items-center gap-1 mt-1 text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-lg">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                        <span x-text="'Aggiunto ×' + (righe.find(r => r.prodottoId === p.id)?.qty || 1)"></span>
+                      </span>
                     </div>
                   </button>
                 </template>
