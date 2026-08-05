@@ -708,7 +708,7 @@ function superAdminPage() {
         nome: "", partita_iva: "", codice_fiscale: "", indirizzo: "",
         comune: "", provincia: "", cap: "", telefono: "", email: "", pec: "",
         // Primo utente amministratore
-        metodo: "password",            // "password" | "invito"
+        metodo: "invito",              // "invito" | "password"
         adminEmail: "", adminNome: "", adminCognome: "",
         adminPassword: this.generaPassword(),
         mostraPassword: false,
@@ -756,16 +756,18 @@ function superAdminPage() {
         // 4) Ruoli, categorie e licenza trial di base
         await SP.seedAzienda(az.id);
 
-        // 5) Metodo "invito via email": manda il link per impostare la password
-        if (f.metodo === "invito") await richiediRecuperoPassword(email);
+        // 5) Invia SEMPRE l'email di accesso all'utente creato (link per
+        //    impostare/confermare la password). Vale per entrambe le modalità.
+        let emailInviata = false;
+        try { emailInviata = await richiediRecuperoPassword(email); } catch (_) {}
 
         // Messaggio finale
-        if (f.metodo === "invito") {
-          Alpine.store("ui").mostraToast("Azienda creata. Invito inviato a " + email);
-        } else if (!resAuth.ok) {
-          Alpine.store("ui").mostraToast("Azienda creata. Nota: l'account login va completato (" + (resAuth.msg || "verifica email") + ")", "error");
+        if (!resAuth.ok) {
+          Alpine.store("ui").mostraToast("Azienda creata. L'account admin potrebbe già esistere o richiedere verifica" + (resAuth.msg ? " (" + resAuth.msg + ")" : "") + ". Email inviata a " + email, "error");
+        } else if (f.metodo === "password") {
+          Alpine.store("ui").mostraToast("Azienda creata. Credenziali admin create" + (emailInviata ? " ed email di accesso inviata a " + email : ""));
         } else {
-          Alpine.store("ui").mostraToast("Azienda creata con amministratore " + email);
+          Alpine.store("ui").mostraToast("Azienda creata. Email di accesso inviata a " + email);
         }
         this.formAz = null;
         this.tab = "aziende";
