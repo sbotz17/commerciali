@@ -68,6 +68,21 @@ const PIANI = {
 };
 const oggiISO = () => new Date().toISOString().slice(0, 10);
 
+// Pagine configurabili per piano (Configuratore, Tappa 8)
+const PAGINE_CONFIG = [
+  { key: "dashboard",    label: "Dashboard",         path: "/" },
+  { key: "catalogo",     label: "Catalogo prodotti", path: "/catalogo" },
+  { key: "preventivi",   label: "Preventivi",        path: "/preventivi" },
+  { key: "clienti",      label: "Clienti",           path: "/clienti" },
+  { key: "bandi",        label: "Bandi & Agevolaz.", path: "/bandi" },
+  { key: "categorie",    label: "Categorie",         path: "/categorie" },
+  { key: "utenti",       label: "Utenti",            path: "/utenti" },
+  { key: "ruoli",        label: "Ruoli & Permessi",  path: "/ruoli" },
+  { key: "impostazioni", label: "Impostazioni",      path: "/impostazioni" },
+];
+// Pagine "figlie" che seguono l'abilitazione del genitore
+const PAGINA_PADRE = { "nuovo-preventivo": "preventivi", "importBandi": "ruoli" };
+
 // Fallback permessi quando la tabella ruoli non è ancora stata creata (schema v3)
 const PERMESSI_FALLBACK = {
   admin:       { dashboard:"entrambi", listino:"entrambi", gestione_prodotti:"entrambi", preventivi_propri:"entrambi", preventivi_tutti:"entrambi", approva_preventivi:"entrambi", clienti:"entrambi", bandi:"entrambi", gestione_categorie:"entrambi", gestione_utenti:"entrambi", gestione_ruoli:"entrambi", impostazioni:"entrambi" },
@@ -179,11 +194,23 @@ document.addEventListener("alpine:init", () => {
       return mioLivello === "scrittura" || mioLivello === "entrambi";
     },
 
+    // Il piano dell'azienda consente questa pagina? (Configuratore, Tappa 8)
+    // Fail-open: se la configurazione non è disponibile non restringe nulla.
+    pianoConsente(pagina) {
+      if (this.isSuperAdmin) return true;
+      if (pagina === "dashboard" || pagina === "superadmin") return true;
+      const cfg = Alpine.store("db").pianoConfig;
+      if (!cfg || !cfg.pagine) return true;
+      const chiave = PAGINA_PADRE[pagina] || pagina;
+      return cfg.pagine[chiave] !== false; // consentito salvo esplicito false
+    },
+
     // Può accedere a una pagina (almeno lettura)
     puo(pagina) {
       if (!this.loggato) return false;
-      if (pagina === "dashboard") return true;
       if (pagina === "superadmin") return this.isSuperAdmin;
+      if (!this.pianoConsente(pagina)) return false;
+      if (pagina === "dashboard") return true;
       return PERMESSI_DEF.some(def =>
         def.pagine.includes(pagina) && this.haPermesso(def.id)
       );
@@ -245,6 +272,7 @@ document.addEventListener("alpine:init", () => {
       this.aziendaAttivaId = null;
       try { localStorage.removeItem("cfg_super_aziende"); } catch (_) {}
       Alpine.store("db").licenza = undefined;
+      Alpine.store("db").pianoConfig = undefined;
       SP.setAziendaAttiva(null);
       Alpine.store("ui").vai("dashboard");
     },
@@ -262,6 +290,7 @@ document.addEventListener("alpine:init", () => {
     ruoli:         [],
     impostazioni:  {},
     licenza:       undefined,  // undefined = sconosciuta (non bloccare), null = assente, oggetto = presente
+    pianoConfig:   undefined,  // configurazione del piano dell'azienda attiva (Tappa 8)
     caricamento:   true,
 
     // Getter impostazioni — leggono dalla store reattiva (aggiornata al save)
@@ -318,6 +347,9 @@ document.addEventListener("alpine:init", () => {
         this.categorie  = categorie;
         this.utenti     = utenti || [];
         this.licenza    = licenza; // undefined (sconosciuta) | null (assente) | oggetto
+        // Configurazione del piano (pagine + limiti) in base alla licenza
+        try { this.pianoConfig = licenza && licenza.piano ? await SP.getPianoConfig(licenza.piano) : null; }
+        catch (_) { this.pianoConfig = undefined; }
       } catch (e) {
         console.error("Errore caricamento dati:", e);
         Alpine.store("ui").mostraToast("Errore connessione al database", "error");
@@ -352,22 +384,28 @@ document.addEventListener("alpine:init", () => {
       if (l.data_fine && l.data_fine < oggiISO()) return "scaduta";
       return "attiva";
     },
+    // Limite effettivo per un tipo: prima la configurazione del piano
+    // (Configuratore), poi la licenza. null / valori < 0 = illimitato.
+    limitePiano(tipo) {
+      const campo = tipo === "utenti" ? "max_utenti" : "max_preventivi";
+      const cfg = this.pianoConfig;
+      if (cfg && cfg[campo] != null) return cfg[campo];
+      const l = this.licenza;
+      if (l && l[campo] != null) return l[campo];
+      return null;
+    },
     // Verifica se creare un elemento supererebbe il limite del piano.
     // Torna un messaggio d'errore (string) se superato, altrimenti null.
     limiteSuperato(tipo, contoAttuale) {
       if (Alpine.store("sessione").isSuperAdmin) return null; // super admin senza limiti
-      const l = this.licenza;
-      if (!l) return null; // se non c'è licenza il blocco accesso agisce altrove
-      const piano = PIANI[l.piano]?.label || l.piano || "";
-      if (tipo === "utenti") {
-        const max = l.max_utenti;
-        const n = (contoAttuale != null) ? contoAttuale : this.utenti.length;
-        if (max != null && n >= max) return `Limite del piano ${piano}: massimo ${max} utenti. Aggiorna la licenza per aggiungerne altri.`;
-      }
-      if (tipo === "preventivi") {
-        const max = l.max_preventivi;
-        const n = (contoAttuale != null) ? contoAttuale : this.preventivi.length;
-        if (max != null && n >= max) return `Limite del piano ${piano}: massimo ${max} preventivi. Aggiorna la licenza per crearne altri.`;
+      const max = this.limitePiano(tipo);
+      if (max == null || max < 0) return null; // illimitato
+      const piano = PIANI[this.licenza?.piano]?.label || this.licenza?.piano || "";
+      const n = (contoAttuale != null) ? contoAttuale
+              : (tipo === "utenti" ? this.utenti.length : this.preventivi.length);
+      if (n >= max) {
+        const cosa = tipo === "utenti" ? "utenti" : "preventivi";
+        return `Limite del piano ${piano}: massimo ${max} ${cosa}. Passa a un piano superiore per aggiungerne altri.`;
       }
       return null;
     },
@@ -569,9 +607,9 @@ function appShell() {
     get navOperativo() {
       const s = Alpine.store("sessione");
       const icone = { dashboard: _ICONS.home, preventivi: _ICONS.doc, clienti: _ICONS.users, catalogo: _ICONS.catalog, bandi: _ICONS.money };
-      // Partenza: tutte le voci permesse dal ruolo
+      // Partenza: voci permesse dal ruolo E abilitate dal piano
       const permesse = VOCI_MENU_OP
-        .filter(v => !v.permesso || s.haPermesso(v.permesso))
+        .filter(v => (!v.permesso || s.haPermesso(v.permesso)) && s.pianoConsente(v.pagina))
         .map(v => ({ ...v, icon: icone[v.pagina] }));
       // Se l'utente ha un menu personalizzato non vuoto, filtra ulteriormente
       const menuUtente = s.utente?.menu_utente;
@@ -611,7 +649,7 @@ function appShell() {
         { pagina: "ruoli",         label: "Ruoli & Permessi", icon: _ICONS.shield,   permesso: "gestione_ruoli" },
         { pagina: "importBandi",   label: "Import Bandi",     icon: _ICONS.upload,   permesso: "gestione_ruoli" },
         { pagina: "impostazioni",  label: "Impostazioni",     icon: _ICONS.settings, permesso: "impostazioni" },
-      ].filter(i => s.haPermesso(i.permesso));
+      ].filter(i => s.haPermesso(i.permesso) && s.pianoConsente(i.pagina));
     },
 
     get hasAdminNav() { return this.navAdmin.length > 0; },
@@ -641,19 +679,84 @@ function superAdminPage() {
     licForm:  null,            // { aziendaId, aziendaNome, piano, stato, data_inizio, data_fine, max_utenti, max_preventivi, note }
     salvandoLic: false,
 
+    // Configuratore (pagine + limiti per piano)
+    configPiani:    {},        // { trial:{pagine:{...},max_utenti,max_preventivi}, ... }
+    salvandoConfig: false,
+
     piani: PIANI,
+    pagineConfig: PAGINE_CONFIG,
+    pianiKeys: ["trial", "starter", "professional", "enterprise"],
 
     init() {
+      // Config di default subito disponibile (evita accessi a undefined nei binding)
+      this.configPiani = this._configDefault();
       this.$watch(() => Alpine.store("ui").pagina, (p) => {
         if (p === "superadmin") this.carica();
       });
+    },
+
+    _configDefault() {
+      const out = {};
+      this.pianiKeys.forEach(k => {
+        const pagine = {};
+        PAGINE_CONFIG.forEach(p => { pagine[p.key] = true; });
+        out[k] = { pagine, max_utenti: (PIANI[k]?.max_utenti ?? -1), max_preventivi: (PIANI[k]?.max_preventivi ?? -1) };
+      });
+      return out;
     },
 
     async carica() {
       if (!Alpine.store("sessione").isSuperAdmin) return;
       this.caricando = true;
       this.aziende = await SP.getTutteAziende();
+      await this.caricaConfigPiani();
       this.caricando = false;
+    },
+
+    // Carica la configurazione dei piani nel formato modificabile
+    async caricaConfigPiani() {
+      const righe = await SP.getPianiConfig();
+      const map = {};
+      (Array.isArray(righe) ? righe : []).forEach(r => { map[r.piano] = r; });
+      const out = {};
+      this.pianiKeys.forEach(k => {
+        const r = map[k] || {};
+        const pagine = {};
+        PAGINE_CONFIG.forEach(p => { pagine[p.key] = (r.pagine ? r.pagine[p.key] !== false : true); });
+        out[k] = {
+          pagine,
+          max_utenti:     (r.max_utenti     ?? (PIANI[k]?.max_utenti     ?? -1)),
+          max_preventivi: (r.max_preventivi ?? (PIANI[k]?.max_preventivi ?? -1)),
+        };
+      });
+      this.configPiani = out;
+    },
+
+    // Scorciatoie: attiva/disattiva tutte le pagine di un piano
+    selezionaTuttoPiano(k, val) {
+      if (!this.configPiani[k]) return;
+      PAGINE_CONFIG.forEach(p => { this.configPiani[k].pagine[p.key] = val; });
+    },
+
+    async salvaConfigurazione() {
+      this.salvandoConfig = true;
+      let errore = null;
+      for (const k of this.pianiKeys) {
+        const c = this.configPiani[k];
+        if (!c) continue;
+        const r = await SP.salvaPianoConfig(k, {
+          pagine: c.pagine,
+          max_utenti: (c.max_utenti === "" || c.max_utenti == null) ? -1 : Number(c.max_utenti),
+          max_preventivi: (c.max_preventivi === "" || c.max_preventivi == null) ? -1 : Number(c.max_preventivi),
+        });
+        if (r && r.__errore) errore = r.__errore;
+      }
+      this.salvandoConfig = false;
+      if (errore) { Alpine.store("ui").mostraToast("Errore salvataggio: " + errore, "error"); return; }
+      Alpine.store("ui").mostraToast("Configurazione piani salvata");
+      // Riallinea la configurazione dell'azienda attiva (pagine/limiti live)
+      const lic = Alpine.store("db").licenza;
+      if (lic && lic.piano) Alpine.store("db").pianoConfig = await SP.getPianoConfig(lic.piano);
     },
 
     // --- Filtri / helper ---
