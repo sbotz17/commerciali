@@ -683,6 +683,12 @@ function superAdminPage() {
     configPiani:    {},        // { trial:{pagine:{...},max_utenti,max_preventivi}, ... }
     salvandoConfig: false,
 
+    // WhatsApp (server unico di piattaforma)
+    waConfig:    undefined,    // undefined = sconosciuta, null = assente, oggetto = presente
+    waForm:      { url: "", api_key: "", numero: "", stato: "" },
+    waMostraKey: false,
+    salvandoWa:  false,
+
     piani: PIANI,
     pagineConfig: PAGINE_CONFIG,
     pianiKeys: ["trial", "starter", "professional", "enterprise"],
@@ -710,7 +716,43 @@ function superAdminPage() {
       this.caricando = true;
       this.aziende = await SP.getTutteAziende();
       await this.caricaConfigPiani();
+      // Configurazione WhatsApp
+      this.waConfig = await SP.getWhatsappConfig();
+      this.waForm = {
+        url:     this.waConfig?.url     || "",
+        api_key: this.waConfig?.api_key || "",
+        numero:  this.waConfig?.numero  || "",
+        stato:   this.waConfig?.stato   || "",
+      };
       this.caricando = false;
+    },
+
+    // --- WhatsApp ---
+    get waCollegato() { return this.waForm.stato === "connesso" && !!this.waForm.numero; },
+    get aziendeWaAttive() { return this.aziende.filter(a => a.whatsapp_attivo).length; },
+
+    async salvaWa() {
+      this.salvandoWa = true;
+      const r = await SP.salvaWhatsappConfig(this.waForm);
+      this.salvandoWa = false;
+      if (r && !r.__errore) { this.waConfig = r; Alpine.store("ui").mostraToast("Configurazione WhatsApp salvata"); }
+      else Alpine.store("ui").mostraToast("Errore: " + (r?.__errore || "—"), "error");
+    },
+
+    async disconnettiWa() {
+      if (!confirm("Disconnettere il numero WhatsApp? Le aziende non potranno inviare finché non lo ricolleghi.")) return;
+      this.waForm.numero = "";
+      this.waForm.stato  = "disconnesso";
+      const r = await SP.salvaWhatsappConfig(this.waForm);
+      if (r && !r.__errore) { this.waConfig = r; Alpine.store("ui").mostraToast("Numero disconnesso"); }
+      else Alpine.store("ui").mostraToast("Errore: " + (r?.__errore || "—"), "error");
+    },
+
+    async toggleWaAzienda(a) {
+      const nuovo = !a.whatsapp_attivo;
+      const r = await SP.setWhatsappAzienda(a.id, nuovo);
+      if (r && !r.__errore) a.whatsapp_attivo = nuovo;
+      else Alpine.store("ui").mostraToast("Errore: " + (r?.__errore || "—"), "error");
     },
 
     // Carica la configurazione dei piani nel formato modificabile
