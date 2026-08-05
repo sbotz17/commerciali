@@ -88,10 +88,24 @@ document.addEventListener("alpine:init", () => {
     // Il ruolo è quello dell'azienda attiva (per-azienda)
     get ruolo()         { return this.aziendaAttiva?.ruolo || this.utente?.ruolo || ""; },
 
+    // Aziende in cui il super admin è "entrato" pur non essendo membro
+    // (persistite così sopravvivono ai reload dei dati)
+    _leggiSuperAziende() {
+      try { return JSON.parse(localStorage.getItem("cfg_super_aziende") || "[]"); } catch (_) { return []; }
+    },
+
     // Carica le aziende dell'utente e imposta quella attiva
     async _caricaAziende() {
       if (!this.utente) { this.aziende = []; this.aziendaAttivaId = null; SP.setAziendaAttiva(null); return; }
       this.aziende = await SP.getAziendeUtente(this.utente.id);
+      // Super admin: riaggiungi le aziende visitate anche se non ne è membro
+      if (this.isSuperAdmin) {
+        this._leggiSuperAziende().forEach(a => {
+          if (a?.id && !this.aziende.find(x => x.id === a.id)) {
+            this.aziende.push({ id: a.id, nome: a.nome || "Azienda", logo: a.logo || null, ruolo: "admin", _super: true });
+          }
+        });
+      }
       const salvata = localStorage.getItem("cfg_azienda_attiva");
       const valida  = this.aziende.find(a => a.id === salvata);
       this.aziendaAttivaId = valida ? salvata : (this.aziende[0]?.id || null);
@@ -108,6 +122,25 @@ document.addEventListener("alpine:init", () => {
       Alpine.store("ui").mostraToast("Azienda: " + (this.aziendaAttiva?.nome || ""));
     },
 
+    // SUPER ADMIN: entra in un'azienda qualsiasi (anche se non ne sei membro).
+    // La aggiunge al selettore come "admin" e ne carica i dati.
+    async entraComeSuperAdmin(az) {
+      if (!this.isSuperAdmin || !az?.id) return;
+      // Memorizza l'azienda tra le "super aziende" così sopravvive ai reload
+      const lista = this._leggiSuperAziende().filter(a => a.id !== az.id);
+      lista.push({ id: az.id, nome: az.nome || "Azienda", logo: az.logo || null });
+      localStorage.setItem("cfg_super_aziende", JSON.stringify(lista));
+      if (!this.aziende.find(a => a.id === az.id)) {
+        this.aziende.push({ id: az.id, nome: az.nome || "Azienda", logo: az.logo || null, ruolo: "admin", _super: true });
+      }
+      this.aziendaAttivaId = az.id;
+      localStorage.setItem("cfg_azienda_attiva", az.id);
+      SP.setAziendaAttiva(az.id);
+      await Alpine.store("db").ricarica();
+      Alpine.store("ui").vai("dashboard");
+      Alpine.store("ui").mostraToast("Sei entrato in: " + (az.nome || ""));
+    },
+
     // Recupera il ruolo corrente dall'elenco DB
     _mioRuolo() {
       const ruoliDB = Alpine.store("db").ruoli;
@@ -119,9 +152,13 @@ document.addEventListener("alpine:init", () => {
       return { permessi: PERMESSI_FALLBACK[chiave] || {} };
     },
 
+    // Super Admin globale: accesso completo a tutto, in qualsiasi azienda
+    get isSuperAdmin() { return !!this.utente?.super_admin; },
+
     // Verifica se l'utente ha un permesso con il livello richiesto
     haPermesso(permId, livelloRichiesto = "lettura") {
       if (!this.utente) return false;
+      if (this.utente.super_admin) return true; // il super admin può tutto
       const mioRuolo = this._mioRuolo();
       if (!mioRuolo) return false;
       const mioLivello = mioRuolo.permessi?.[permId];
@@ -136,6 +173,7 @@ document.addEventListener("alpine:init", () => {
     puo(pagina) {
       if (!this.loggato) return false;
       if (pagina === "dashboard") return true;
+      if (pagina === "superadmin") return this.isSuperAdmin;
       return PERMESSI_DEF.some(def =>
         def.pagine.includes(pagina) && this.haPermesso(def.id)
       );
@@ -195,6 +233,7 @@ document.addEventListener("alpine:init", () => {
       this.authEmail = null;
       this.aziende = [];
       this.aziendaAttivaId = null;
+      try { localStorage.removeItem("cfg_super_aziende"); } catch (_) {}
       SP.setAziendaAttiva(null);
       Alpine.store("ui").vai("dashboard");
     },
@@ -433,6 +472,7 @@ const _ICONS = {
   shield:  '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>',
   upload:   '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>',
   settings: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>',
+  globe:    '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zm0 0c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m-9 9h18"/></svg>',
 };
 
 // ==========================================================
@@ -508,6 +548,46 @@ function appShell() {
     },
 
     get hasAdminNav() { return this.navAdmin.length > 0; },
+
+    // Nav Super Admin: visibile solo all'utente super_admin
+    get isSuperAdmin() { return Alpine.store("sessione").isSuperAdmin; },
+    get iconGlobe()    { return _ICONS.globe; },
+  };
+}
+
+// ==========================================================
+// COMPONENTE: superAdminPage — pannello globale "tutte le aziende"
+// ==========================================================
+function superAdminPage() {
+  return {
+    aziende:   [],
+    caricando: false,
+    q:         "",
+
+    init() {
+      // Carica solo quando si naviga sulla pagina (dati sempre freschi)
+      this.$watch(() => Alpine.store("ui").pagina, (p) => {
+        if (p === "superadmin") this.carica();
+      });
+    },
+
+    async carica() {
+      if (!Alpine.store("sessione").isSuperAdmin) return;
+      this.caricando = true;
+      this.aziende = await SP.getTutteAziende();
+      this.caricando = false;
+    },
+
+    get filtrate() {
+      const t = this.q.trim().toLowerCase();
+      if (!t) return this.aziende;
+      return this.aziende.filter(a => (a.nome || "").toLowerCase().includes(t));
+    },
+    get totMembri() { return this.aziende.reduce((s, a) => s + (a.membri?.length || 0), 0); },
+
+    aziendaAttivaId()  { return Alpine.store("sessione").aziendaAttivaId; },
+    entra(a)           { Alpine.store("sessione").entraComeSuperAdmin(a); },
+    dataIt(s) { try { return s ? new Date(s).toLocaleDateString("it-IT") : ""; } catch (_) { return ""; } },
   };
 }
 
