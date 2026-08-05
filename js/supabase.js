@@ -69,7 +69,75 @@ const SP = {
       if (!perAz[m.azienda_id]) perAz[m.azienda_id] = [];
       perAz[m.azienda_id].push({ ruolo: m.ruolo, nome: m.utenti?.nome || "", email: m.utenti?.email || "" });
     });
-    return (az || []).map(a => ({ ...a, membri: perAz[a.id] || [] }));
+    // Licenze (tabella Tappa 6: se manca, l'errore viene ignorato)
+    const licByAz = {};
+    const { data: lic } = await _sb.from("licenze").select("*");
+    (lic || []).forEach(l => { licByAz[l.azienda_id] = l; });
+    return (az || []).map(a => ({ ...a, membri: perAz[a.id] || [], licenza: licByAz[a.id] || null }));
+  },
+
+  // ----------------------------------------------------------
+  // LICENZE (Tappa 6) — gestite solo dal super admin
+  // ----------------------------------------------------------
+  // Licenza della singola azienda. Torna:
+  //   - l'oggetto licenza se presente
+  //   - null se l'azienda non ha licenza
+  //   - undefined se la tabella non esiste ancora / errore (→ non bloccare)
+  async getLicenzaAzienda(aziendaId) {
+    if (!aziendaId) return null;
+    const { data, error } = await _sb
+      .from("licenze").select("*").eq("azienda_id", aziendaId).maybeSingle();
+    if (error) { console.error("getLicenzaAzienda:", error.message); return undefined; }
+    return data || null;
+  },
+
+  // Crea o aggiorna la licenza di un'azienda (upsert per azienda_id)
+  async salvaLicenza(aziendaId, dati) {
+    const payload = {
+      azienda_id:     aziendaId,
+      piano:          dati.piano || "trial",
+      stato:          dati.stato || "attiva",
+      data_inizio:    dati.data_inizio || new Date().toISOString().slice(0, 10),
+      data_fine:      dati.data_fine || null,
+      max_utenti:     (dati.max_utenti === "" || dati.max_utenti == null) ? null : Number(dati.max_utenti),
+      max_preventivi: (dati.max_preventivi === "" || dati.max_preventivi == null) ? null : Number(dati.max_preventivi),
+      note:           dati.note || null,
+      updated_at:     new Date().toISOString(),
+    };
+    const { data, error } = await _sb
+      .from("licenze").upsert([payload], { onConflict: "azienda_id" }).select("*").single();
+    if (error) { console.error("salvaLicenza:", error.message); return { __errore: error.message }; }
+    return data;
+  },
+
+  // Revoca (elimina) la licenza di un'azienda
+  async revocaLicenza(aziendaId) {
+    const { error } = await _sb.from("licenze").delete().eq("azienda_id", aziendaId);
+    if (error) { console.error("revocaLicenza:", error.message); return { __errore: error.message }; }
+    return { ok: true };
+  },
+
+  // Rinomina un'azienda (super admin)
+  async rinominaAzienda(aziendaId, nome) {
+    const { data, error } = await _sb
+      .from("aziende").update({ nome: (nome || "").trim() }).eq("id", aziendaId).select("id, nome, logo").single();
+    if (error) { console.error("rinominaAzienda:", error.message); return { __errore: error.message }; }
+    return data;
+  },
+
+  // Elimina un'azienda (super admin). Fallisce se contiene ancora dati collegati.
+  async eliminaAzienda(aziendaId) {
+    const { error } = await _sb.from("aziende").delete().eq("id", aziendaId);
+    if (error) { console.error("eliminaAzienda:", error.message); return { __errore: error.message }; }
+    return { ok: true };
+  },
+
+  // Conta i preventivi dell'azienda attiva (per i limiti di piano)
+  async contaPreventivi() {
+    const { count, error } = await _scopeAzienda(_sb
+      .from("preventivi").select("id", { count: "exact", head: true }));
+    if (error) { console.error("contaPreventivi:", error.message); return null; }
+    return count;
   },
 
   // Recupera o crea il profilo utente (globale) in base all'email
@@ -117,6 +185,18 @@ const SP = {
       { azienda_id: aziendaId, nome: "servizi",  icona: "🛠️", ordine: 2 },
       { azienda_id: aziendaId, nome: "hardware", icona: "🖥️", ordine: 3 },
     ]);
+    // Licenza di prova (14 giorni) per la nuova azienda (Tappa 6; se la
+    // tabella non esiste ancora l'errore è ignorato)
+    try {
+      const oggi = new Date();
+      const fine = new Date(oggi.getTime() + 14 * 24 * 60 * 60 * 1000);
+      await _sb.from("licenze").insert([{
+        azienda_id: aziendaId, piano: "trial", stato: "attiva",
+        data_inizio: oggi.toISOString().slice(0, 10),
+        data_fine:   fine.toISOString().slice(0, 10),
+        max_utenti: 2, max_preventivi: 20,
+      }]);
+    } catch (_) { /* tabella licenze non presente: ignora */ }
     return true;
   },
 
