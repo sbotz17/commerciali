@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=31"></script>
-  <script src="js/supabase.js?v=31"></script>
-  <script src="js/auth.js?v=31"></script>
-  <script src="js/app.js?v=31"></script>
+  <script src="js/bandi-data.js?v=32"></script>
+  <script src="js/supabase.js?v=32"></script>
+  <script src="js/auth.js?v=32"></script>
+  <script src="js/app.js?v=32"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -2723,10 +2723,21 @@
                         class="btn-tap bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-slate-900 disabled:opacity-50">
                   <span x-text="salvandoWa ? 'Salvo…' : 'Salva'"></span>
                 </button>
+                <button @click="verificaConnessioneWa()" :disabled="verificandoWa" x-show="waForm.url"
+                        class="btn-tap bg-green-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-green-700 disabled:opacity-50">
+                  <span x-text="verificandoWa ? 'Verifico…' : 'Collega numero (QR)'"></span>
+                </button>
                 <button @click="disconnettiWa()" x-show="waForm.url || waForm.api_key"
                         class="btn-tap border border-slate-200 text-slate-600 text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-slate-50">
                   Disconnetti
                 </button>
+              </div>
+
+              <!-- QR da scansionare -->
+              <div x-show="qrImg" class="mt-4 flex flex-col items-center gap-2 bg-slate-50 rounded-xl p-4">
+                <p class="text-sm text-slate-600 font-medium">Apri WhatsApp → Dispositivi collegati → Collega un dispositivo, poi inquadra:</p>
+                <img :src="qrImg" alt="QR WhatsApp" class="w-52 h-52 rounded-lg border border-slate-200 bg-white" />
+                <button @click="verificaConnessioneWa()" class="btn-tap text-xs text-slate-500 hover:underline">Ho scansionato — verifica stato</button>
               </div>
 
               <!-- Stato -->
