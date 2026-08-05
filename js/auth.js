@@ -70,16 +70,25 @@ async function caricaProfilo(email) {
 async function login(email, password) {
   const em = (email || "").trim().toLowerCase();
   const { data, error } = await _sb.auth.signInWithPassword({ email: em, password });
-  if (error || !data?.session) return null;
+  if (error || !data?.session) return { ok: false };
 
   const prof = await caricaProfilo(em);
-  if (!prof || prof.attivo === false) {
-    // Account valido ma nessun profilo attivo → nega l'accesso
+  if (prof && prof.attivo === false) {
+    // Profilo disabilitato → nega
     await _sb.auth.signOut();
-    return null;
+    return { ok: false, disabilitato: true };
   }
-  salvaSessione(prof);
-  return prof;
+  if (prof) salvaSessione(prof);
+  // Se non c'è profilo/azienda, l'utente andrà all'onboarding (gestito dallo store)
+  return { ok: true, email: em, profilo: prof || null };
+}
+
+// Registrazione self-service: crea l'account di autenticazione
+async function registrati(email, password) {
+  const em = (email || "").trim().toLowerCase();
+  const { data, error } = await _sb.auth.signUp({ email: em, password });
+  if (error) { console.error("registrati:", error.message); return { ok: false, error: error.message }; }
+  return { ok: true, email: em, sessione: !!data?.session };
 }
 
 // ------------------------------------------------------------
@@ -88,16 +97,17 @@ async function login(email, password) {
 async function ripristinaSessione() {
   const { data } = await _sb.auth.getSession();
   const session = data?.session;
-  if (!session?.user?.email) { cancellaSessione(); return null; }
+  if (!session?.user?.email) { cancellaSessione(); return { authed: false }; }
 
-  const prof = await caricaProfilo(session.user.email);
-  if (!prof || prof.attivo === false) {
+  const em = session.user.email;
+  const prof = await caricaProfilo(em);
+  if (prof && prof.attivo === false) {
     await _sb.auth.signOut();
     cancellaSessione();
-    return null;
+    return { authed: false };
   }
-  salvaSessione(prof);
-  return prof;
+  if (prof) salvaSessione(prof); else cancellaSessione();
+  return { authed: true, email: em, profilo: prof || null };
 }
 
 // ------------------------------------------------------------
