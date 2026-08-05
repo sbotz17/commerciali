@@ -168,6 +168,39 @@ const SP = {
     return data;
   },
 
+  // ----------------------------------------------------------
+  // WHATSAPP (Tappa 9) — configurazione server (solo super admin)
+  // ----------------------------------------------------------
+  async getWhatsappConfig() {
+    const { data, error } = await _sb
+      .from("whatsapp_config").select("*").eq("id", 1).maybeSingle();
+    if (error) { console.error("getWhatsappConfig:", error.message); return undefined; }
+    return data || null;
+  },
+
+  async salvaWhatsappConfig(dati) {
+    const payload = {
+      id: 1,
+      url:     dati.url || null,
+      api_key: dati.api_key || null,
+      numero:  dati.numero || null,
+      stato:   dati.stato || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await _sb
+      .from("whatsapp_config").upsert([payload], { onConflict: "id" }).select("*").single();
+    if (error) { console.error("salvaWhatsappConfig:", error.message); return { __errore: error.message }; }
+    return data;
+  },
+
+  // Attiva/disattiva il modulo WhatsApp per una singola azienda
+  async setWhatsappAzienda(aziendaId, attivo) {
+    const { error } = await _sb
+      .from("aziende").update({ whatsapp_attivo: !!attivo }).eq("id", aziendaId);
+    if (error) { console.error("setWhatsappAzienda:", error.message); return { __errore: error.message }; }
+    return { ok: true };
+  },
+
   // Conta i preventivi dell'azienda attiva (per i limiti di piano)
   async contaPreventivi() {
     const { count, error } = await _scopeAzienda(_sb

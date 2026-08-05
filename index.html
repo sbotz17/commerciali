@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=30"></script>
-  <script src="js/supabase.js?v=30"></script>
-  <script src="js/auth.js?v=30"></script>
-  <script src="js/app.js?v=30"></script>
+  <script src="js/bandi-data.js?v=31"></script>
+  <script src="js/supabase.js?v=31"></script>
+  <script src="js/auth.js?v=31"></script>
+  <script src="js/app.js?v=31"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -2406,7 +2406,7 @@
 
           <!-- Sotto-schede -->
           <div class="flex items-center gap-1 border-b border-slate-200 mb-6 overflow-x-auto no-scrollbar">
-            <template x-for="t in [{k:'panoramica',l:'Panoramica'},{k:'aziende',l:'Aziende'},{k:'licenze',l:'Licenze'},{k:'configuratore',l:'Configuratore'}]" :key="t.k">
+            <template x-for="t in [{k:'panoramica',l:'Panoramica'},{k:'aziende',l:'Aziende'},{k:'licenze',l:'Licenze'},{k:'configuratore',l:'Configuratore'},{k:'whatsapp',l:'WhatsApp'}]" :key="t.k">
               <button @click="tab = t.k"
                       :class="tab === t.k ? 'border-red-600 text-red-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
                       class="btn-tap px-4 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap transition-colors"
@@ -2689,6 +2689,73 @@
                     <input x-model.number="configPiani[k].max_preventivi" type="number" min="-1"
                            class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
                     <p class="text-xs text-slate-400 mt-1">-1 = illimitati</p>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===================== WHATSAPP ===================== -->
+          <div x-show="!caricando && tab === 'whatsapp'">
+            <!-- Server unico -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5 mb-6">
+              <h3 class="text-base font-bold text-slate-800">Server WhatsApp — unico per tutta la piattaforma</h3>
+              <p class="text-sm text-slate-500 mt-1 mb-4">Collega qui il numero WhatsApp una sola volta: tutte le aziende con il modulo attivo invieranno da questo stesso numero.</p>
+
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-sm text-slate-600">URL del server</label>
+                  <input x-model="waForm.url" type="url" placeholder="https://…" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+                </div>
+                <div>
+                  <label class="text-sm text-slate-600">API key</label>
+                  <div class="relative mt-1">
+                    <input x-model="waForm.api_key" :type="waMostraKey ? 'text' : 'password'" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-red-500" />
+                    <button type="button" @click="waMostraKey = !waMostraKey" class="btn-tap absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-2 mt-4">
+                <button @click="salvaWa()" :disabled="salvandoWa"
+                        class="btn-tap bg-slate-800 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-slate-900 disabled:opacity-50">
+                  <span x-text="salvandoWa ? 'Salvo…' : 'Salva'"></span>
+                </button>
+                <button @click="disconnettiWa()" x-show="waForm.url || waForm.api_key"
+                        class="btn-tap border border-slate-200 text-slate-600 text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-slate-50">
+                  Disconnetti
+                </button>
+              </div>
+
+              <!-- Stato -->
+              <p class="mt-4 text-sm flex items-center gap-2" :class="waCollegato ? 'text-green-600' : 'text-slate-400'">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"/></svg>
+                <span x-show="waCollegato" x-text="'Connesso — numero ' + waForm.numero"></span>
+                <span x-show="!waCollegato">Non collegato</span>
+              </p>
+
+              <p class="mt-3 text-xs text-slate-400 bg-slate-50 rounded-lg px-3 py-2">
+                Nota: il collegamento del numero (QR), lo stato in tempo reale e l'invio dei messaggi funzionano quando il server WhatsApp è raggiungibile in <strong>https</strong>. Qui salvi la configurazione e attivi il modulo per azienda.
+              </p>
+            </div>
+
+            <!-- Aziende con modulo attivo -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-5">
+              <h3 class="text-base font-bold text-slate-800" x-text="'Aziende con modulo attivo (' + aziendeWaAttive + ')'"></h3>
+              <p class="text-sm text-slate-400 mt-1 mb-4">Attiva o disattiva il modulo WhatsApp per ciascuna azienda.</p>
+
+              <div x-show="aziende.length === 0" class="text-center text-slate-400 py-6 text-sm">Nessuna azienda.</div>
+              <div class="divide-y divide-slate-100">
+                <template x-for="a in aziende" :key="a.id">
+                  <div class="flex items-center justify-between gap-3 py-3">
+                    <span class="text-sm font-medium text-slate-700 truncate" x-text="a.nome"></span>
+                    <button @click="toggleWaAzienda(a)"
+                            :class="a.whatsapp_attivo ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'"
+                            class="btn-tap text-xs font-semibold px-3 py-1.5 rounded-full shrink-0 transition-colors">
+                      <span x-text="a.whatsapp_attivo ? 'Attivo' : 'Non attivo'"></span>
+                    </button>
                   </div>
                 </template>
               </div>
