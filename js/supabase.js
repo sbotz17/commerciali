@@ -132,6 +132,42 @@ const SP = {
     return { ok: true };
   },
 
+  // ----------------------------------------------------------
+  // CONFIGURAZIONE PIANI (Tappa 8) — pagine e limiti per piano
+  // ----------------------------------------------------------
+  // Tutte le configurazioni (per il Configuratore del super admin)
+  async getPianiConfig() {
+    const { data, error } = await _sb.from("piani_config").select("*");
+    if (error) { console.error("getPianiConfig:", error.message); return undefined; }
+    return data || [];
+  },
+
+  // Configurazione di un singolo piano (per l'enforcement dentro l'azienda).
+  // Torna l'oggetto, null se assente, undefined se la tabella non esiste.
+  async getPianoConfig(piano) {
+    if (!piano) return null;
+    const { data, error } = await _sb
+      .from("piani_config").select("*").eq("piano", piano).maybeSingle();
+    if (error) { console.error("getPianoConfig:", error.message); return undefined; }
+    return data || null;
+  },
+
+  // Salva (upsert) la configurazione di un piano — solo super admin
+  async salvaPianoConfig(piano, dati) {
+    const norm = (v) => (v === "" || v == null) ? null : Number(v);
+    const payload = {
+      piano,
+      pagine:         dati.pagine || {},
+      max_utenti:     norm(dati.max_utenti),
+      max_preventivi: norm(dati.max_preventivi),
+      updated_at:     new Date().toISOString(),
+    };
+    const { data, error } = await _sb
+      .from("piani_config").upsert([payload], { onConflict: "piano" }).select("*").single();
+    if (error) { console.error("salvaPianoConfig:", error.message); return { __errore: error.message }; }
+    return data;
+  },
+
   // Conta i preventivi dell'azienda attiva (per i limiti di piano)
   async contaPreventivi() {
     const { count, error } = await _scopeAzienda(_sb
