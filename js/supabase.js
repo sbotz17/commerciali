@@ -51,6 +51,27 @@ const SP = {
     }));
   },
 
+  // SUPER ADMIN: elenco di TUTTE le aziende registrate (con i membri).
+  // Funziona solo per un utente con super_admin=true (le policy RLS della
+  // Tappa 5 lasciano leggere tutto solo a lui; per gli altri torna solo le
+  // proprie aziende, quindi è comunque sicuro).
+  async getTutteAziende() {
+    const { data: az, error } = await _sb
+      .from("aziende")
+      .select("id, nome, logo, created_at")
+      .order("created_at");
+    if (error) { console.error("getTutteAziende:", error.message); return []; }
+    const { data: membri } = await _sb
+      .from("membri")
+      .select("azienda_id, ruolo, utenti(nome, email)");
+    const perAz = {};
+    (membri || []).forEach(m => {
+      if (!perAz[m.azienda_id]) perAz[m.azienda_id] = [];
+      perAz[m.azienda_id].push({ ruolo: m.ruolo, nome: m.utenti?.nome || "", email: m.utenti?.email || "" });
+    });
+    return (az || []).map(a => ({ ...a, membri: perAz[a.id] || [] }));
+  },
+
   // Recupera o crea il profilo utente (globale) in base all'email
   async assicuraProfilo(email, nome) {
     const em = (email || "").trim().toLowerCase();
