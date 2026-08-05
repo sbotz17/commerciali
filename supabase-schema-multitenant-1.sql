@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS aziende (
 );
 
 -- 2) Membri: collega un utente a un'azienda, con il ruolo PER azienda
+-- (drop di sicurezza in caso di tentativo precedente con tipo errato — la tabella è nuova)
+DROP TABLE IF EXISTS membri CASCADE;
 CREATE TABLE IF NOT EXISTS membri (
   id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   azienda_id uuid   NOT NULL REFERENCES aziende(id) ON DELETE CASCADE,
