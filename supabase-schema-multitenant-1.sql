@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS aziende (
 -- 2) Membri: collega un utente a un'azienda, con il ruolo PER azienda
 CREATE TABLE IF NOT EXISTS membri (
   id         uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  azienda_id uuid NOT NULL REFERENCES aziende(id) ON DELETE CASCADE,
-  utente_id  uuid NOT NULL REFERENCES utenti(id) ON DELETE CASCADE,
-  ruolo      text NOT NULL DEFAULT 'commerciale',
+  azienda_id uuid   NOT NULL REFERENCES aziende(id) ON DELETE CASCADE,
+  utente_id  bigint NOT NULL REFERENCES utenti(id) ON DELETE CASCADE,  -- utenti.id è bigint
+  ruolo      text   NOT NULL DEFAULT 'commerciale',
   created_at timestamptz DEFAULT now(),
   UNIQUE (azienda_id, utente_id)
 );
