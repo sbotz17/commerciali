@@ -71,6 +71,7 @@ document.addEventListener("alpine:init", () => {
   // ==========================================================
   Alpine.store("sessione", {
     utente: null,
+    authEmail: null,        // email autenticata (anche senza profilo/azienda)
     aziende: [],            // aziende di cui l'utente è membro
     aziendaAttivaId: null,  // azienda attualmente selezionata
 
@@ -78,9 +79,12 @@ document.addEventListener("alpine:init", () => {
       this.utente = getUtenteSessione();
     },
 
-    get loggato()       { return !!this.utente; },
-    get nomeUtente()    { return this.utente?.nome || this.utente?.username || ""; },
-    get aziendaAttiva() { return this.aziende.find(a => a.id === this.aziendaAttivaId) || null; },
+    // Loggato = ha profilo E almeno un'azienda attiva
+    get loggato()        { return !!this.utente && !!this.aziendaAttivaId; },
+    // Autenticato ma senza azienda → deve fare l'onboarding
+    get needsOnboarding() { return !!this.authEmail && !this.loggato; },
+    get nomeUtente()     { return this.utente?.nome || this.utente?.username || ""; },
+    get aziendaAttiva()  { return this.aziende.find(a => a.id === this.aziendaAttivaId) || null; },
     // Il ruolo è quello dell'azienda attiva (per-azienda)
     get ruolo()         { return this.aziendaAttiva?.ruolo || this.utente?.ruolo || ""; },
 
@@ -141,24 +145,54 @@ document.addEventListener("alpine:init", () => {
     get isAdmin() { return this.haPermesso("gestione_ruoli"); },
 
     async eseguiLogin(email, password) {
-      const u = await login(email, password);
-      if (!u) return false;
-      this.utente = u;
+      const r = await login(email, password);
+      if (!r.ok) return false;
+      this.authEmail = r.email;
+      this.utente    = r.profilo || null;
+      if (r.profilo) await this._caricaAziende();
+      return true; // lo store decide se app o onboarding via loggato/needsOnboarding
+    },
+
+    // Registrazione self-service
+    async registra(email, password) {
+      const r = await registrati(email, password);
+      if (!r.ok) return r;
+      if (r.sessione) this.authEmail = r.email; // niente conferma email → subito onboarding
+      return r;
+    },
+
+    // Completa l'onboarding: crea profilo (se manca), azienda, membership e dati base
+    async completaOnboarding(nomePersona, nomeAzienda) {
+      const email = this.authEmail;
+      if (!email) return { ok: false, msg: "Sessione scaduta, rifai l'accesso" };
+      let prof = this.utente || await SP.assicuraProfilo(email, nomePersona);
+      if (!prof || prof.__errore) return { ok: false, msg: (prof && prof.__errore) || "Profilo non creato" };
+      const az = await SP.creaAzienda(nomeAzienda);
+      if (!az || az.__errore) return { ok: false, msg: (az && az.__errore) || "Azienda non creata" };
+      const m = await SP.aggiungiMembro(az.id, prof.id, "admin");
+      if (m && m.__errore) return { ok: false, msg: m.__errore };
+      SP.setAziendaAttiva(az.id);
+      await SP.seedAzienda(az.id);
+      this.utente = prof; salvaSessione(prof);
       await this._caricaAziende();
-      return true;
+      await Alpine.store("db").ricarica();
+      return { ok: true };
     },
 
     // Ripristina la sessione autenticata all'avvio (async)
     async ripristina() {
-      const prof = await ripristinaSessione();
-      this.utente = prof || null;
-      if (prof) await this._caricaAziende();
+      const r = await ripristinaSessione();
+      if (!r.authed) { this.authEmail = null; this.utente = null; this.aziende = []; this.aziendaAttivaId = null; SP.setAziendaAttiva(null); return; }
+      this.authEmail = r.email;
+      this.utente    = r.profilo || null;
+      if (r.profilo) await this._caricaAziende();
       else { this.aziende = []; this.aziendaAttivaId = null; SP.setAziendaAttiva(null); }
     },
 
     async logout() {
       await authLogout();
       this.utente = null;
+      this.authEmail = null;
       this.aziende = [];
       this.aziendaAttivaId = null;
       SP.setAziendaAttiva(null);
@@ -411,6 +445,7 @@ function appShell() {
     get pagina()      { return Alpine.store("ui").pagina; },
     get caricamento() { return Alpine.store("db").caricamento; },
     get loggato()     { return Alpine.store("sessione").loggato; },
+    get needsOnboarding() { return Alpine.store("sessione").needsOnboarding; },
     get isAdmin()     { return Alpine.store("sessione").isAdmin; },
 
     vai(p) {
@@ -492,18 +527,41 @@ function loginPage() {
     msgRecupero:   "",
     inviando:      false,
 
+    // Registrazione
+    modoRegistrazione: false,
+    msgRegistrazione:  "",
+
     async esegui() {
       if (!this.email || !this.password) { this.errore = "Inserisci email e password"; return; }
       this.caricando = true;
       this.errore    = "";
       const ok = await Alpine.store("sessione").eseguiLogin(this.email, this.password);
       if (ok) {
-        await Alpine.store("db").ricarica();
-        Alpine.store("ui").pagina = "dashboard";
+        if (Alpine.store("sessione").loggato) {
+          await Alpine.store("db").ricarica();
+          Alpine.store("ui").pagina = "dashboard";
+        }
+        // altrimenti manca l'azienda → parte l'onboarding (needsOnboarding)
       } else {
         this.errore = "Email o password non validi, oppure utente disabilitato";
       }
       this.caricando = false;
+    },
+
+    async registra() {
+      if (!this.email || !this.password) { this.errore = "Inserisci email e password"; return; }
+      if (this.password.length < 8)     { this.errore = "La password deve avere almeno 8 caratteri"; return; }
+      this.caricando = true; this.errore = ""; this.msgRegistrazione = "";
+      const r = await Alpine.store("sessione").registra(this.email, this.password);
+      this.caricando = false;
+      if (!r.ok) { this.errore = "Registrazione non riuscita: " + (r.error || ""); return; }
+      if (!r.sessione) {
+        // Serve conferma email (impostazione Supabase)
+        this.modoRegistrazione = false;
+        this.msgRegistrazione = "Ti abbiamo inviato un'email di conferma. Confermala, poi accedi per creare la tua azienda.";
+        return;
+      }
+      // Sessione attiva → parte l'onboarding automaticamente (needsOnboarding)
     },
 
     apriRecupero() {
@@ -522,6 +580,33 @@ function loginPage() {
       this.inviando    = false;
       this.msgRecupero = "Se l'email è registrata riceverai a breve un link per reimpostare la password. Controlla anche la cartella spam.";
     },
+  };
+}
+
+// ==========================================================
+// COMPONENTE: onboardingPage — crea la tua azienda (self-service)
+// ==========================================================
+function onboardingPage() {
+  return {
+    nomePersona: "",
+    nomeAzienda: "",
+    errore:      "",
+    salvando:    false,
+
+    get email() { return Alpine.store("sessione").authEmail || ""; },
+    get haProfilo() { return !!Alpine.store("sessione").utente; },
+
+    async crea() {
+      if (!this.nomeAzienda.trim()) { this.errore = "Inserisci il nome della tua azienda"; return; }
+      if (!this.haProfilo && !this.nomePersona.trim()) { this.errore = "Inserisci il tuo nome"; return; }
+      this.salvando = true; this.errore = "";
+      const r = await Alpine.store("sessione").completaOnboarding(this.nomePersona.trim(), this.nomeAzienda.trim());
+      this.salvando = false;
+      if (!r.ok) { this.errore = "Errore: " + r.msg; return; }
+      Alpine.store("ui").pagina = "dashboard";
+    },
+
+    async esci() { await Alpine.store("sessione").logout(); },
   };
 }
 
