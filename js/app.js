@@ -755,6 +755,31 @@ function superAdminPage() {
       else Alpine.store("ui").mostraToast("Errore: " + (r?.__errore || "—"), "error");
     },
 
+    // Collegamento numero: interroga il server WhatsApp (stato + QR).
+    qrImg: null,
+    verificandoWa: false,
+    _waBase() { return (this.waForm.url || "").replace(/\/+$/, ""); },
+    async verificaConnessioneWa() {
+      const base = this._waBase();
+      if (!base) { Alpine.store("ui").mostraToast("Inserisci prima l'URL del server", "error"); return; }
+      this.verificandoWa = true; this.qrImg = null;
+      const headers = { "x-api-key": this.waForm.api_key || "" };
+      try {
+        const st = await fetch(base + "/status", { headers });
+        const sj = await st.json();
+        this.waForm.stato  = sj.connected ? "connesso" : "disconnesso";
+        this.waForm.numero = sj.number || "";
+        if (!sj.connected) {
+          try { const q = await fetch(base + "/qr", { headers }); const qj = await q.json(); this.qrImg = qj.qr || null; } catch (_) {}
+        }
+        await SP.salvaWhatsappConfig(this.waForm);
+        Alpine.store("ui").mostraToast(sj.connected ? ("Connesso — " + (sj.number || "")) : "Scansiona il QR con WhatsApp");
+      } catch (e) {
+        Alpine.store("ui").mostraToast("Server non raggiungibile. Verifica URL, https e che sia avviato.", "error");
+      }
+      this.verificandoWa = false;
+    },
+
     // Carica la configurazione dei piani nel formato modificabile
     async caricaConfigPiani() {
       const righe = await SP.getPianiConfig();
