@@ -71,23 +71,48 @@ document.addEventListener("alpine:init", () => {
   // ==========================================================
   Alpine.store("sessione", {
     utente: null,
+    aziende: [],            // aziende di cui l'utente è membro
+    aziendaAttivaId: null,  // azienda attualmente selezionata
 
     init() {
       this.utente = getUtenteSessione();
     },
 
-    get loggato()    { return !!this.utente; },
-    get nomeUtente() { return this.utente?.nome || this.utente?.username || ""; },
-    get ruolo()      { return this.utente?.ruolo || ""; },
+    get loggato()       { return !!this.utente; },
+    get nomeUtente()    { return this.utente?.nome || this.utente?.username || ""; },
+    get aziendaAttiva() { return this.aziende.find(a => a.id === this.aziendaAttivaId) || null; },
+    // Il ruolo è quello dell'azienda attiva (per-azienda)
+    get ruolo()         { return this.aziendaAttiva?.ruolo || this.utente?.ruolo || ""; },
+
+    // Carica le aziende dell'utente e imposta quella attiva
+    async _caricaAziende() {
+      if (!this.utente) { this.aziende = []; this.aziendaAttivaId = null; SP.setAziendaAttiva(null); return; }
+      this.aziende = await SP.getAziendeUtente(this.utente.id);
+      const salvata = localStorage.getItem("cfg_azienda_attiva");
+      const valida  = this.aziende.find(a => a.id === salvata);
+      this.aziendaAttivaId = valida ? salvata : (this.aziende[0]?.id || null);
+      SP.setAziendaAttiva(this.aziendaAttivaId);
+    },
+
+    // Cambia azienda attiva e ricarica i dati
+    async cambiaAzienda(id) {
+      if (!this.aziende.find(a => a.id === id)) return;
+      this.aziendaAttivaId = id;
+      localStorage.setItem("cfg_azienda_attiva", id);
+      SP.setAziendaAttiva(id);
+      await Alpine.store("db").ricarica();
+      Alpine.store("ui").mostraToast("Azienda: " + (this.aziendaAttiva?.nome || ""));
+    },
 
     // Recupera il ruolo corrente dall'elenco DB
     _mioRuolo() {
       const ruoliDB = Alpine.store("db").ruoli;
+      const chiave  = this.ruolo;
       if (ruoliDB && ruoliDB.length) {
-        return ruoliDB.find(r => r.chiave === this.utente?.ruolo) || null;
+        return ruoliDB.find(r => r.chiave === chiave) || null;
       }
       // Fallback se ruoli DB non ancora caricati
-      return { permessi: PERMESSI_FALLBACK[this.utente?.ruolo] || {} };
+      return { permessi: PERMESSI_FALLBACK[chiave] || {} };
     },
 
     // Verifica se l'utente ha un permesso con il livello richiesto
@@ -117,19 +142,26 @@ document.addEventListener("alpine:init", () => {
 
     async eseguiLogin(email, password) {
       const u = await login(email, password);
-      if (u) { this.utente = u; return true; }
-      return false;
+      if (!u) return false;
+      this.utente = u;
+      await this._caricaAziende();
+      return true;
     },
 
     // Ripristina la sessione autenticata all'avvio (async)
     async ripristina() {
       const prof = await ripristinaSessione();
       this.utente = prof || null;
+      if (prof) await this._caricaAziende();
+      else { this.aziende = []; this.aziendaAttivaId = null; SP.setAziendaAttiva(null); }
     },
 
     async logout() {
       await authLogout();
       this.utente = null;
+      this.aziende = [];
+      this.aziendaAttivaId = null;
+      SP.setAziendaAttiva(null);
       Alpine.store("ui").vai("dashboard");
     },
   });
@@ -297,12 +329,12 @@ document.addEventListener("alpine:init", () => {
     // --- Utenti ---
     async aggiungiUtente(dati, passwordHash) {
       const u = await SP.inserisciUtente(dati, passwordHash);
-      if (u) this.utenti.push(u);
+      if (u && !u.__errore) this.utenti.push(u);
       return u;
     },
     async modificaUtente(id, dati) {
       const u = await SP.aggiornaUtente(id, dati);
-      if (u) { const i = this.utenti.findIndex(x => x.id === id); if (i !== -1) this.utenti[i] = u; }
+      if (u && !u.__errore) { const i = this.utenti.findIndex(x => x.id === id); if (i !== -1) this.utenti[i] = u; }
       return u;
     },
     async eliminaUtente(id) {
