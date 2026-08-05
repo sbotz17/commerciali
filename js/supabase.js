@@ -51,6 +51,54 @@ const SP = {
     }));
   },
 
+  // Recupera o crea il profilo utente (globale) in base all'email
+  async assicuraProfilo(email, nome) {
+    const em = (email || "").trim().toLowerCase();
+    const { data: ex } = await _sb.from("utenti")
+      .select("id, username, email, nome, attivo, avatar, menu_utente")
+      .eq("email", em).maybeSingle();
+    if (ex) return ex;
+    const username = em.split("@")[0] || em;
+    const ins = await _sb.from("utenti")
+      .insert([{ username, email: em, nome: (nome || username), ruolo: "admin", attivo: true }])
+      .select("id, username, email, nome, attivo, avatar, menu_utente").single();
+    if (ins.error) { console.error("assicuraProfilo:", ins.error.message); return { __errore: ins.error.message }; }
+    return ins.data;
+  },
+
+  // Crea una nuova azienda
+  async creaAzienda(nome) {
+    const { data, error } = await _sb.from("aziende")
+      .insert([{ nome: (nome || "La mia azienda").trim() }])
+      .select("id, nome, logo").single();
+    if (error) { console.error("creaAzienda:", error.message); return { __errore: error.message }; }
+    return data;
+  },
+
+  // Iscrive un utente a un'azienda con un ruolo
+  async aggiungiMembro(aziendaId, utenteId, ruolo = "commerciale") {
+    const { error } = await _sb.from("membri")
+      .insert([{ azienda_id: aziendaId, utente_id: utenteId, ruolo }]);
+    if (error && error.code !== "23505") { console.error("aggiungiMembro:", error.message); return { __errore: error.message }; }
+    return { ok: true };
+  },
+
+  // Popola una nuova azienda con ruoli di sistema e categorie di base
+  async seedAzienda(aziendaId) {
+    await _sb.from("ruoli").insert([
+      { azienda_id: aziendaId, nome: "Amministratore", chiave: "admin", descrizione: "Accesso completo", sconto_max: 100, sistema: true,
+        permessi: { dashboard:"entrambi", listino:"entrambi", gestione_prodotti:"entrambi", preventivi_propri:"entrambi", preventivi_tutti:"entrambi", approva_preventivi:"entrambi", clienti:"entrambi", bandi:"entrambi", gestione_categorie:"entrambi", gestione_utenti:"entrambi", gestione_ruoli:"entrambi", impostazioni:"entrambi" } },
+      { azienda_id: aziendaId, nome: "Commerciale", chiave: "commerciale", descrizione: "Accesso operativo", sconto_max: 20, sistema: true,
+        permessi: { dashboard:"lettura", listino:"lettura", preventivi_propri:"entrambi", clienti:"entrambi", bandi:"lettura" } },
+    ]);
+    await _sb.from("categorie").insert([
+      { azienda_id: aziendaId, nome: "software", icona: "💻", ordine: 1 },
+      { azienda_id: aziendaId, nome: "servizi",  icona: "🛠️", ordine: 2 },
+      { azienda_id: aziendaId, nome: "hardware", icona: "🖥️", ordine: 3 },
+    ]);
+    return true;
+  },
+
   // ----------------------------------------------------------
   // PRODOTTI
   // ----------------------------------------------------------

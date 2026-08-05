@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=24"></script>
-  <script src="js/supabase.js?v=24"></script>
-  <script src="js/auth.js?v=24"></script>
-  <script src="js/app.js?v=24"></script>
+  <script src="js/bandi-data.js?v=25"></script>
+  <script src="js/supabase.js?v=25"></script>
+  <script src="js/auth.js?v=25"></script>
+  <script src="js/app.js?v=25"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -49,7 +49,7 @@
   <!-- ======================================================
        PAGINA LOGIN
   ====================================================== -->
-  <div x-show="!caricamento && !loggato" x-data="loginPage()"
+  <div x-show="!caricamento && !loggato && !needsOnboarding" x-data="loginPage()"
        class="min-h-screen bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center px-4">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8">
       <div class="flex flex-col items-center mb-8">
@@ -59,32 +59,51 @@
           </svg>
         </div>
         <h1 class="text-xl font-bold text-slate-800">Configuratore Commerciali</h1>
-        <p class="text-sm text-slate-400 mt-1">Accedi alla piattaforma</p>
+        <p class="text-sm text-slate-400 mt-1" x-text="modoRegistrazione ? 'Crea il tuo account' : 'Accedi alla piattaforma'"></p>
       </div>
-      <!-- Form di accesso -->
+      <!-- Form di accesso / registrazione -->
       <div class="space-y-4" x-show="!modoRecupero">
         <div>
           <label class="text-xs font-medium text-slate-500">Email</label>
-          <input x-model="email" type="email" placeholder="nome@esempio.it" autocomplete="username" @keyup.enter="esegui()"
+          <input x-model="email" type="email" placeholder="nome@esempio.it" autocomplete="username" @keyup.enter="modoRegistrazione ? registra() : esegui()"
                  class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
           <label class="text-xs font-medium text-slate-500">Password</label>
-          <input x-model="password" type="password" placeholder="••••••••" autocomplete="current-password" @keyup.enter="esegui()"
+          <input x-model="password" type="password" placeholder="••••••••" :autocomplete="modoRegistrazione ? 'new-password' : 'current-password'" @keyup.enter="modoRegistrazione ? registra() : esegui()"
                  class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <template x-if="errore">
           <p class="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg" x-text="errore"></p>
         </template>
-        <button @click="esegui()" :disabled="caricando"
+        <template x-if="msgRegistrazione">
+          <p class="text-xs text-green-700 bg-green-50 px-3 py-2 rounded-lg" x-text="msgRegistrazione"></p>
+        </template>
+        <!-- Pulsante ACCEDI -->
+        <button x-show="!modoRegistrazione" @click="esegui()" :disabled="caricando"
                 class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl active:bg-blue-800 disabled:opacity-50 mt-2">
           <span x-show="!caricando">Accedi →</span>
           <span x-show="caricando">Accesso in corso…</span>
         </button>
-        <button type="button" @click="apriRecupero()"
+        <!-- Pulsante REGISTRATI -->
+        <button x-show="modoRegistrazione" @click="registra()" :disabled="caricando" x-cloak
+                class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl active:bg-blue-800 disabled:opacity-50 mt-2">
+          <span x-show="!caricando">Crea account →</span>
+          <span x-show="caricando">Creazione…</span>
+        </button>
+        <button type="button" x-show="!modoRegistrazione" @click="apriRecupero()"
                 class="btn-tap w-full text-xs text-blue-700 font-medium mt-1 py-1">
           Password dimenticata?
         </button>
+        <!-- Toggle login / registrazione -->
+        <div class="text-center text-xs text-slate-500 pt-2 border-t border-slate-100">
+          <span x-show="!modoRegistrazione">Non hai un account?
+            <button type="button" @click="modoRegistrazione=true; errore=''" class="text-blue-700 font-semibold">Registra la tua azienda</button>
+          </span>
+          <span x-show="modoRegistrazione" x-cloak>Hai già un account?
+            <button type="button" @click="modoRegistrazione=false; errore=''" class="text-blue-700 font-semibold">Accedi</button>
+          </span>
+        </div>
       </div>
 
       <!-- Form recupero password -->
@@ -107,6 +126,41 @@
                 class="btn-tap w-full text-xs text-slate-500 font-medium py-1">
           ← Torna all'accesso
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================
+       ONBOARDING — crea la tua azienda (self-service)
+  ====================================================== -->
+  <div x-show="!caricamento && needsOnboarding" x-data="onboardingPage()" x-cloak
+       class="min-h-screen bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center px-4">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8">
+      <div class="flex flex-col items-center mb-6">
+        <div class="w-16 h-16 bg-blue-700 rounded-2xl flex items-center justify-center mb-3 text-3xl">🏢</div>
+        <h1 class="text-xl font-bold text-slate-800">Crea la tua azienda</h1>
+        <p class="text-sm text-slate-400 mt-1 text-center">Ultimo passo per iniziare. Diventerai l'amministratore dell'azienda.</p>
+      </div>
+      <div class="space-y-4">
+        <div x-show="!haProfilo">
+          <label class="text-xs font-medium text-slate-500">Il tuo nome</label>
+          <input x-model="nomePersona" type="text" placeholder="Es. Mario Rossi"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500">Nome azienda</label>
+          <input x-model="nomeAzienda" type="text" placeholder="Es. Acme S.r.l." @keyup.enter="crea()"
+                 class="mt-1 w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <template x-if="errore">
+          <p class="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg" x-text="errore"></p>
+        </template>
+        <button @click="crea()" :disabled="salvando"
+                class="btn-tap w-full bg-blue-700 text-white font-semibold py-3 rounded-xl active:bg-blue-800 disabled:opacity-50 mt-1">
+          <span x-show="!salvando">Crea azienda e inizia →</span>
+          <span x-show="salvando">Creazione…</span>
+        </button>
+        <button type="button" @click="esci()" class="btn-tap w-full text-xs text-slate-400 font-medium py-1">Esci</button>
       </div>
     </div>
   </div>
