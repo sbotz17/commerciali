@@ -58,7 +58,7 @@ const SP = {
   async getTutteAziende() {
     const { data: az, error } = await _sb
       .from("aziende")
-      .select("id, nome, logo, created_at")
+      .select("*")
       .order("created_at");
     if (error) { console.error("getTutteAziende:", error.message); return []; }
     const { data: membri } = await _sb
@@ -155,11 +155,15 @@ const SP = {
     return ins.data;
   },
 
-  // Crea una nuova azienda
-  async creaAzienda(nome) {
+  // Crea una nuova azienda. Accetta una stringa (solo nome) oppure un
+  // oggetto con l'anagrafica completa (Tappa 7).
+  async creaAzienda(dati) {
+    const base = (typeof dati === "string") ? { nome: dati } : (dati || {});
+    const payload = { nome: (base.nome || "La mia azienda").trim() };
+    ["partita_iva", "codice_fiscale", "indirizzo", "comune", "provincia", "cap", "telefono", "email", "pec"]
+      .forEach(k => { if (base[k]) payload[k] = String(base[k]).trim(); });
     const { data, error } = await _sb.from("aziende")
-      .insert([{ nome: (nome || "La mia azienda").trim() }])
-      .select("id, nome, logo").single();
+      .insert([payload]).select("*").single();
     if (error) { console.error("creaAzienda:", error.message); return { __errore: error.message }; }
     return data;
   },

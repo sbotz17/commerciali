@@ -633,9 +633,9 @@ function superAdminPage() {
     caricando: false,
     q:         "",
 
-    // Form nuova azienda
-    nuovaAzienda: "",
-    creando:      false,
+    // Form nuova azienda (anagrafica completa + primo utente admin)
+    formAz:  null,
+    creando: false,
 
     // Form licenza (modale)
     licForm:  null,            // { aziendaId, aziendaNome, piano, stato, data_inizio, data_fine, max_utenti, max_preventivi, note }
@@ -701,23 +701,78 @@ function superAdminPage() {
     aziendaAttivaId() { return Alpine.store("sessione").aziendaAttivaId; },
     entra(a) { Alpine.store("sessione").entraComeSuperAdmin(a); },
 
-    async creaAzienda() {
-      const nome = this.nuovaAzienda.trim();
-      if (!nome) return;
-      this.creando = true;
-      const az = await SP.creaAzienda(nome);
-      if (az && !az.__errore) {
-        // Aggiungi automaticamente il super admin come membro admin e una licenza trial
-        const uid = Alpine.store("sessione").utente?.id;
-        if (uid) await SP.aggiungiMembro(az.id, uid, "admin");
-        await SP.seedAzienda(az.id);
-        this.nuovaAzienda = "";
-        Alpine.store("ui").mostraToast("Azienda creata: " + nome);
-        await this.carica();
-      } else {
-        Alpine.store("ui").mostraToast("Errore: " + (az?.__errore || "creazione non riuscita"), "error");
+    // Apre il form completo di creazione azienda
+    apriNuovaAzienda() {
+      this.formAz = {
+        // Dati azienda
+        nome: "", partita_iva: "", codice_fiscale: "", indirizzo: "",
+        comune: "", provincia: "", cap: "", telefono: "", email: "", pec: "",
+        // Primo utente amministratore
+        metodo: "password",            // "password" | "invito"
+        adminEmail: "", adminNome: "", adminCognome: "",
+        adminPassword: this.generaPassword(),
+        mostraPassword: false,
+      };
+    },
+    chiudiFormAz() { this.formAz = null; },
+
+    generaPassword() {
+      const alfa = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+      let p = "";
+      const arr = new Uint32Array(10);
+      (window.crypto || {}).getRandomValues?.(arr);
+      for (let i = 0; i < 10; i++) p += alfa[(arr[i] || Math.floor(Math.random() * 1e9)) % alfa.length];
+      return p;
+    },
+    rigeneraPassword() { if (this.formAz) this.formAz.adminPassword = this.generaPassword(); },
+
+    // Crea l'azienda con anagrafica completa e il primo utente amministratore
+    async creaAziendaCompleta() {
+      const f = this.formAz;
+      if (!f) return;
+      if (!f.nome.trim())       { Alpine.store("ui").mostraToast("La ragione sociale è obbligatoria", "error"); return; }
+      if (!f.adminEmail.trim()) { Alpine.store("ui").mostraToast("L'email del primo amministratore è obbligatoria", "error"); return; }
+      if (f.metodo === "password" && (!f.adminPassword || f.adminPassword.length < 8)) {
+        Alpine.store("ui").mostraToast("La password temporanea deve avere almeno 8 caratteri", "error"); return;
       }
-      this.creando = false;
+      this.creando = true;
+      try {
+        // 1) Azienda
+        const az = await SP.creaAzienda(f);
+        if (!az || az.__errore) { Alpine.store("ui").mostraToast("Errore azienda: " + (az?.__errore || "—"), "error"); return; }
+
+        // 2) Account di login del primo amministratore
+        const email = f.adminEmail.trim().toLowerCase();
+        const pwd = (f.metodo === "password") ? f.adminPassword : this.generaPassword() + "!Aa9";
+        const resAuth = await creaAccountLogin(email, pwd);
+
+        // 3) Profilo utente + iscrizione come admin dell'azienda
+        const nomeCompleto = [f.adminNome, f.adminCognome].filter(Boolean).join(" ").trim() || email.split("@")[0];
+        const prof = await SP.assicuraProfilo(email, nomeCompleto);
+        if (prof && !prof.__errore) {
+          await SP.aggiungiMembro(az.id, prof.id, "admin");
+        }
+
+        // 4) Ruoli, categorie e licenza trial di base
+        await SP.seedAzienda(az.id);
+
+        // 5) Metodo "invito via email": manda il link per impostare la password
+        if (f.metodo === "invito") await richiediRecuperoPassword(email);
+
+        // Messaggio finale
+        if (f.metodo === "invito") {
+          Alpine.store("ui").mostraToast("Azienda creata. Invito inviato a " + email);
+        } else if (!resAuth.ok) {
+          Alpine.store("ui").mostraToast("Azienda creata. Nota: l'account login va completato (" + (resAuth.msg || "verifica email") + ")", "error");
+        } else {
+          Alpine.store("ui").mostraToast("Azienda creata con amministratore " + email);
+        }
+        this.formAz = null;
+        this.tab = "aziende";
+        await this.carica();
+      } finally {
+        this.creando = false;
+      }
     },
 
     async rinomina(a) {
