@@ -61,6 +61,14 @@ async function caricaProfilo(email) {
     .eq("email", em)
     .maybeSingle();
   if (error) { console.error("caricaProfilo:", error.message); return null; }
+  if (!data) return null;
+  // Flag super_admin: colonna aggiunta dalla Tappa 5. Query separata e
+  // tollerante: se la colonna non esiste ancora, il login non deve rompersi.
+  try {
+    const { data: sa } = await _sb
+      .from("utenti").select("super_admin").eq("email", em).maybeSingle();
+    if (sa && typeof sa.super_admin !== "undefined") data.super_admin = !!sa.super_admin;
+  } catch (_) { /* colonna non presente: ignora */ }
   return data;
 }
 
