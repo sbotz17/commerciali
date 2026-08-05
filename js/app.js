@@ -58,6 +58,16 @@ const PERMESSI_DEF = [
   { id: "impostazioni",       label: "Impostazioni",         emoji: "⚙️",  pagine: ["impostazioni"] },
 ];
 
+// Piani licenza (Tappa 6) — limiti predefiniti suggeriti in fase di assegnazione.
+// null = illimitato. "giorni" = durata predefinita proposta nel form.
+const PIANI = {
+  trial:        { label: "Trial",        colore: "slate",  max_utenti: 2,    max_preventivi: 20,   giorni: 14 },
+  starter:      { label: "Starter",      colore: "blue",   max_utenti: 3,    max_preventivi: 100,  giorni: 365 },
+  professional: { label: "Professional", colore: "purple", max_utenti: 10,   max_preventivi: 1000, giorni: 365 },
+  enterprise:   { label: "Enterprise",   colore: "amber",  max_utenti: null, max_preventivi: null, giorni: 365 },
+};
+const oggiISO = () => new Date().toISOString().slice(0, 10);
+
 // Fallback permessi quando la tabella ruoli non è ancora stata creata (schema v3)
 const PERMESSI_FALLBACK = {
   admin:       { dashboard:"entrambi", listino:"entrambi", gestione_prodotti:"entrambi", preventivi_propri:"entrambi", preventivi_tutti:"entrambi", approva_preventivi:"entrambi", clienti:"entrambi", bandi:"entrambi", gestione_categorie:"entrambi", gestione_utenti:"entrambi", gestione_ruoli:"entrambi", impostazioni:"entrambi" },
@@ -234,6 +244,7 @@ document.addEventListener("alpine:init", () => {
       this.aziende = [];
       this.aziendaAttivaId = null;
       try { localStorage.removeItem("cfg_super_aziende"); } catch (_) {}
+      Alpine.store("db").licenza = undefined;
       SP.setAziendaAttiva(null);
       Alpine.store("ui").vai("dashboard");
     },
@@ -250,6 +261,7 @@ document.addEventListener("alpine:init", () => {
     utenti:        [],
     ruoli:         [],
     impostazioni:  {},
+    licenza:       undefined,  // undefined = sconosciuta (non bloccare), null = assente, oggetto = presente
     caricamento:   true,
 
     // Getter impostazioni — leggono dalla store reattiva (aggiornata al save)
@@ -297,12 +309,15 @@ document.addEventListener("alpine:init", () => {
         if (sess.haPermesso("gestione_utenti")) fetches.push(SP.getUtenti());
         else fetches.push(Promise.resolve([]));
 
-        const [prodotti, clienti, preventivi, categorie, utenti] = await Promise.all(fetches);
+        fetches.push(SP.getLicenzaAzienda(sess.aziendaAttivaId));
+
+        const [prodotti, clienti, preventivi, categorie, utenti, licenza] = await Promise.all(fetches);
         this.prodotti   = prodotti;
         this.clienti    = clienti;
         this.preventivi = preventivi;
         this.categorie  = categorie;
         this.utenti     = utenti || [];
+        this.licenza    = licenza; // undefined (sconosciuta) | null (assente) | oggetto
       } catch (e) {
         console.error("Errore caricamento dati:", e);
         Alpine.store("ui").mostraToast("Errore connessione al database", "error");
@@ -314,6 +329,47 @@ document.addEventListener("alpine:init", () => {
     async ricarica() {
       this.caricamento = true;
       await this.init();
+    },
+
+    // --- Licenza (Tappa 6) ---
+    // La licenza è valida se attiva e non scaduta. Se sconosciuta (undefined:
+    // tabella non presente o errore) NON blocca (fail-open, per non chiudere
+    // fuori nessuno se la migrazione non è ancora stata eseguita).
+    get licenzaValida() {
+      const l = this.licenza;
+      if (l === undefined) return true;
+      if (!l) return false;
+      if (l.stato !== "attiva") return false;
+      if (l.data_fine && l.data_fine < oggiISO()) return false;
+      return true;
+    },
+    // Etichetta stato licenza per l'interfaccia
+    get statoLicenza() {
+      const l = this.licenza;
+      if (l === undefined) return "sconosciuta";
+      if (!l) return "assente";
+      if (l.stato !== "attiva") return "sospesa";
+      if (l.data_fine && l.data_fine < oggiISO()) return "scaduta";
+      return "attiva";
+    },
+    // Verifica se creare un elemento supererebbe il limite del piano.
+    // Torna un messaggio d'errore (string) se superato, altrimenti null.
+    limiteSuperato(tipo, contoAttuale) {
+      if (Alpine.store("sessione").isSuperAdmin) return null; // super admin senza limiti
+      const l = this.licenza;
+      if (!l) return null; // se non c'è licenza il blocco accesso agisce altrove
+      const piano = PIANI[l.piano]?.label || l.piano || "";
+      if (tipo === "utenti") {
+        const max = l.max_utenti;
+        const n = (contoAttuale != null) ? contoAttuale : this.utenti.length;
+        if (max != null && n >= max) return `Limite del piano ${piano}: massimo ${max} utenti. Aggiorna la licenza per aggiungerne altri.`;
+      }
+      if (tipo === "preventivi") {
+        const max = l.max_preventivi;
+        const n = (contoAttuale != null) ? contoAttuale : this.preventivi.length;
+        if (max != null && n >= max) return `Limite del piano ${piano}: massimo ${max} preventivi. Aggiorna la licenza per crearne altri.`;
+      }
+      return null;
     },
 
     // --- Prodotti ---
@@ -352,6 +408,11 @@ document.addEventListener("alpine:init", () => {
 
     // --- Preventivi ---
     async salvaPreventivo(dati) {
+      // Limite di piano: conta i preventivi reali dell'azienda (non solo i miei)
+      let conto = await SP.contaPreventivi();
+      if (conto == null) conto = this.preventivi.length; // fallback
+      const lim = this.limiteSuperato("preventivi", conto);
+      if (lim) { Alpine.store("ui").mostraToast(lim, "error"); return null; }
       const p = await SP.inserisciPreventivo(dati);
       if (p) this.preventivi.unshift(p);
       return p;
@@ -487,6 +548,12 @@ function appShell() {
     get loggato()     { return Alpine.store("sessione").loggato; },
     get needsOnboarding() { return Alpine.store("sessione").needsOnboarding; },
     get isAdmin()     { return Alpine.store("sessione").isAdmin; },
+    // Accesso bloccato: licenza assente/scaduta/sospesa (il super admin è esente)
+    get accessoBloccato() {
+      const sess = Alpine.store("sessione");
+      return sess.loggato && !sess.isSuperAdmin && !Alpine.store("db").licenzaValida;
+    },
+    get statoLicenza() { return Alpine.store("db").statoLicenza; },
 
     vai(p) {
       Alpine.store("ui").vai(p);
@@ -556,16 +623,27 @@ function appShell() {
 }
 
 // ==========================================================
-// COMPONENTE: superAdminPage — pannello globale "tutte le aziende"
+// COMPONENTE: superAdminPage — console di amministrazione (SaaS)
+// Sotto-schede: Panoramica · Aziende · Licenze
 // ==========================================================
 function superAdminPage() {
   return {
-    aziende:   [],
+    tab:       "panoramica",   // panoramica | aziende | licenze
+    aziende:   [],             // { id, nome, logo, created_at, membri:[], licenza:{}|null }
     caricando: false,
     q:         "",
 
+    // Form nuova azienda
+    nuovaAzienda: "",
+    creando:      false,
+
+    // Form licenza (modale)
+    licForm:  null,            // { aziendaId, aziendaNome, piano, stato, data_inizio, data_fine, max_utenti, max_preventivi, note }
+    salvandoLic: false,
+
+    piani: PIANI,
+
     init() {
-      // Carica solo quando si naviga sulla pagina (dati sempre freschi)
       this.$watch(() => Alpine.store("ui").pagina, (p) => {
         if (p === "superadmin") this.carica();
       });
@@ -578,6 +656,7 @@ function superAdminPage() {
       this.caricando = false;
     },
 
+    // --- Filtri / helper ---
     get filtrate() {
       const t = this.q.trim().toLowerCase();
       if (!t) return this.aziende;
@@ -585,9 +664,136 @@ function superAdminPage() {
     },
     get totMembri() { return this.aziende.reduce((s, a) => s + (a.membri?.length || 0), 0); },
 
-    aziendaAttivaId()  { return Alpine.store("sessione").aziendaAttivaId; },
-    entra(a)           { Alpine.store("sessione").entraComeSuperAdmin(a); },
-    dataIt(s) { try { return s ? new Date(s).toLocaleDateString("it-IT") : ""; } catch (_) { return ""; } },
+    // Stato licenza di un'azienda: attiva | scaduta | sospesa | assente
+    statoLic(a) {
+      const l = a.licenza;
+      if (!l) return "assente";
+      if (l.stato !== "attiva") return "sospesa";
+      if (l.data_fine && l.data_fine < oggiISO()) return "scaduta";
+      return "attiva";
+    },
+    licValida(a) { return this.statoLic(a) === "attiva"; },
+    pianoLabel(p) { return PIANI[p]?.label || p || "—"; },
+
+    // --- Statistiche (Panoramica) ---
+    get stats() {
+      const oggi = oggiISO();
+      const in30 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const perPiano = { trial: 0, starter: 0, professional: 0, enterprise: 0 };
+      let attive = 0, inScadenza = 0, scadute = 0;
+      this.aziende.forEach(a => {
+        const s = this.statoLic(a);
+        if (s === "attiva") {
+          attive++;
+          const p = a.licenza?.piano;
+          if (p && perPiano[p] != null) perPiano[p]++;
+          if (a.licenza?.data_fine && a.licenza.data_fine <= in30) inScadenza++;
+        } else if (s === "scaduta") {
+          scadute++;
+        }
+      });
+      const maxPiano = Math.max(1, ...Object.values(perPiano));
+      return { totali: this.aziende.length, attive, inScadenza, scadute, perPiano, maxPiano };
+    },
+    get senzaLicenza() { return this.aziende.filter(a => !a.licenza); },
+
+    // --- Aziende: creare / rinominare / eliminare / entrare ---
+    aziendaAttivaId() { return Alpine.store("sessione").aziendaAttivaId; },
+    entra(a) { Alpine.store("sessione").entraComeSuperAdmin(a); },
+
+    async creaAzienda() {
+      const nome = this.nuovaAzienda.trim();
+      if (!nome) return;
+      this.creando = true;
+      const az = await SP.creaAzienda(nome);
+      if (az && !az.__errore) {
+        // Aggiungi automaticamente il super admin come membro admin e una licenza trial
+        const uid = Alpine.store("sessione").utente?.id;
+        if (uid) await SP.aggiungiMembro(az.id, uid, "admin");
+        await SP.seedAzienda(az.id);
+        this.nuovaAzienda = "";
+        Alpine.store("ui").mostraToast("Azienda creata: " + nome);
+        await this.carica();
+      } else {
+        Alpine.store("ui").mostraToast("Errore: " + (az?.__errore || "creazione non riuscita"), "error");
+      }
+      this.creando = false;
+    },
+
+    async rinomina(a) {
+      const nome = prompt("Nuovo nome per l'azienda:", a.nome);
+      if (!nome || !nome.trim() || nome.trim() === a.nome) return;
+      const r = await SP.rinominaAzienda(a.id, nome.trim());
+      if (r && !r.__errore) { Alpine.store("ui").mostraToast("Azienda rinominata"); await this.carica(); }
+      else Alpine.store("ui").mostraToast("Errore: " + (r?.__errore || "—"), "error");
+    },
+
+    async elimina(a) {
+      if (!confirm(`Eliminare definitivamente l'azienda "${a.nome}"?\nFunziona solo se non contiene più dati (prodotti, clienti, preventivi...).`)) return;
+      const r = await SP.eliminaAzienda(a.id);
+      if (r && !r.__errore) { Alpine.store("ui").mostraToast("Azienda eliminata"); await this.carica(); }
+      else Alpine.store("ui").mostraToast("Impossibile eliminare: " + (r?.__errore || "contiene ancora dati"), "error");
+    },
+
+    // --- Licenze: assegna / modifica / revoca ---
+    apriLicenza(a) {
+      const l = a.licenza;
+      this.licForm = {
+        aziendaId:      a.id,
+        aziendaNome:    a.nome,
+        piano:          l?.piano || "trial",
+        stato:          l?.stato || "attiva",
+        data_inizio:    l?.data_inizio || oggiISO(),
+        data_fine:      l?.data_fine || "",
+        max_utenti:     l?.max_utenti ?? "",
+        max_preventivi: l?.max_preventivi ?? "",
+        note:           l?.note || "",
+      };
+    },
+    chiudiLicenza() { this.licForm = null; },
+
+    // Quando si sceglie un piano, propone i limiti e la scadenza predefiniti
+    applicaPiano(piano) {
+      const def = PIANI[piano];
+      if (!def) return;
+      this.licForm.max_utenti     = def.max_utenti ?? "";
+      this.licForm.max_preventivi = def.max_preventivi ?? "";
+      const fine = new Date(Date.now() + def.giorni * 24 * 60 * 60 * 1000);
+      this.licForm.data_fine = def.giorni ? fine.toISOString().slice(0, 10) : "";
+    },
+
+    async salvaLicenza() {
+      if (!this.licForm) return;
+      const aziendaId = this.licForm.aziendaId;
+      this.salvandoLic = true;
+      const r = await SP.salvaLicenza(aziendaId, this.licForm);
+      this.salvandoLic = false;
+      if (r && !r.__errore) {
+        Alpine.store("ui").mostraToast("Licenza salvata");
+        this.licForm = null;
+        await this.carica();
+        // Se ho modificato la licenza dell'azienda attiva, aggiorno lo stato blocco
+        if (aziendaId === Alpine.store("sessione").aziendaAttivaId) {
+          Alpine.store("db").licenza = await SP.getLicenzaAzienda(aziendaId);
+        }
+      } else {
+        Alpine.store("ui").mostraToast("Errore: " + (r?.__errore || "—"), "error");
+      }
+    },
+
+    async revoca(a) {
+      if (!confirm(`Revocare la licenza di "${a.nome}"?\nGli utenti dell'azienda non potranno più accedere finché non ne assegni una nuova.`)) return;
+      const r = await SP.revocaLicenza(a.id);
+      if (r && !r.__errore) { Alpine.store("ui").mostraToast("Licenza revocata"); await this.carica(); }
+      else Alpine.store("ui").mostraToast("Errore: " + (r?.__errore || "—"), "error");
+    },
+
+    dataIt(s) { try { return s ? new Date(s).toLocaleDateString("it-IT") : "—"; } catch (_) { return "—"; } },
+    // Giorni residui alla scadenza (null = senza scadenza)
+    giorniResidui(l) {
+      if (!l || !l.data_fine) return null;
+      return Math.ceil((new Date(l.data_fine) - new Date(oggiISO())) / (24 * 60 * 60 * 1000));
+    },
   };
 }
 
@@ -1439,6 +1645,9 @@ function utentiPage() {
           }
           Alpine.store("ui").mostraToast("Utente aggiornato");
         } else {
+          // Limite utenti del piano (licenza)
+          const lim = Alpine.store("db").limiteSuperato("utenti");
+          if (lim) { Alpine.store("ui").mostraToast(lim, "error"); return; }
           // 1) Crea l'account di login (Supabase Auth) senza sloggare l'admin
           const res = await creaAccountLogin(this.form.email, this.nuovaPassword);
           // 2) Crea comunque il profilo (ruolo, menu, ecc.)
