@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=23"></script>
-  <script src="js/supabase.js?v=23"></script>
-  <script src="js/auth.js?v=23"></script>
-  <script src="js/app.js?v=23"></script>
+  <script src="js/bandi-data.js?v=24"></script>
+  <script src="js/supabase.js?v=24"></script>
+  <script src="js/auth.js?v=24"></script>
+  <script src="js/app.js?v=24"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -198,6 +198,17 @@
         <button @click="sidebarAperta = false" class="btn-tap ml-auto text-slate-400 md:hidden">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
+      </div>
+
+      <!-- Selettore azienda (multi-azienda) -->
+      <div class="px-3 pt-3" x-show="$store.sessione.aziende.length > 0" x-cloak>
+        <label class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-1">Azienda</label>
+        <select @change="$store.sessione.cambiaAzienda($event.target.value)"
+                class="mt-1 w-full border border-slate-200 rounded-lg px-2 py-2 text-sm font-medium text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
+          <template x-for="a in $store.sessione.aziende" :key="a.id">
+            <option :value="a.id" :selected="a.id === $store.sessione.aziendaAttivaId" x-text="a.nome"></option>
+          </template>
+        </select>
       </div>
 
       <!-- Nav scrollabile -->

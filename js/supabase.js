@@ -17,18 +17,48 @@ const _RECOVERY_FLAG = (window.location.hash || "").includes("type=recovery");
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ============================================================
+// AZIENDA ATTIVA (multi-tenant): tutte le query filtrano/scrivono
+// sull'azienda attualmente selezionata dall'utente.
+// ============================================================
+let _aziendaAttiva = null;
+function _scopeAzienda(query) {
+  return _aziendaAttiva ? query.eq("azienda_id", _aziendaAttiva) : query;
+}
+
+// ============================================================
 // Oggetto SP — tutte le operazioni sul database
 // ============================================================
 const SP = {
 
   // ----------------------------------------------------------
+  // AZIENDE (multi-tenant)
+  // ----------------------------------------------------------
+  setAziendaAttiva(id) { _aziendaAttiva = id || null; },
+  getAziendaAttiva()   { return _aziendaAttiva; },
+
+  // Aziende di cui l'utente è membro (con il ruolo per azienda)
+  async getAziendeUtente(utenteId) {
+    const { data, error } = await _sb
+      .from("membri")
+      .select("azienda_id, ruolo, aziende(nome, logo)")
+      .eq("utente_id", utenteId);
+    if (error) { console.error("getAziendeUtente:", error.message); return []; }
+    return (data || []).map(m => ({
+      id:    m.azienda_id,
+      nome:  m.aziende?.nome || "Azienda",
+      logo:  m.aziende?.logo || null,
+      ruolo: m.ruolo || "commerciale",
+    }));
+  },
+
+  // ----------------------------------------------------------
   // PRODOTTI
   // ----------------------------------------------------------
   async getProdotti() {
-    const { data, error } = await _sb
+    const { data, error } = await _scopeAzienda(_sb
       .from("prodotti")
       .select("*")
-      .order("id");
+      .order("id"));
     if (error) { console.error("getProdotti:", error.message); return []; }
     return data;
   },
@@ -37,6 +67,7 @@ const SP = {
     const { data, error } = await _sb
       .from("prodotti")
       .insert([{
+        azienda_id:  _aziendaAttiva,
         nome:        dati.nome,
         categoria:   dati.categoria || "software",
         prezzo:      parseFloat(dati.prezzo) || 0,
@@ -77,20 +108,20 @@ const SP = {
   // CLIENTI
   // ----------------------------------------------------------
   async getClienti() {
-    const { data, error } = await _sb
+    const { data, error } = await _scopeAzienda(_sb
       .from("clienti")
       .select("*")
-      .order("nome");
+      .order("nome"));
     if (error) { console.error("getClienti:", error.message); return []; }
     return data;
   },
 
   // Ritorna il primo cliente trovato che è un duplicato, o null
   async cercaDuplicatoCliente({ piva, nome, cf, escludiId }) {
-    // Carica tutti i clienti e filtra in JS — evita problemi di sintassi PostgREST
-    const { data: tutti } = await _sb
+    // Carica i clienti dell'azienda attiva e filtra in JS
+    const { data: tutti } = await _scopeAzienda(_sb
       .from("clienti")
-      .select("id, nome, piva, codice_fiscale");
+      .select("id, nome, piva, codice_fiscale"));
 
     if (!tutti) return null;
 
@@ -122,6 +153,7 @@ const SP = {
     const { data, error } = await _sb
       .from("clienti")
       .insert([{
+        azienda_id:      _aziendaAttiva,
         tipo_cliente:    dati.tipo_cliente    || "azienda",
         nome:            dati.nome,
         referente:       dati.referente       || "",
@@ -191,10 +223,10 @@ const SP = {
   // PREVENTIVI
   // ----------------------------------------------------------
   async getPreventivi(soloUtenteId = null) {
-    let query = _sb
+    let query = _scopeAzienda(_sb
       .from("preventivi")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false }));
     // Se richiesto, scarica solo i preventivi di un dato commerciale
     if (soloUtenteId) query = query.eq("utente_id", soloUtenteId);
     const { data, error } = await query;
@@ -208,6 +240,7 @@ const SP = {
     const { data, error } = await _sb
       .from("preventivi")
       .insert([{
+        azienda_id:   _aziendaAttiva,
         cliente_id:   dati.clienteId   || null,
         cliente_nome: dati.clienteNome || "",
         utente_id:    (typeof getUtenteSessione === "function" ? getUtenteSessione()?.id : null) || null,
@@ -282,6 +315,7 @@ const SP = {
     const { data, error } = await _sb
       .from("preventivi")
       .insert([{
+        azienda_id:   _aziendaAttiva || vecchio.azienda_id || null,
         cliente_id:   vecchio.cliente_id   || null,
         cliente_nome: vecchio.cliente_nome || "",
         utente_id:    (typeof getUtenteSessione === "function" ? getUtenteSessione()?.id : null) || vecchio.utente_id || null,
@@ -313,10 +347,10 @@ const SP = {
   // CATEGORIE
   // ----------------------------------------------------------
   async getCategorie() {
-    const { data, error } = await _sb
+    const { data, error } = await _scopeAzienda(_sb
       .from("categorie")
       .select("*")
-      .order("ordine");
+      .order("ordine"));
     if (error) { console.error("getCategorie:", error.message); return []; }
     return data;
   },
@@ -324,7 +358,7 @@ const SP = {
   async inserisciCategoria(dati) {
     const { data, error } = await _sb
       .from("categorie")
-      .insert([{ nome: dati.nome, icona: dati.icona || "📦", ordine: dati.ordine || 0 }])
+      .insert([{ azienda_id: _aziendaAttiva, nome: dati.nome, icona: dati.icona || "📦", ordine: dati.ordine || 0 }])
       .select()
       .single();
     if (error) { console.error("inserisciCategoria:", error.message); return null; }
@@ -351,21 +385,27 @@ const SP = {
   // ----------------------------------------------------------
   // UTENTI
   // ----------------------------------------------------------
+  // Elenco dei MEMBRI dell'azienda attiva (con il ruolo per azienda)
   async getUtenti() {
+    if (!_aziendaAttiva) return [];
     const { data, error } = await _sb
-      .from("utenti")
-      .select("id, username, email, nome, ruolo, attivo, avatar, menu_utente, created_at")
-      .order("nome");
+      .from("membri")
+      .select("ruolo, utenti(id, username, email, nome, attivo, avatar, menu_utente, created_at)")
+      .eq("azienda_id", _aziendaAttiva);
     if (error) { console.error("getUtenti:", error.message); return []; }
-    return data;
+    return (data || []).filter(m => m.utenti).map(m => ({ ...m.utenti, ruolo: m.ruolo }));
   },
 
+  // Crea l'utente globale (o riusa quello con la stessa email) e lo iscrive
+  // come membro dell'azienda attiva con il ruolo scelto.
   async inserisciUtente(dati, passwordHash) {
-    const { data, error } = await _sb
+    const email = (dati.email || "").trim().toLowerCase() || null;
+    let utente = null;
+    const ins = await _sb
       .from("utenti")
       .insert([{
         username:      dati.username.trim().toLowerCase(),
-        email:         (dati.email || "").trim().toLowerCase() || null,
+        email,
         password_hash: passwordHash,
         nome:          dati.nome        || "",
         ruolo:         dati.ruolo       || "commerciale",
@@ -373,38 +413,52 @@ const SP = {
         menu_utente:   dati.menu_utente || null,
         attivo:        true,
       }])
-      .select("id, username, email, nome, ruolo, attivo, avatar, menu_utente")
+      .select("id, username, email, nome, attivo, avatar, menu_utente")
       .single();
-    if (error) { console.error("inserisciUtente:", error.message); return null; }
-    return data;
+    if (ins.error) {
+      // Se l'utente esiste già (email/username duplicati), lo riusa
+      if (ins.error.code === "23505" && email) {
+        const { data: ex } = await _sb.from("utenti")
+          .select("id, username, email, nome, attivo, avatar, menu_utente")
+          .eq("email", email).maybeSingle();
+        utente = ex || null;
+      }
+      if (!utente) { console.error("inserisciUtente:", ins.error.message); return { __errore: ins.error.message }; }
+    } else {
+      utente = ins.data;
+    }
+    // Iscrizione come membro dell'azienda attiva
+    const { error: eM } = await _sb.from("membri")
+      .insert([{ azienda_id: _aziendaAttiva, utente_id: utente.id, ruolo: dati.ruolo || "commerciale" }]);
+    if (eM && eM.code !== "23505") { console.error("inserisciUtente/membri:", eM.message); return { __errore: eM.message }; }
+    return { ...utente, ruolo: dati.ruolo || "commerciale" };
   },
 
   async aggiornaUtente(id, dati) {
-    const aggiornamenti = {
-      nome:        dati.nome   || "",
-      ruolo:       dati.ruolo  || "commerciale",
-      attivo:      dati.attivo !== false,
-      avatar:      dati.avatar      !== undefined ? (dati.avatar      || null) : undefined,
-      menu_utente: dati.menu_utente !== undefined ? (dati.menu_utente || null) : undefined,
-    };
-    // Rimuovi undefined
-    Object.keys(aggiornamenti).forEach(k => aggiornamenti[k] === undefined && delete aggiornamenti[k]);
-    // Aggiorna password solo se fornita
-    if (dati._nuovaPasswordHash) {
-      aggiornamenti.password_hash = dati._nuovaPasswordHash;
-    }
+    const aggiornamenti = { nome: dati.nome || "", attivo: dati.attivo !== false };
+    if (dati.avatar      !== undefined) aggiornamenti.avatar      = dati.avatar      || null;
+    if (dati.menu_utente !== undefined) aggiornamenti.menu_utente = dati.menu_utente || null;
+    if (dati._nuovaPasswordHash)        aggiornamenti.password_hash = dati._nuovaPasswordHash;
     const { data, error } = await _sb
       .from("utenti")
       .update(aggiornamenti)
       .eq("id", id)
-      .select("id, username, email, nome, ruolo, attivo, avatar, menu_utente")
+      .select("id, username, email, nome, attivo, avatar, menu_utente")
       .single();
     if (error) { console.error("aggiornaUtente:", error.message); return null; }
-    return data;
+    // Il ruolo è per-azienda: aggiorna la riga in membri dell'azienda attiva
+    const ruolo = dati.ruolo || "commerciale";
+    if (_aziendaAttiva) {
+      await _sb.from("membri").update({ ruolo }).eq("azienda_id", _aziendaAttiva).eq("utente_id", id);
+    }
+    return { ...data, ruolo };
   },
 
+  // "Elimina" = rimuove l'utente dall'azienda attiva (non cancella l'account globale)
   async eliminaUtente(id) {
-    const { error } = await _sb.from("utenti").delete().eq("id", id);
+    if (!_aziendaAttiva) return false;
+    const { error } = await _sb.from("membri").delete()
+      .eq("azienda_id", _aziendaAttiva).eq("utente_id", id);
     if (error) { console.error("eliminaUtente:", error.message); return false; }
     return true;
   },
@@ -413,10 +467,10 @@ const SP = {
   // RUOLI
   // ----------------------------------------------------------
   async getRuoli() {
-    const { data, error } = await _sb
+    const { data, error } = await _scopeAzienda(_sb
       .from("ruoli")
       .select("*")
-      .order("nome");
+      .order("nome"));
     if (error) { console.error("getRuoli:", error.message); return []; }
     return data;
   },
@@ -425,6 +479,7 @@ const SP = {
     const { data, error } = await _sb
       .from("ruoli")
       .insert([{
+        azienda_id:  _aziendaAttiva,
         nome:        dati.nome.trim(),
         chiave:      (dati.chiave || dati.nome).trim().toLowerCase().replace(/[\s\W]+/g, "_"),
         descrizione: dati.descrizione || "",
