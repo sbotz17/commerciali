@@ -40,7 +40,7 @@ const SP = {
   async getAziendeUtente(utenteId) {
     const { data, error } = await _sb
       .from("membri")
-      .select("azienda_id, ruolo, aziende(nome, logo)")
+      .select("azienda_id, ruolo, aziende(nome, logo, whatsapp_attivo)")
       .eq("utente_id", utenteId);
     if (error) { console.error("getAziendeUtente:", error.message); return []; }
     return (data || []).map(m => ({
@@ -48,6 +48,7 @@ const SP = {
       nome:  m.aziende?.nome || "Azienda",
       logo:  m.aziende?.logo || null,
       ruolo: m.ruolo || "commerciale",
+      whatsapp_attivo: !!m.aziende?.whatsapp_attivo,
     }));
   },
 
@@ -191,6 +192,28 @@ const SP = {
       .from("whatsapp_config").upsert([payload], { onConflict: "id" }).select("*").single();
     if (error) { console.error("salvaWhatsappConfig:", error.message); return { __errore: error.message }; }
     return data;
+  },
+
+  // Invia un messaggio WhatsApp tramite il server di piattaforma.
+  // Legge URL + API key dalla configurazione (leggibile dagli autenticati
+  // dopo la Tappa 11). Torna { ok } oppure { __errore }.
+  async inviaWhatsapp(numero, messaggio, mediaUrl) {
+    const cfg = await this.getWhatsappConfig();
+    if (!cfg || cfg.__errore || !cfg.url) return { __errore: "WhatsApp non configurato" };
+    const base = String(cfg.url).replace(/\/+$/, "");
+    try {
+      const res = await fetch(base + "/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": cfg.api_key || "" },
+        body: JSON.stringify({ to: numero, message: messaggio, mediaUrl: mediaUrl || undefined }),
+      });
+      let j = {};
+      try { j = await res.json(); } catch (_) {}
+      if (!res.ok || j.error) return { __errore: j.error || ("HTTP " + res.status) };
+      return { ok: true, id: j.id };
+    } catch (e) {
+      return { __errore: "Server non raggiungibile (verifica URL/https)" };
+    }
   },
 
   // Attiva/disattiva il modulo WhatsApp per una singola azienda
