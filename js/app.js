@@ -273,6 +273,7 @@ document.addEventListener("alpine:init", () => {
       try { localStorage.removeItem("cfg_super_aziende"); } catch (_) {}
       Alpine.store("db").licenza = undefined;
       Alpine.store("db").pianoConfig = undefined;
+      Alpine.store("db")._waCfg = null;
       SP.setAziendaAttiva(null);
       Alpine.store("ui").vai("dashboard");
     },
@@ -291,6 +292,7 @@ document.addEventListener("alpine:init", () => {
     impostazioni:  {},
     licenza:       undefined,  // undefined = sconosciuta (non bloccare), null = assente, oggetto = presente
     pianoConfig:   undefined,  // configurazione del piano dell'azienda attiva (Tappa 8)
+    _waCfg:        null,       // configurazione WhatsApp (Tappa 9/11)
     caricamento:   true,
 
     // Getter impostazioni — leggono dalla store reattiva (aggiornata al save)
@@ -350,6 +352,9 @@ document.addEventListener("alpine:init", () => {
         // Configurazione del piano (pagine + limiti) in base alla licenza
         try { this.pianoConfig = licenza && licenza.piano ? await SP.getPianoConfig(licenza.piano) : null; }
         catch (_) { this.pianoConfig = undefined; }
+        // Configurazione WhatsApp (per gli invii ai clienti)
+        try { const c = await SP.getWhatsappConfig(); this._waCfg = (c && !c.__errore) ? c : null; }
+        catch (_) { this._waCfg = null; }
       } catch (e) {
         console.error("Errore caricamento dati:", e);
         Alpine.store("ui").mostraToast("Errore connessione al database", "error");
@@ -375,6 +380,12 @@ document.addEventListener("alpine:init", () => {
       if (l.data_fine && l.data_fine < oggiISO()) return false;
       return true;
     },
+    // --- WhatsApp (invii ai clienti) ---
+    get whatsappConfigurato()   { return !!(this._waCfg && this._waCfg.url); },
+    get whatsappAttivoAzienda() { return !!Alpine.store("sessione").aziendaAttiva?.whatsapp_attivo; },
+    // Pronto = server configurato E modulo attivo per l'azienda corrente
+    get whatsappPronto()        { return this.whatsappConfigurato && this.whatsappAttivoAzienda; },
+
     // Etichetta stato licenza per l'interfaccia
     get statoLicenza() {
       const l = this.licenza;
@@ -556,7 +567,73 @@ document.addEventListener("alpine:init", () => {
     },
   });
 
+  // ==========================================================
+  // STORE: wa — compositore/invio messaggi WhatsApp
+  // ==========================================================
+  Alpine.store("wa", {
+    aperto:   false,
+    titolo:   "Invia su WhatsApp",
+    numero:   "",
+    testo:    "",
+    inviando: false,
+
+    get pronto() { return Alpine.store("db").whatsappPronto; },
+    get configurato() { return Alpine.store("db").whatsappConfigurato; },
+
+    apri({ numero = "", testo = "", titolo = "Invia su WhatsApp" } = {}) {
+      this.numero = numero || "";
+      this.testo  = testo || "";
+      this.titolo = titolo;
+      this.aperto = true;
+    },
+    chiudi() { this.aperto = false; },
+
+    // Normalizza il numero in formato internazionale (default Italia)
+    _norm(n) {
+      let d = String(n || "").replace(/\D/g, "");
+      if (!d) return "";
+      if (d.startsWith("00")) d = d.slice(2);
+      if (d.length <= 10 && d.startsWith("3")) d = "39" + d; // cellulare IT senza prefisso
+      return d;
+    },
+
+    async invia() {
+      const num = this._norm(this.numero);
+      if (!num) { Alpine.store("ui").mostraToast("Inserisci il numero del destinatario", "error"); return; }
+      if (!this.testo.trim()) { Alpine.store("ui").mostraToast("Il messaggio è vuoto", "error"); return; }
+      if (!this.configurato) { Alpine.store("ui").mostraToast("Server WhatsApp non configurato dal Super Admin", "error"); return; }
+      this.inviando = true;
+      const r = await SP.inviaWhatsapp(num, this.testo);
+      this.inviando = false;
+      if (r && !r.__errore) { Alpine.store("ui").mostraToast("Messaggio inviato a " + num); this.aperto = false; }
+      else Alpine.store("ui").mostraToast("Invio non riuscito: " + (r?.__errore || "—"), "error");
+    },
+  });
+
 }); // fine alpine:init
+
+// ==========================================================
+// WHATSAPP — costruttori dei messaggi (usati dai pulsanti "Invia")
+// ==========================================================
+function testoPreventivoWA(p) {
+  if (!p) return "";
+  const tot = (p.totale_iva != null ? p.totale_iva : p.totale) || 0;
+  const righe = (p.righe || []).map(r => `• ${r.nome}${r.qty ? " ×" + r.qty : ""}`).join("\n");
+  const nome = p.cliente_nome || "cliente";
+  return `Gentile ${nome},\ndi seguito il preventivo ${p.numero || ""}.\n`
+       + (righe ? righe + "\n" : "")
+       + `Totale: € ${Number(tot).toFixed(2)}\n\nRestiamo a disposizione per qualsiasi informazione.`;
+}
+function testoBandiWA(bandi) {
+  const lista = (bandi || []).slice(0, 12)
+    .map(b => `• ${b.titolo || b.nome || b.bando || "Bando"}`).join("\n");
+  return `Bandi e agevolazioni disponibili:\n${lista || "—"}\n\nContattaci per verificare i requisiti e presentare la domanda.`;
+}
+// Numero WhatsApp di un cliente a partire dal suo id (usa il telefono)
+function numeroClienteWA(clienteId) {
+  const c = Alpine.store("db").clienti.find(x => x.id === clienteId);
+  return (c && c.telefono) || "";
+}
 
 // ==========================================================
 // SVG ICONS (riutilizzati in più componenti)
