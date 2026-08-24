@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=39"></script>
-  <script src="js/supabase.js?v=39"></script>
-  <script src="js/auth.js?v=39"></script>
-  <script src="js/app.js?v=39"></script>
+  <script src="js/bandi-data.js?v=40"></script>
+  <script src="js/supabase.js?v=40"></script>
+  <script src="js/auth.js?v=40"></script>
+  <script src="js/app.js?v=40"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -536,7 +536,7 @@
               </thead>
               <tbody>
                 <template x-for="p in prodottiFiltrati" :key="p.id">
-                  <tr>
+                  <tr @click="canWrite && apriModifica(p)" :style="canWrite ? 'cursor:pointer' : ''">
                     <td>
                       <template x-if="p.immagine">
                         <img :src="p.immagine" :alt="p.nome" class="w-10 h-10 rounded-lg object-contain bg-slate-50 border border-slate-100" />
@@ -555,8 +555,8 @@
                     <td class="tr font-bold text-blue-700 whitespace-nowrap" x-text="fmt(p.prezzo)"></td>
                     <td x-show="canWrite">
                       <div class="tbl-actions">
-                        <button @click="apriModifica(p)" class="btn-tap text-xs text-blue-700 font-medium bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
-                        <button @click="elimina(p.id)"   class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                        <button @click.stop="apriModifica(p)" class="btn-tap text-xs text-blue-700 font-medium bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
+                        <button @click.stop="elimina(p.id)"   class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
                       </div>
                     </td>
                   </tr>
@@ -682,7 +682,7 @@
               </thead>
               <tbody>
                 <template x-for="c in clientiFiltrati" :key="c.id">
-                  <tr>
+                  <tr @click="apriModifica(c)" style="cursor:pointer">
                     <td>
                       <p class="font-semibold text-slate-800" x-text="c.nome"></p>
                       <p class="text-xs text-slate-400" x-text="c.referente || '—'"></p>
@@ -699,12 +699,12 @@
                     <td class="tc text-slate-600" x-text="countPreventivi(c.id)"></td>
                     <td>
                       <div class="tbl-actions">
-                        <button @click="nuovoPreventivoPer(c)" title="Nuovo preventivo" class="btn-tap text-xs text-white font-medium bg-blue-700 px-2.5 py-1.5 rounded-lg hover:bg-blue-800">+ Prev.</button>
-                        <button @click="vaBandi(c)" title="Bandi" class="btn-tap text-xs text-purple-700 font-medium bg-purple-50 px-2.5 py-1.5 rounded-lg hover:bg-purple-100">Bandi</button>
-                        <button x-show="$store.db.whatsappPronto" @click="$store.wa.apri({ numero: c.telefono, testo: '', titolo: 'WhatsApp a ' + c.nome })" title="WhatsApp" class="btn-tap text-xs text-green-700 font-medium bg-green-50 px-2.5 py-1.5 rounded-lg hover:bg-green-100">WhatsApp</button>
-                        <button @click="verificaPIVA(c)" title="Verifica P.IVA" class="btn-tap text-xs text-teal-700 font-medium bg-teal-50 px-2.5 py-1.5 rounded-lg hover:bg-teal-100">P.IVA</button>
-                        <button @click="apriModifica(c)" title="Modifica" class="btn-tap text-xs text-slate-600 font-medium bg-slate-100 px-2.5 py-1.5 rounded-lg hover:bg-slate-200">Modifica</button>
-                        <button @click="elimina(c.id)" title="Elimina" class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">✕</button>
+                        <button @click.stop="nuovoPreventivoPer(c)" title="Nuovo preventivo" class="btn-tap text-xs text-white font-medium bg-blue-700 px-2.5 py-1.5 rounded-lg hover:bg-blue-800">+ Prev.</button>
+                        <button @click.stop="vaBandi(c)" title="Bandi" class="btn-tap text-xs text-purple-700 font-medium bg-purple-50 px-2.5 py-1.5 rounded-lg hover:bg-purple-100">Bandi</button>
+                        <button x-show="$store.db.whatsappPronto" @click.stop="$store.wa.apri({ numero: c.telefono, testo: '', titolo: 'WhatsApp a ' + c.nome })" title="WhatsApp" class="btn-tap text-xs text-green-700 font-medium bg-green-50 px-2.5 py-1.5 rounded-lg hover:bg-green-100">WhatsApp</button>
+                        <button @click.stop="verificaPIVA(c)" title="Verifica P.IVA" class="btn-tap text-xs text-teal-700 font-medium bg-teal-50 px-2.5 py-1.5 rounded-lg hover:bg-teal-100">P.IVA</button>
+                        <button @click.stop="apriModifica(c)" title="Modifica" class="btn-tap text-xs text-slate-600 font-medium bg-slate-100 px-2.5 py-1.5 rounded-lg hover:bg-slate-200">Modifica</button>
+                        <button @click.stop="elimina(c.id)" title="Elimina" class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">✕</button>
                       </div>
                     </td>
                   </tr>
@@ -2187,14 +2187,14 @@
               </thead>
               <tbody>
                 <template x-for="c in elenco" :key="c.id">
-                  <tr>
+                  <tr @click="apriModifica(c)" style="cursor:pointer">
                     <td><span class="text-2xl" x-text="c.icona"></span></td>
                     <td class="font-semibold text-slate-800" x-text="c.nome"></td>
                     <td class="text-slate-500" x-text="c.ordine"></td>
                     <td>
                       <div class="tbl-actions">
-                        <button @click="apriModifica(c)" class="btn-tap text-xs text-blue-700 font-medium bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
-                        <button @click="elimina(c.id)"   class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                        <button @click.stop="apriModifica(c)" class="btn-tap text-xs text-blue-700 font-medium bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
+                        <button @click.stop="elimina(c.id)"   class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
                       </div>
                     </td>
                   </tr>
@@ -2269,7 +2269,7 @@
               </thead>
               <tbody>
                 <template x-for="u in elenco" :key="u.id">
-                  <tr>
+                  <tr @click="apriModifica(u)" style="cursor:pointer">
                     <td>
                       <div class="flex items-center gap-3">
                         <template x-if="u.avatar">
@@ -2293,10 +2293,10 @@
                     </td>
                     <td>
                       <div class="tbl-actions">
-                        <button @click="apriModifica(u)" title="Modifica" class="btn-tap p-2 rounded-xl text-slate-400 hover:text-blue-700 hover:bg-blue-50 transition-colors">
+                        <button @click.stop="apriModifica(u)" title="Modifica" class="btn-tap p-2 rounded-xl text-slate-400 hover:text-blue-700 hover:bg-blue-50 transition-colors">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
                         </button>
-                        <button @click="elimina(u.id)" title="Elimina" class="btn-tap p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                        <button @click.stop="elimina(u.id)" title="Elimina" class="btn-tap p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
                           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
                         </button>
                       </div>
@@ -2811,7 +2811,7 @@
                 </thead>
                 <tbody>
                   <template x-for="a in filtrate" :key="a.id">
-                    <tr>
+                    <tr @click="apriLicenza(a)" style="cursor:pointer">
                       <td class="font-medium text-slate-700" x-text="a.nome"></td>
                       <td x-text="pianoLabel(a.licenza?.piano)"></td>
                       <td>
@@ -2827,8 +2827,8 @@
                       <td class="text-xs text-slate-500 whitespace-nowrap"
                           x-text="a.licenza ? ((a.licenza.max_utenti ?? '∞') + ' utenti · ' + (a.licenza.max_preventivi ?? '∞') + ' prev.') : '—'"></td>
                       <td class="tr whitespace-nowrap">
-                        <button @click="apriLicenza(a)" class="btn-tap text-xs font-semibold text-red-700 hover:underline" x-text="a.licenza ? 'Modifica' : 'Assegna'"></button>
-                        <button x-show="a.licenza" @click="revoca(a)" class="btn-tap text-xs font-semibold text-slate-400 hover:text-red-600 ml-3">Revoca</button>
+                        <button @click.stop="apriLicenza(a)" class="btn-tap text-xs font-semibold text-red-700 hover:underline" x-text="a.licenza ? 'Modifica' : 'Assegna'"></button>
+                        <button x-show="a.licenza" @click.stop="revoca(a)" class="btn-tap text-xs font-semibold text-slate-400 hover:text-red-600 ml-3">Revoca</button>
                       </td>
                     </tr>
                   </template>
