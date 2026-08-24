@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=40"></script>
-  <script src="js/supabase.js?v=40"></script>
-  <script src="js/auth.js?v=40"></script>
-  <script src="js/app.js?v=40"></script>
+  <script src="js/bandi-data.js?v=41"></script>
+  <script src="js/supabase.js?v=41"></script>
+  <script src="js/auth.js?v=41"></script>
+  <script src="js/app.js?v=41"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -1158,27 +1158,24 @@
             </div>
           </div>
 
-          <!-- ── MODALE DETTAGLIO PREVENTIVO ─────────────────── -->
-          <div x-show="dettaglioAperto" x-transition.opacity x-cloak
-               class="fixed inset-0 z-50 flex items-center justify-center p-4" style="background:rgba(0,0,0,0.45)">
-            <div @click.outside="dettaglioAperto=false" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col">
-              <template x-if="dettaglioP">
-                <div class="flex flex-col min-h-0">
-                  <!-- Header -->
-                  <div class="flex items-start justify-between px-5 py-4 border-b border-slate-100">
-                    <div class="min-w-0">
-                      <div class="flex items-center gap-2">
-                        <h3 class="text-base font-bold text-slate-800 truncate" x-text="dettaglioP.numero"></h3>
-                        <span x-show="dettaglioP.revisione > 0" class="text-xs font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded shrink-0" x-text="'Rev. ' + dettaglioP.revisione"></span>
-                      </div>
-                      <p class="text-xs text-slate-500 mt-0.5 truncate" x-text="dettaglioP.cliente_nome + ' · ' + fmtData(dettaglioP.data)"></p>
-                    </div>
-                    <button @click="dettaglioAperto=false" class="btn-tap shrink-0 text-slate-400 hover:text-slate-600">
-                      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                    </button>
+          <!-- ── DETTAGLIO PREVENTIVO (a tutta pagina) ───────── -->
+          <div x-show="dettaglioAperto" x-cloak class="fixed inset-0 z-50 bg-slate-50 overflow-y-auto">
+            <template x-if="dettaglioP">
+              <div class="min-h-full flex flex-col">
+                <!-- Barra superiore -->
+                <div class="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 md:px-8 h-14 flex items-center gap-3">
+                  <button @click="dettaglioAperto=false" class="btn-tap flex items-center gap-2 text-slate-500 hover:text-slate-700 shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+                    <span class="text-sm">Indietro</span>
+                  </button>
+                  <div class="min-w-0 flex items-center gap-2">
+                    <h2 class="text-base font-bold text-slate-800 truncate" x-text="dettaglioP.numero"></h2>
+                    <span x-show="dettaglioP.revisione > 0" class="text-xs font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded shrink-0" x-text="'Rev. ' + dettaglioP.revisione"></span>
                   </div>
-                  <!-- Corpo scrollabile -->
-                  <div class="overflow-y-auto px-5 py-4 space-y-4">
+                </div>
+                <!-- Contenuto -->
+                <div class="flex-1 px-4 md:px-8 py-6 max-w-2xl w-full mx-auto space-y-5">
+                  <p class="text-sm text-slate-500" x-text="dettaglioP.cliente_nome + ' · ' + fmtData(dettaglioP.data)"></p>
                     <!-- Stato -->
                     <div>
                       <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Stato</label>
@@ -1251,15 +1248,14 @@
                       <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note</label>
                       <p class="mt-1 text-sm text-slate-600 whitespace-pre-wrap" x-text="dettaglioP.note"></p>
                     </div>
-                  </div>
-                  <!-- Footer -->
-                  <div class="px-5 py-3 border-t border-slate-100 flex items-center justify-between bg-slate-50 rounded-b-2xl">
-                    <span class="text-sm text-slate-500">Totale</span>
-                    <span class="text-lg font-bold text-blue-700" x-text="fmt(dettaglioP.totale_iva)"></span>
-                  </div>
                 </div>
-              </template>
-            </div>
+                <!-- Footer totale -->
+                <div class="sticky bottom-0 bg-white border-t border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between">
+                  <span class="text-sm text-slate-500">Totale</span>
+                  <span class="text-lg font-bold text-blue-700" x-text="fmt(dettaglioP.totale_iva)"></span>
+                </div>
+              </div>
+            </template>
           </div>
         </section>
 
