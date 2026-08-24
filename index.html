@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=37"></script>
-  <script src="js/supabase.js?v=37"></script>
-  <script src="js/auth.js?v=37"></script>
-  <script src="js/app.js?v=37"></script>
+  <script src="js/bandi-data.js?v=38"></script>
+  <script src="js/supabase.js?v=38"></script>
+  <script src="js/auth.js?v=38"></script>
+  <script src="js/app.js?v=38"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -1076,7 +1076,53 @@
             </div>
           </div>
 
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <!-- ── Vista DESKTOP: tabella (componente .tbl condiviso) ── -->
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Numero</th>
+                  <th>Stato</th>
+                  <th>Cliente</th>
+                  <th>Data</th>
+                  <th>Operatore</th>
+                  <th class="tr">Totale</th>
+                  <th class="tr">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="p in preventiviFiltrati" :key="p.id">
+                  <tr @click="apriDettaglio(p)" style="cursor:pointer">
+                    <td>
+                      <span class="font-semibold text-slate-800" x-text="p.numero"></span>
+                      <span x-show="p.revisione > 0" class="text-xs font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded ml-1" x-text="'Rev. ' + p.revisione"></span>
+                    </td>
+                    <td><span class="text-xs px-2 py-0.5 rounded-full font-medium" :class="statoClasse(p.stato)" x-text="statoLabel(p.stato)"></span></td>
+                    <td class="text-slate-600" x-text="p.cliente_nome"></td>
+                    <td class="text-xs text-slate-500 whitespace-nowrap" x-text="fmtData(p.data)"></td>
+                    <td class="text-xs text-slate-500" x-text="p.utente_nome || '—'"></td>
+                    <td class="tr font-bold text-blue-700 whitespace-nowrap" x-text="fmt(p.totale_iva)"></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button @click.stop="esportaPDF(p)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-2.5 py-1.5 rounded-lg hover:bg-blue-800">PDF</button>
+                        <button @click.stop="riprendi(p)"                   x-show="p.stato==='bozza' || p.stato==='inviato'" class="btn-tap text-xs text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
+                        <button @click.stop="cambiaStato(p.id,'inviato')"   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg hover:bg-amber-100">Invia</button>
+                        <button @click.stop="cambiaStato(p.id,'accettato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-green-700 bg-green-50 px-2.5 py-1.5 rounded-lg hover:bg-green-100">Accetta</button>
+                        <button @click.stop="cambiaStato(p.id,'rifiutato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-red-600 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Rifiuta</button>
+                        <button @click.stop="elimina(p.id)" class="btn-tap text-xs text-red-600 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <template x-if="preventiviFiltrati.length === 0">
+                  <tr><td colspan="7" class="tc text-slate-400 text-sm" style="padding:2.5rem 1rem">Nessuna richiesta</td></tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ── Vista MOBILE: lista/card ───────────────────── -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden md:hidden">
             <template x-if="preventiviFiltrati.length === 0">
               <div class="text-center py-12 text-slate-400 text-sm">
                 <p>Nessuna richiesta</p>
@@ -2177,7 +2223,62 @@
               Nuovo utente
             </button>
           </div>
-          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <!-- ── Vista DESKTOP: tabella (componente .tbl condiviso) ── -->
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>Utente</th>
+                  <th>Ruolo</th>
+                  <th>Stato</th>
+                  <th class="tr">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="u in elenco" :key="u.id">
+                  <tr>
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <template x-if="u.avatar">
+                          <img :src="u.avatar" alt="" class="w-9 h-9 rounded-full object-cover shrink-0 border border-slate-200" />
+                        </template>
+                        <template x-if="!u.avatar">
+                          <div class="w-9 h-9 rounded-full bg-blue-700 flex items-center justify-center text-white font-bold text-sm shrink-0" x-text="(u.nome || u.username).charAt(0).toUpperCase()"></div>
+                        </template>
+                        <div class="min-w-0">
+                          <p class="font-semibold text-slate-800" x-text="u.nome || u.username"></p>
+                          <p class="text-xs text-slate-400" x-text="'@' + u.username"></p>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="text-xs px-2.5 py-1 rounded-full font-medium" :class="ruoloClasse(u.ruolo)" x-text="ruoloLabel(u.ruolo)"></span></td>
+                    <td>
+                      <span class="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" :class="u.attivo ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-500'">
+                        <span class="w-1.5 h-1.5 rounded-full inline-block" :class="u.attivo ? 'bg-green-500' : 'bg-red-400'"></span>
+                        <span x-text="u.attivo ? 'Attivo' : 'Disabilitato'"></span>
+                      </span>
+                    </td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button @click="apriModifica(u)" title="Modifica" class="btn-tap p-2 rounded-xl text-slate-400 hover:text-blue-700 hover:bg-blue-50 transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/></svg>
+                        </button>
+                        <button @click="elimina(u.id)" title="Elimina" class="btn-tap p-2 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <template x-if="elenco.length === 0">
+                  <tr><td colspan="4" class="tc text-slate-400 text-sm" style="padding:2.5rem 1rem">Nessun utente</td></tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ── Vista MOBILE: card ─────────────────────────── -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden md:hidden">
             <div class="divide-y divide-slate-100">
               <template x-for="u in elenco" :key="u.id">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
