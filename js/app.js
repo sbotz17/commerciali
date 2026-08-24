@@ -568,6 +568,13 @@ document.addEventListener("alpine:init", () => {
   });
 
   // ==========================================================
+  // STORE: recupero — schermata "reimposta password" (link email)
+  // ==========================================================
+  Alpine.store("recupero", { attivo: inRecuperoPassword() });
+  // Se l'evento di recupero arriva dopo l'avvio, attiva comunque la schermata
+  onRecuperoPassword(() => { try { Alpine.store("recupero").attivo = true; } catch (_) {} });
+
+  // ==========================================================
   // STORE: wa — compositore/invio messaggi WhatsApp
   // ==========================================================
   Alpine.store("wa", {
@@ -1206,7 +1213,8 @@ function onboardingPage() {
 // ==========================================================
 function resetPasswordPage() {
   return {
-    attivo:   inRecuperoPassword(),
+    get attivo()  { return Alpine.store("recupero").attivo; },
+    set attivo(v) { Alpine.store("recupero").attivo = v; },
     nuova:    "",
     conferma: "",
     errore:   "",
