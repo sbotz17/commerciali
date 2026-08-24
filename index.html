@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=35"></script>
-  <script src="js/supabase.js?v=35"></script>
-  <script src="js/auth.js?v=35"></script>
-  <script src="js/app.js?v=35"></script>
+  <script src="js/bandi-data.js?v=36"></script>
+  <script src="js/supabase.js?v=36"></script>
+  <script src="js/auth.js?v=36"></script>
+  <script src="js/app.js?v=36"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -508,8 +508,54 @@
             </template>
           </div>
 
-          <!-- Griglia prodotti -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <!-- ── Vista DESKTOP: tabella ─────────────────────── -->
+          <div class="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto">
+            <table class="w-full text-sm min-w-[680px]">
+              <thead>
+                <tr class="text-left text-xs text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                  <th class="px-4 py-3 font-semibold w-14"></th>
+                  <th class="px-4 py-3 font-semibold">Prodotto</th>
+                  <th class="px-4 py-3 font-semibold">Categoria</th>
+                  <th class="px-4 py-3 font-semibold text-right">Prezzo</th>
+                  <th x-show="canWrite" class="px-4 py-3 font-semibold text-right">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="p in prodottiFiltrati" :key="p.id">
+                  <tr class="border-b border-slate-50 last:border-0 hover:bg-slate-50/60">
+                    <td class="px-4 py-2.5">
+                      <template x-if="p.immagine">
+                        <img :src="p.immagine" :alt="p.nome" class="w-10 h-10 rounded-lg object-contain bg-slate-50 border border-slate-100" />
+                      </template>
+                      <template x-if="!p.immagine">
+                        <div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-lg text-slate-300">📦</div>
+                      </template>
+                    </td>
+                    <td class="px-4 py-2.5">
+                      <p class="font-semibold text-slate-800" x-text="p.nome"></p>
+                      <p class="text-xs text-slate-400 line-clamp-1 max-w-[320px]" x-text="p.descrizione"></p>
+                    </td>
+                    <td class="px-4 py-2.5">
+                      <span class="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full" x-text="p.categoria"></span>
+                    </td>
+                    <td class="px-4 py-2.5 text-right font-bold text-blue-700 whitespace-nowrap" x-text="fmt(p.prezzo)"></td>
+                    <td x-show="canWrite" class="px-4 py-2.5">
+                      <div class="flex items-center justify-end gap-1.5 whitespace-nowrap">
+                        <button @click="apriModifica(p)" class="btn-tap text-xs text-blue-700 font-medium bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
+                        <button @click="elimina(p.id)"   class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <template x-if="prodottiFiltrati.length === 0">
+                  <tr><td colspan="5" class="text-center text-slate-400 py-12 text-sm">Nessun prodotto trovato</td></tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ── Vista MOBILE: card ─────────────────────────── -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
             <template x-for="p in prodottiFiltrati" :key="p.id">
               <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col">
                 <!-- Immagine articolo -->
