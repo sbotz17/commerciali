@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=38"></script>
-  <script src="js/supabase.js?v=38"></script>
-  <script src="js/auth.js?v=38"></script>
-  <script src="js/app.js?v=38"></script>
+  <script src="js/bandi-data.js?v=39"></script>
+  <script src="js/supabase.js?v=39"></script>
+  <script src="js/auth.js?v=39"></script>
+  <script src="js/app.js?v=39"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -2174,7 +2174,40 @@
               Nuova categoria
             </button>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- ── Vista DESKTOP: tabella (componente .tbl condiviso) ── -->
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th class="w-14"></th>
+                  <th>Categoria</th>
+                  <th>Ordine</th>
+                  <th class="tr">Azioni</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="c in elenco" :key="c.id">
+                  <tr>
+                    <td><span class="text-2xl" x-text="c.icona"></span></td>
+                    <td class="font-semibold text-slate-800" x-text="c.nome"></td>
+                    <td class="text-slate-500" x-text="c.ordine"></td>
+                    <td>
+                      <div class="tbl-actions">
+                        <button @click="apriModifica(c)" class="btn-tap text-xs text-blue-700 font-medium bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
+                        <button @click="elimina(c.id)"   class="btn-tap text-xs text-red-600 font-medium bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+                <template x-if="elenco.length === 0">
+                  <tr><td colspan="4" class="tc text-slate-400 text-sm" style="padding:2.5rem 1rem">Nessuna categoria</td></tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- ── Vista MOBILE: card ─────────────────────────── -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
             <template x-for="c in elenco" :key="c.id">
               <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
                 <div class="flex items-center gap-4">
@@ -2764,36 +2797,36 @@
             </div>
 
             <!-- Tabella (desktop) -->
-            <div class="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-x-auto">
-              <table class="w-full text-sm">
+            <div class="tbl-wrap">
+              <table class="tbl">
                 <thead>
-                  <tr class="text-left text-xs text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                    <th class="px-4 py-3 font-semibold">Azienda</th>
-                    <th class="px-4 py-3 font-semibold">Piano</th>
-                    <th class="px-4 py-3 font-semibold">Stato</th>
-                    <th class="px-4 py-3 font-semibold">Scadenza</th>
-                    <th class="px-4 py-3 font-semibold">Limiti</th>
-                    <th class="px-4 py-3 font-semibold text-right">Azioni</th>
+                  <tr>
+                    <th>Azienda</th>
+                    <th>Piano</th>
+                    <th>Stato</th>
+                    <th>Scadenza</th>
+                    <th>Limiti</th>
+                    <th class="tr">Azioni</th>
                   </tr>
                 </thead>
                 <tbody>
                   <template x-for="a in filtrate" :key="a.id">
-                    <tr class="border-b border-slate-50 last:border-0">
-                      <td class="px-4 py-3 font-medium text-slate-700" x-text="a.nome"></td>
-                      <td class="px-4 py-3" x-text="pianoLabel(a.licenza?.piano)"></td>
-                      <td class="px-4 py-3">
+                    <tr>
+                      <td class="font-medium text-slate-700" x-text="a.nome"></td>
+                      <td x-text="pianoLabel(a.licenza?.piano)"></td>
+                      <td>
                         <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
                               :class="{attiva:'bg-green-100 text-green-700',scaduta:'bg-red-100 text-red-700',sospesa:'bg-amber-100 text-amber-700',assente:'bg-slate-100 text-slate-500'}[statoLic(a)]"
                               x-text="statoLic(a)"></span>
                       </td>
-                      <td class="px-4 py-3 text-slate-600">
+                      <td class="text-slate-600 whitespace-nowrap">
                         <span x-text="a.licenza?.data_fine ? dataIt(a.licenza.data_fine) : (a.licenza ? 'Senza scadenza' : '—')"></span>
                         <span x-show="a.licenza && a.licenza.data_fine" class="text-xs text-slate-400"
                               x-text="giorniResidui(a.licenza) != null ? (' (' + giorniResidui(a.licenza) + 'gg)') : ''"></span>
                       </td>
-                      <td class="px-4 py-3 text-xs text-slate-500"
+                      <td class="text-xs text-slate-500 whitespace-nowrap"
                           x-text="a.licenza ? ((a.licenza.max_utenti ?? '∞') + ' utenti · ' + (a.licenza.max_preventivi ?? '∞') + ' prev.') : '—'"></td>
-                      <td class="px-4 py-3 text-right whitespace-nowrap">
+                      <td class="tr whitespace-nowrap">
                         <button @click="apriLicenza(a)" class="btn-tap text-xs font-semibold text-red-700 hover:underline" x-text="a.licenza ? 'Modifica' : 'Assegna'"></button>
                         <button x-show="a.licenza" @click="revoca(a)" class="btn-tap text-xs font-semibold text-slate-400 hover:text-red-600 ml-3">Revoca</button>
                       </td>
