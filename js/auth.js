@@ -152,8 +152,15 @@ async function impostaNuovaPassword(nuovaPassword) {
 // Usa il flag catturato in modo sincrono all'avvio (vedi supabase.js),
 // perché la libreria Supabase ripulisce l'hash dall'URL subito dopo l'init.
 function inRecuperoPassword() {
-  return (typeof _RECOVERY_FLAG !== "undefined" && _RECOVERY_FLAG)
+  return !!window.__IN_RECOVERY
+    || (typeof _RECOVERY_FLAG !== "undefined" && _RECOVERY_FLAG)
     || (window.location.hash || "").includes("type=recovery");
+}
+
+// Sottoscrive l'evento di recupero password (link email, anche flusso PKCE)
+function onRecuperoPassword(cb) {
+  try { _sb.auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") cb(); }); }
+  catch (_) {}
 }
 
 // ------------------------------------------------------------

@@ -10,11 +10,25 @@ const SUPABASE_URL  = "https://segbfdfoqxrnitboeyof.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlZ2JmZGZvcXhybml0Ym9leW9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMzIxNzksImV4cCI6MjA5NzcwODE3OX0.v5ZGCkqTduegxFaa6GOYUIIHrQ5cQe0JFB7PGO93XNo";
 
 // Cattura SUBITO (in modo sincrono) se stiamo arrivando da un link di recupero
-// password: la libreria Supabase ripulisce l'hash dall'URL poco dopo l'init.
+// password. La libreria Supabase ripulisce l'URL poco dopo l'init, e i link
+// recenti usano ?code=… (PKCE) invece di #type=recovery: intercettiamo quindi
+// sia l'hash, sia il parametro "code", sia l'evento PASSWORD_RECOVERY.
 const _RECOVERY_FLAG = (window.location.hash || "").includes("type=recovery");
+window.__IN_RECOVERY = _RECOVERY_FLAG;
 
 // Inizializza client (CDN carica la libreria come window.supabase)
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// L'evento PASSWORD_RECOVERY scatta quando si arriva dal link email: segna lo
+// stato di recupero e, se Alpine è già pronto, attiva la schermata reset.
+try {
+  _sb.auth.onAuthStateChange((event) => {
+    if (event === "PASSWORD_RECOVERY") {
+      window.__IN_RECOVERY = true;
+      try { if (window.Alpine && Alpine.store("recupero")) Alpine.store("recupero").attivo = true; } catch (_) {}
+    }
+  });
+} catch (_) {}
 
 // ============================================================
 // AZIENDA ATTIVA (multi-tenant): tutte le query filtrano/scrivono
