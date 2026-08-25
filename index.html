@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=44"></script>
-  <script src="js/supabase.js?v=44"></script>
-  <script src="js/auth.js?v=44"></script>
-  <script src="js/app.js?v=44"></script>
+  <script src="js/bandi-data.js?v=45"></script>
+  <script src="js/supabase.js?v=45"></script>
+  <script src="js/auth.js?v=45"></script>
+  <script src="js/app.js?v=45"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -47,6 +47,16 @@
     .tbl .tc { text-align: center; }
     .tbl .tr { text-align: right; }
     .tbl-actions { display: flex; align-items: center; justify-content: flex-end; gap: .375rem; white-space: nowrap; }
+
+    /* ===== Dettaglio preventivo: card (bottom sheet) su mobile, schermo intero su desktop ===== */
+    .det-overlay { position: fixed; inset: 0; z-index: 50; overflow: hidden; background: rgba(2,6,23,.45); display: flex; flex-direction: column; justify-content: flex-end; }
+    .det-card { background: #fff; width: 100%; display: flex; flex-direction: column; border-radius: 1rem 1rem 0 0; max-height: 92vh; overflow: hidden; box-shadow: 0 -10px 40px rgba(0,0,0,.25); }
+    .det-pad { padding-left: 1rem; padding-right: 1rem; }
+    @media (min-width: 768px) {
+      .det-overlay { background: transparent; display: block; }
+      .det-card { border-radius: 0; max-height: none; height: 100%; box-shadow: none; }
+      .det-pad { padding-left: 2rem; padding-right: 2rem; }
+    }
   </style>
 </head>
 
@@ -1159,12 +1169,11 @@
           </div>
 
           <!-- ── DETTAGLIO PREVENTIVO — desktop: a tutto schermo · mobile: card (bottom sheet) ── -->
-          <div x-show="dettaglioAperto" x-cloak
-               class="fixed inset-0 z-50 overflow-hidden bg-black/40 md:bg-transparent flex flex-col justify-end md:block">
+          <div x-show="dettaglioAperto" x-cloak class="det-overlay">
             <template x-if="dettaglioP">
-              <div class="bg-white w-full flex flex-col rounded-t-2xl md:rounded-none max-h-[92vh] md:max-h-none md:h-full overflow-hidden shadow-2xl md:shadow-none">
+              <div class="det-card">
                 <!-- Barra superiore -->
-                <div class="shrink-0 bg-white border-b border-slate-200 px-4 md:px-8 h-14 flex items-center gap-3">
+                <div class="shrink-0 bg-white border-b border-slate-200 det-pad h-14 flex items-center gap-3">
                   <button @click="dettaglioAperto=false" class="btn-tap flex items-center gap-2 text-slate-500 hover:text-slate-700 shrink-0">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
                     <span class="text-sm">Indietro</span>
@@ -1175,7 +1184,7 @@
                   </div>
                 </div>
                 <!-- Contenuto (scrollabile) -->
-                <div class="flex-1 overflow-y-auto px-4 md:px-8 py-6">
+                <div class="flex-1 overflow-y-auto det-pad py-6">
                  <div class="max-w-2xl w-full mx-auto space-y-5">
                   <p class="text-sm text-slate-500" x-text="dettaglioP.cliente_nome + ' · ' + fmtData(dettaglioP.data)"></p>
                     <!-- Stato -->
@@ -1253,7 +1262,7 @@
                  </div>
                 </div>
                 <!-- Footer totale -->
-                <div class="shrink-0 bg-white border-t border-slate-200 px-4 md:px-8 py-3 flex items-center justify-between">
+                <div class="shrink-0 bg-white border-t border-slate-200 det-pad py-3 flex items-center justify-between">
                   <span class="text-sm text-slate-500">Totale</span>
                   <span class="text-lg font-bold text-blue-700" x-text="fmt(dettaglioP.totale_iva)"></span>
                 </div>
