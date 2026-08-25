@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=43"></script>
-  <script src="js/supabase.js?v=43"></script>
-  <script src="js/auth.js?v=43"></script>
-  <script src="js/app.js?v=43"></script>
+  <script src="js/bandi-data.js?v=44"></script>
+  <script src="js/supabase.js?v=44"></script>
+  <script src="js/auth.js?v=44"></script>
+  <script src="js/app.js?v=44"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -1092,7 +1092,7 @@
               </thead>
               <tbody>
                 <template x-for="p in preventiviFiltrati" :key="p.id">
-                  <tr @click="riprendi(p)" style="cursor:pointer">
+                  <tr @click="apriDettaglio(p)" style="cursor:pointer">
                     <td>
                       <span class="font-semibold text-slate-800" x-text="p.numero"></span>
                       <span x-show="p.revisione > 0" class="text-xs font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded ml-1" x-text="'Rev. ' + p.revisione"></span>
@@ -1131,7 +1131,7 @@
             </template>
             <div class="divide-y divide-slate-100">
               <template x-for="p in preventiviFiltrati" :key="p.id">
-                <div @click="riprendi(p)" role="button" tabindex="0"
+                <div @click="apriDettaglio(p)" role="button" tabindex="0"
                      class="btn-tap cursor-pointer flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
