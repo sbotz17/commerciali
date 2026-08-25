@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=46"></script>
-  <script src="js/supabase.js?v=46"></script>
-  <script src="js/auth.js?v=46"></script>
-  <script src="js/app.js?v=46"></script>
+  <script src="js/bandi-data.js?v=47"></script>
+  <script src="js/supabase.js?v=47"></script>
+  <script src="js/auth.js?v=47"></script>
+  <script src="js/app.js?v=47"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -1548,7 +1548,31 @@
               <!-- SALVA / AZIONI -->
               <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                 <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4" x-text="ro ? 'Azioni' : 'Salva'"></p>
+
+                <!-- Stato corrente (preventivo esistente) -->
+                <div x-show="preventivoId" class="flex items-center justify-between mb-4 pb-4 border-b border-slate-100">
+                  <span class="text-sm text-slate-500">Stato</span>
+                  <span class="text-xs px-2.5 py-1 rounded-full font-medium" :class="statoClasse(statoCorrente)" x-text="statoLabel(statoCorrente)"></span>
+                </div>
+
                 <div class="space-y-2">
+
+                  <!-- GESTIONE STATO (in visualizzazione) -->
+                  <button x-show="ro && statoCorrente==='bozza'" @click="cambiaStatoCorrente('inviato')"
+                          class="btn-tap w-full bg-amber-500 text-white font-semibold py-2.5 rounded-xl hover:bg-amber-600 text-sm flex items-center justify-center gap-2">
+                    ✈️ Segna come inviato
+                  </button>
+                  <div x-show="ro && statoCorrente==='inviato'" class="grid grid-cols-2 gap-2">
+                    <button @click="cambiaStatoCorrente('accettato')"
+                            class="btn-tap bg-green-600 text-white font-semibold py-2.5 rounded-xl hover:bg-green-700 text-sm flex items-center justify-center gap-1">✓ Accetta</button>
+                    <button @click="cambiaStatoCorrente('rifiutato')"
+                            class="btn-tap bg-red-500 text-white font-semibold py-2.5 rounded-xl hover:bg-red-600 text-sm flex items-center justify-center gap-1">✕ Rifiuta</button>
+                  </div>
+                  <!-- Riporta in attesa (da accettato/rifiutato) -->
+                  <button x-show="ro && (statoCorrente==='accettato' || statoCorrente==='rifiutato')" @click="cambiaStatoCorrente('inviato')"
+                          class="btn-tap w-full border border-amber-300 text-amber-700 font-semibold py-2.5 rounded-xl hover:bg-amber-50 text-sm flex items-center justify-center gap-2">
+                    ↩︎ Riporta in attesa
+                  </button>
 
                   <!-- MODIFICA (in visualizzazione, per stati modificabili) -->
                   <button x-show="ro && !soloLettura" @click="modoModifica = true"
