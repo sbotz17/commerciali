@@ -642,6 +642,12 @@ function numeroClienteWA(clienteId) {
   return (c && c.telefono) || "";
 }
 
+// Apre un NUOVO preventivo vuoto (in modifica), ripulendo l'editor
+function apriNuovoPreventivo() {
+  Alpine.store("ui").vai("nuovo-preventivo");
+  setTimeout(() => window.dispatchEvent(new CustomEvent("nuovo-preventivo-vuoto")), 50);
+}
+
 // ==========================================================
 // SVG ICONS (riutilizzati in più componenti)
 // ==========================================================
@@ -1551,7 +1557,8 @@ function clientiPage() {
     },
     nuovoPreventivoPer(cliente) {
       Alpine.store("ui").vai("nuovo-preventivo");
-      setTimeout(() => window.dispatchEvent(new CustomEvent("preseleziona-cliente", { detail: cliente })), 80);
+      setTimeout(() => window.dispatchEvent(new CustomEvent("nuovo-preventivo-vuoto")), 50);
+      setTimeout(() => window.dispatchEvent(new CustomEvent("preseleziona-cliente", { detail: cliente })), 90);
     },
     vaBandi(cliente) {
       Alpine.store("ui").vai("bandi");
@@ -1567,10 +1574,8 @@ function preventiviPage() {
   return {
     filtroStato: "tutti",
 
-    // Dettaglio preventivo (da qui si può cambiare liberamente lo stato)
-    dettaglioAperto: false,
-    dettaglioP:      null,
-    apriDettaglio(p) { this.dettaglioP = p; this.dettaglioAperto = true; },
+    // Click sulla riga: apre la pagina del preventivo in SOLA VISUALIZZAZIONE
+    apriDettaglio(p) { this.riprendi(p, false); },
 
     // Revisione: disponibile per "In attesa", "Accettato" e "Rifiutato"
     async revisiona(p) {
@@ -1581,9 +1586,8 @@ function preventiviPage() {
         Alpine.store("ui").mostraToast("Errore revisione: " + ((nuovo && nuovo.__errore) || "nessuna risposta dal database"), "error");
         return;
       }
-      this.dettaglioAperto = false;
       Alpine.store("ui").mostraToast("Creata Revisione " + nuovo.revisione);
-      this.riprendi(nuovo); // apre la nuova revisione in modifica
+      this.riprendi(nuovo, true); // apre la nuova revisione in modifica
     },
 
     get preventiviFiltrati() {
@@ -1599,10 +1603,10 @@ function preventiviPage() {
       if (ok) Alpine.store("ui").mostraToast("Stato aggiornato: " + statoLabel(stato));
       else    Alpine.store("ui").mostraToast("Errore: stato non aggiornato (permessi database?)", "error");
     },
-    riprendi(p) {
+    riprendi(p, modifica = true) {
       Alpine.store("ui").vai("nuovo-preventivo");
       // Piccolo delay per dare tempo ad Alpine di montare il componente
-      setTimeout(() => window.dispatchEvent(new CustomEvent("riprendi-bozza", { detail: p })), 50);
+      setTimeout(() => window.dispatchEvent(new CustomEvent("riprendi-bozza", { detail: { p, modifica } })), 50);
     },
     async elimina(id) {
       if (!confirm("Eliminare il preventivo?")) return;
@@ -1639,6 +1643,9 @@ function nuovoPreventivo() {
     scontoGlobaleEuro: 0,
     ivaInclusa:        false,
 
+    // Modalità: true = campi modificabili, false = sola visualizzazione (dettaglio)
+    modoModifica: true,
+
     // Modal prodotti
     modaleAperto:    false,
     ricercaProdotto: "",
@@ -1651,9 +1658,17 @@ function nuovoPreventivo() {
         if (c) this.ricercaCliente = c.nome;
       });
       window.addEventListener("riprendi-bozza", (e) => {
-        this.carica(e.detail);
+        this.carica(e.detail.p, e.detail.modifica !== false);
+      });
+      // Nuovo preventivo vuoto (dai pulsanti "Nuova richiesta"/"Nuovo preventivo")
+      window.addEventListener("nuovo-preventivo-vuoto", () => {
+        this._reset();
+        this.modoModifica = true;
       });
     },
+
+    // Campi bloccati (read-only) quando non si è in modifica
+    get ro() { return !this.modoModifica; },
 
     // Stato di sola lettura (accettato/rifiutato/revisionato): non modificabile, solo revisionabile
     get soloLettura()    { return ["accettato", "rifiutato", "revisionato"].includes(this.statoCorrente); },
@@ -1670,7 +1685,7 @@ function nuovoPreventivo() {
         return;
       }
       Alpine.store("ui").mostraToast("Creata Revisione " + nuovo.revisione);
-      this.carica(nuovo);
+      this.carica(nuovo, true); // la nuova revisione si apre in modifica
     },
 
     // Invia il preventivo aperto su WhatsApp
@@ -1683,8 +1698,9 @@ function nuovoPreventivo() {
       });
     },
 
-    carica(p) {
+    carica(p, modifica = false) {
       this._reset();
+      this.modoModifica     = !!modifica;   // dal click riga = false (vista), da Modifica/Revisione = true
       this.preventivoId     = p.id;
       this.revisione        = p.revisione || 0;
       this.statoCorrente    = p.stato || "";
