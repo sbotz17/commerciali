@@ -1624,6 +1624,8 @@ function nuovoPreventivo() {
     // ID preventivo in modifica (null = nuovo)
     preventivoId: null,
     revisione:    0,
+    statoCorrente: "",       // stato del preventivo caricato
+    _preventivoOrig: null,   // preventivo originale (per la revisione)
 
     // Cliente
     clienteId:        null,
@@ -1653,10 +1655,40 @@ function nuovoPreventivo() {
       });
     },
 
+    // Stato di sola lettura (accettato/rifiutato/revisionato): non modificabile, solo revisionabile
+    get soloLettura()    { return ["accettato", "rifiutato", "revisionato"].includes(this.statoCorrente); },
+    // Può creare una revisione (In attesa / Accettato / Rifiutato)
+    get puoRevisionare() { return ["inviato", "accettato", "rifiutato"].includes(this.statoCorrente); },
+
+    // Crea una revisione del preventivo aperto e la carica nell'editor
+    async revisionaCorrente() {
+      if (!this._preventivoOrig) return;
+      if (!confirm("Creare una nuova revisione?\nIl preventivo attuale verrà segnato come 'Revisionato' e potrai modificare la nuova versione (Rev. " + ((this.revisione || 0) + 1) + ").")) return;
+      const nuovo = await Alpine.store("db").revisiona(this._preventivoOrig);
+      if (!nuovo || nuovo.__errore) {
+        Alpine.store("ui").mostraToast("Errore revisione: " + ((nuovo && nuovo.__errore) || "nessuna risposta dal database"), "error");
+        return;
+      }
+      Alpine.store("ui").mostraToast("Creata Revisione " + nuovo.revisione);
+      this.carica(nuovo);
+    },
+
+    // Invia il preventivo aperto su WhatsApp
+    inviaWA() {
+      if (!this._preventivoOrig) return;
+      Alpine.store("wa").apri({
+        numero: numeroClienteWA(this._preventivoOrig.cliente_id),
+        testo:  testoPreventivoWA(this._preventivoOrig),
+        titolo: "Invia preventivo su WhatsApp",
+      });
+    },
+
     carica(p) {
       this._reset();
       this.preventivoId     = p.id;
       this.revisione        = p.revisione || 0;
+      this.statoCorrente    = p.stato || "";
+      this._preventivoOrig  = p;
       this.note             = p.note || "";
       this.scontoGlobaleEuro = p.imp_sconto || 0;
       this.righe            = (p.righe || []).map(r => ({ ...r }));
@@ -1815,7 +1847,7 @@ function nuovoPreventivo() {
     _reset() {
       Object.assign(this, {
         titolo:"", validita:30, note:"",
-        preventivoId: null, revisione: 0,
+        preventivoId: null, revisione: 0, statoCorrente: "", _preventivoOrig: null,
         clienteId:null, ricercaCliente:"", dropdownCliente:false,
         modoNuovoCliente:false, formCliente:{nome:"",azienda:"",email:"",indirizzo:""},
         righe:[], scontoGlobaleEuro:0, ivaInclusa:false,
