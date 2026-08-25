@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=45"></script>
-  <script src="js/supabase.js?v=45"></script>
-  <script src="js/auth.js?v=45"></script>
-  <script src="js/app.js?v=45"></script>
+  <script src="js/bandi-data.js?v=46"></script>
+  <script src="js/supabase.js?v=46"></script>
+  <script src="js/auth.js?v=46"></script>
+  <script src="js/app.js?v=46"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -390,7 +390,7 @@
              e solo a chi può creare preventivi (nascosto su ruoli/utenti/impostazioni, ecc.) -->
         <div class="flex items-center gap-2 shrink-0"
              x-show="['dashboard','preventivi','clienti','catalogo','bandi'].includes(pagina) && puoLeggere('preventivi_propri')">
-          <button @click="$store.ui.vai('nuovo-preventivo')"
+          <button @click="apriNuovoPreventivo()"
                   class="btn-tap flex items-center gap-1.5 bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-blue-800 active:bg-blue-800 transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
             <span class="hidden sm:inline">Nuova richiesta</span>
@@ -446,7 +446,7 @@
                 <button @click="vai('preventivi')" class="text-xs text-blue-700 font-medium hover:underline">Vedi tutti →</button>
               </div>
               <template x-if="ultimi.length === 0">
-                <div class="px-5 py-8 text-center text-slate-400 text-sm">Nessuna richiesta — <button @click="vai('nuovo-preventivo')" class="text-blue-700 font-medium hover:underline">creane uno</button></div>
+                <div class="px-5 py-8 text-center text-slate-400 text-sm">Nessuna richiesta — <button @click="apriNuovoPreventivo()" class="text-blue-700 font-medium hover:underline">creane uno</button></div>
               </template>
               <div class="divide-y divide-slate-50">
                 <template x-for="p in ultimi" :key="p.id">
@@ -471,7 +471,7 @@
                 <div class="px-5 py-4 border-b border-slate-100"><p class="text-sm font-semibold text-slate-700">Azioni rapide</p></div>
                 <div class="p-3 space-y-1">
                   <template x-for="az in azioniRapide" :key="az.pagina">
-                    <button @click="vai(az.pagina)" class="btn-tap w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors">
+                    <button @click="az.pagina === 'nuovo-preventivo' ? apriNuovoPreventivo() : vai(az.pagina)" class="btn-tap w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 text-left transition-colors">
                       <div class="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" :class="az.bg">
                         <span class="w-4 h-4" x-html="az.icon"></span>
                       </div>
@@ -1136,7 +1136,7 @@
             <template x-if="preventiviFiltrati.length === 0">
               <div class="text-center py-12 text-slate-400 text-sm">
                 <p>Nessuna richiesta</p>
-                <button @click="$store.ui.vai('nuovo-preventivo')" class="btn-tap mt-2 text-blue-700 font-medium hover:underline">Crea il primo →</button>
+                <button @click="apriNuovoPreventivo()" class="btn-tap mt-2 text-blue-700 font-medium hover:underline">Crea il primo →</button>
               </div>
             </template>
             <div class="divide-y divide-slate-100">
@@ -1168,107 +1168,6 @@
             </div>
           </div>
 
-          <!-- ── DETTAGLIO PREVENTIVO — desktop: a tutto schermo · mobile: card (bottom sheet) ── -->
-          <div x-show="dettaglioAperto" x-cloak class="det-overlay">
-            <template x-if="dettaglioP">
-              <div class="det-card">
-                <!-- Barra superiore -->
-                <div class="shrink-0 bg-white border-b border-slate-200 det-pad h-14 flex items-center gap-3">
-                  <button @click="dettaglioAperto=false" class="btn-tap flex items-center gap-2 text-slate-500 hover:text-slate-700 shrink-0">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
-                    <span class="text-sm">Indietro</span>
-                  </button>
-                  <div class="min-w-0 flex items-center gap-2">
-                    <h2 class="text-base font-bold text-slate-800 truncate" x-text="dettaglioP.numero"></h2>
-                    <span x-show="dettaglioP.revisione > 0" class="text-xs font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded shrink-0" x-text="'Rev. ' + dettaglioP.revisione"></span>
-                  </div>
-                </div>
-                <!-- Contenuto (scrollabile) -->
-                <div class="flex-1 overflow-y-auto det-pad py-6">
-                 <div class="max-w-2xl w-full mx-auto space-y-5">
-                  <p class="text-sm text-slate-500" x-text="dettaglioP.cliente_nome + ' · ' + fmtData(dettaglioP.data)"></p>
-                    <!-- Stato -->
-                    <div>
-                      <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Stato</label>
-                      <!-- Bozza / In attesa: stato modificabile -->
-                      <template x-if="['bozza','inviato'].includes(dettaglioP.stato)">
-                        <div class="mt-1.5 flex items-center gap-3">
-                          <select x-model="dettaglioP.stato" @change="cambiaStato(dettaglioP.id, dettaglioP.stato)"
-                                  class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer">
-                            <option value="bozza">Bozza</option>
-                            <option value="inviato">In attesa</option>
-                            <option value="accettato">Accettato</option>
-                            <option value="rifiutato">Rifiutato</option>
-                          </select>
-                          <span class="text-xs px-2 py-1 rounded-full font-medium shrink-0" :class="statoClasse(dettaglioP.stato)" x-text="statoLabel(dettaglioP.stato)"></span>
-                        </div>
-                      </template>
-                      <!-- Accettato / Rifiutato / Revisionato: SOLA LETTURA -->
-                      <template x-if="!['bozza','inviato'].includes(dettaglioP.stato)">
-                        <div class="mt-1.5 flex items-center gap-2">
-                          <span class="text-xs px-2 py-1 rounded-full font-medium" :class="statoClasse(dettaglioP.stato)" x-text="statoLabel(dettaglioP.stato)"></span>
-                          <span class="text-xs text-slate-400" x-text="dettaglioP.stato === 'revisionato' ? '🔒 sola lettura (versione superata)' : '🔒 sola lettura'"></span>
-                        </div>
-                      </template>
-                    </div>
-                    <!-- Modifica (solo stati autorizzati: Bozza / In attesa) -->
-                    <div x-show="['bozza','inviato'].includes(dettaglioP.stato)">
-                      <button @click="dettaglioAperto=false; riprendi(dettaglioP)"
-                              class="btn-tap w-full flex items-center justify-center gap-2 bg-blue-700 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-blue-800">
-                        ✏️ Modifica preventivo
-                      </button>
-                    </div>
-                    <!-- Revisione (In attesa / Accettato / Rifiutato) -->
-                    <div x-show="['inviato','accettato','rifiutato'].includes(dettaglioP.stato)">
-                      <button @click="revisiona(dettaglioP)"
-                              class="btn-tap w-full flex items-center justify-center gap-2 bg-purple-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-purple-700">
-                        🔁 Crea nuova revisione
-                      </button>
-                      <p class="text-[11px] text-slate-400 mt-1 text-center">Segna questo come "Revisionato" e crea una nuova versione modificabile (Rev. successiva).</p>
-                    </div>
-                    <!-- Invia su WhatsApp -->
-                    <div x-show="$store.db.whatsappPronto">
-                      <button @click="$store.wa.apri({ numero: numeroClienteWA(dettaglioP.cliente_id), testo: testoPreventivoWA(dettaglioP), titolo: 'Invia preventivo su WhatsApp' })"
-                              class="btn-tap w-full flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-green-700">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.567-.955z"/></svg>
-                        Invia su WhatsApp
-                      </button>
-                    </div>
-                    <!-- Articoli -->
-                    <div>
-                      <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Articoli</label>
-                      <div class="mt-1.5 border border-slate-100 rounded-xl divide-y divide-slate-50">
-                        <template x-for="(r, idx) in (dettaglioP.righe || [])" :key="idx">
-                          <div class="flex items-center gap-3 px-3 py-2">
-                            <img x-show="$store.db.mostraImmaginiPreventivi && r.immagine" :src="r.immagine" :alt="r.nome"
-                                 class="w-9 h-9 rounded-lg object-contain bg-slate-50 border border-slate-100 shrink-0" />
-                            <div class="flex-1 min-w-0">
-                              <p class="text-sm font-medium text-slate-800 truncate" x-text="r.nome"></p>
-                              <p class="text-xs text-slate-400" x-text="(r.qty || 1) + ' × ' + fmt(r.prezzo)"></p>
-                            </div>
-                            <p class="text-sm font-semibold text-slate-700 shrink-0 whitespace-nowrap" x-text="fmt((r.prezzo * (r.qty||1)) - (r.scontoVal || 0))"></p>
-                          </div>
-                        </template>
-                        <template x-if="!(dettaglioP.righe || []).length">
-                          <div class="px-3 py-4 text-center text-xs text-slate-400">Nessun articolo</div>
-                        </template>
-                      </div>
-                    </div>
-                    <!-- Note -->
-                    <div x-show="dettaglioP.note">
-                      <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Note</label>
-                      <p class="mt-1 text-sm text-slate-600 whitespace-pre-wrap" x-text="dettaglioP.note"></p>
-                    </div>
-                 </div>
-                </div>
-                <!-- Footer totale -->
-                <div class="shrink-0 bg-white border-t border-slate-200 det-pad py-3 flex items-center justify-between">
-                  <span class="text-sm text-slate-500">Totale</span>
-                  <span class="text-lg font-bold text-blue-700" x-text="fmt(dettaglioP.totale_iva)"></span>
-                </div>
-              </div>
-            </template>
-          </div>
         </section>
 
         <!-- ================================================
@@ -1344,14 +1243,14 @@
               <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
             </button>
             <h2 class="text-base font-bold text-slate-800"
-                x-text="preventivoId ? ('Modifica preventivo' + (revisione > 0 ? ' · Rev. ' + revisione : '')) : 'Nuovo preventivo'"></h2>
+                x-text="preventivoId ? ((ro ? 'Dettaglio preventivo' : 'Modifica preventivo') + (revisione > 0 ? ' · Rev. ' + revisione : '')) : 'Nuovo preventivo'"></h2>
           </div>
 
           <!-- ── LAYOUT PRINCIPALE ────────────────────────────── -->
           <div class="flex flex-col lg:flex-row gap-6 items-start">
 
-            <!-- Colonna sinistra -->
-            <div class="w-full lg:flex-1 min-w-0 space-y-5">
+            <!-- Colonna sinistra — fieldset: in sola visualizzazione blocca tutti i campi -->
+            <fieldset :disabled="ro" class="w-full lg:flex-1 min-w-0 space-y-5 border-0 p-0 m-0">
 
               <!-- DATI PREVENTIVO -->
               <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
@@ -1598,7 +1497,7 @@
                 <textarea x-model="note" rows="3" placeholder="Condizioni, termini di consegna, note aggiuntive…"
                           class="mt-1.5 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
               </div>
-            </div>
+            </fieldset>
 
             <!-- Colonna destra -->
             <div class="w-full lg:w-72 xl:w-80 shrink-0 space-y-4 lg:sticky lg:top-4">
@@ -1612,8 +1511,8 @@
                     <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Sconto globale €</label>
                     <div class="flex items-center gap-2 mt-1.5">
                       <input x-model.number="scontoGlobaleEuro" type="number" min="0" step="0.01"
-                             :max="subtotale"
-                             class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+                             :max="subtotale" :disabled="ro"
+                             class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-right disabled:bg-slate-50 disabled:text-slate-400" />
                       <span class="text-xs text-slate-400 whitespace-nowrap"
                             x-text="subtotale > 0 ? '(' + ((scontoGlobaleValido/subtotale)*100).toFixed(1) + '%)' : ''"></span>
                     </div>
@@ -1621,7 +1520,7 @@
                   </div>
 
                   <label class="flex items-center gap-2.5 cursor-pointer select-none py-1">
-                    <input type="checkbox" x-model="ivaInclusa" class="w-4 h-4 rounded accent-blue-700" />
+                    <input type="checkbox" x-model="ivaInclusa" :disabled="ro" class="w-4 h-4 rounded accent-blue-700 disabled:opacity-50" />
                     <span class="text-sm text-slate-700 font-medium">Prezzi IVA inclusa</span>
                   </label>
                 </div>
@@ -1646,12 +1545,26 @@
                 </div>
               </div>
 
-              <!-- SALVA -->
+              <!-- SALVA / AZIONI -->
               <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">💾 Salva</p>
+                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4" x-text="ro ? 'Azioni' : 'Salva'"></p>
                 <div class="space-y-2">
-                  <!-- Salvataggio: nascosto per gli stati in sola lettura -->
-                  <template x-if="!soloLettura">
+
+                  <!-- MODIFICA (in visualizzazione, per stati modificabili) -->
+                  <button x-show="ro && !soloLettura" @click="modoModifica = true"
+                          class="btn-tap w-full bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 text-sm flex items-center justify-center gap-2">
+                    ✏️ Modifica preventivo
+                  </button>
+
+                  <!-- Sola lettura (accettato/rifiutato/revisionato): avviso -->
+                  <template x-if="ro && soloLettura">
+                    <p class="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 text-center">
+                      Preventivo in sola lettura (<span x-text="statoCorrente"></span>). Crea una revisione per modificarlo.
+                    </p>
+                  </template>
+
+                  <!-- SALVATAGGIO (solo in modalità modifica) -->
+                  <template x-if="!ro">
                     <div class="space-y-2">
                       <button @click="salva('bozza')"
                               :disabled="!clienteValido || righe.length === 0 || salvando"
@@ -1664,14 +1577,12 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
                         <span x-text="salvando ? 'Salvataggio…' : 'Salva e invia'"></span>
                       </button>
+                      <!-- Annulla modifiche (per un preventivo esistente): torna in visualizzazione -->
+                      <button x-show="preventivoId" @click="carica(_preventivoOrig, false)"
+                              class="btn-tap w-full border border-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl hover:bg-slate-50 text-sm">
+                        Annulla modifiche
+                      </button>
                     </div>
-                  </template>
-
-                  <!-- Sola lettura: avviso -->
-                  <template x-if="soloLettura">
-                    <p class="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 text-center">
-                      Preventivo in sola lettura (<span x-text="statoCorrente"></span>). Crea una revisione per modificarlo.
-                    </p>
                   </template>
 
                   <!-- Revisiona (In attesa / Accettato / Rifiutato) -->
@@ -1687,11 +1598,11 @@
                     Invia su WhatsApp
                   </button>
                 </div>
-                <!-- Validità cliente -->
-                <template x-if="!soloLettura && !clienteValido">
+                <!-- Avvisi (solo in modifica) -->
+                <template x-if="!ro && !clienteValido">
                   <p class="text-xs text-amber-600 mt-3 text-center">Seleziona o crea un cliente</p>
                 </template>
-                <template x-if="!soloLettura && clienteValido && righe.length === 0">
+                <template x-if="!ro && clienteValido && righe.length === 0">
                   <p class="text-xs text-amber-600 mt-3 text-center">Aggiungi almeno un prodotto</p>
                 </template>
               </div>
