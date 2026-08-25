@@ -1688,6 +1688,19 @@ function nuovoPreventivo() {
       this.carica(nuovo, true); // la nuova revisione si apre in modifica
     },
 
+    // Cambia lo stato del preventivo aperto (bozza→inviato, inviato→accettato/rifiutato…)
+    async cambiaStatoCorrente(stato) {
+      if (!this._preventivoOrig || !this.preventivoId) return;
+      const ok = await Alpine.store("db").aggiornaStato(this._preventivoOrig.id, stato);
+      if (ok) {
+        this.statoCorrente          = stato;
+        this._preventivoOrig.stato  = stato;
+        Alpine.store("ui").mostraToast("Stato aggiornato: " + statoLabel(stato));
+      } else {
+        Alpine.store("ui").mostraToast("Errore: stato non aggiornato (permessi database?)", "error");
+      }
+    },
+
     // Invia il preventivo aperto su WhatsApp
     inviaWA() {
       if (!this._preventivoOrig) return;
