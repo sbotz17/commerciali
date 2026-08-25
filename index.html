@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=42"></script>
-  <script src="js/supabase.js?v=42"></script>
-  <script src="js/auth.js?v=42"></script>
-  <script src="js/app.js?v=42"></script>
+  <script src="js/bandi-data.js?v=43"></script>
+  <script src="js/supabase.js?v=43"></script>
+  <script src="js/auth.js?v=43"></script>
+  <script src="js/app.js?v=43"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -1092,7 +1092,7 @@
               </thead>
               <tbody>
                 <template x-for="p in preventiviFiltrati" :key="p.id">
-                  <tr @click="apriDettaglio(p)" style="cursor:pointer">
+                  <tr @click="riprendi(p)" style="cursor:pointer">
                     <td>
                       <span class="font-semibold text-slate-800" x-text="p.numero"></span>
                       <span x-show="p.revisione > 0" class="text-xs font-semibold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded ml-1" x-text="'Rev. ' + p.revisione"></span>
@@ -1105,10 +1105,10 @@
                     <td>
                       <div class="tbl-actions">
                         <button @click.stop="esportaPDF(p)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-2.5 py-1.5 rounded-lg hover:bg-blue-800">PDF</button>
-                        <button @click.stop="riprendi(p)"                   x-show="p.stato==='bozza' || p.stato==='inviato'" class="btn-tap text-xs text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">Modifica</button>
                         <button @click.stop="cambiaStato(p.id,'inviato')"   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-amber-700 bg-amber-50 px-2.5 py-1.5 rounded-lg hover:bg-amber-100">Invia</button>
                         <button @click.stop="cambiaStato(p.id,'accettato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-green-700 bg-green-50 px-2.5 py-1.5 rounded-lg hover:bg-green-100">Accetta</button>
                         <button @click.stop="cambiaStato(p.id,'rifiutato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-red-600 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Rifiuta</button>
+                        <button @click.stop="revisiona(p)" x-show="['inviato','accettato','rifiutato'].includes(p.stato)" class="btn-tap text-xs text-purple-700 bg-purple-50 px-2.5 py-1.5 rounded-lg hover:bg-purple-100">Revisiona</button>
                         <button @click.stop="elimina(p.id)" class="btn-tap text-xs text-red-600 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
                       </div>
                     </td>
@@ -1131,7 +1131,7 @@
             </template>
             <div class="divide-y divide-slate-100">
               <template x-for="p in preventiviFiltrati" :key="p.id">
-                <div @click="apriDettaglio(p)" role="button" tabindex="0"
+                <div @click="riprendi(p)" role="button" tabindex="0"
                      class="btn-tap cursor-pointer flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 hover:bg-slate-50 transition-colors">
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 flex-wrap">
@@ -1146,10 +1146,10 @@
                     <p class="text-base font-bold text-blue-700" x-text="fmt(p.totale_iva)"></p>
                     <div class="flex gap-1.5 flex-wrap">
                       <button @click.stop="esportaPDF(p)" class="btn-tap text-xs text-white font-medium bg-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-800">📄 PDF</button>
-                      <button @click.stop="riprendi(p)"                   x-show="p.stato==='bozza' || p.stato==='inviato'"   class="btn-tap text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100">✏️ Modifica</button>
                       <button @click.stop="cambiaStato(p.id,'inviato')"   x-show="p.stato==='bozza'"   class="btn-tap text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-lg hover:bg-amber-100">Invia</button>
                       <button @click.stop="cambiaStato(p.id,'accettato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-green-700 bg-green-50 px-3 py-1.5 rounded-lg hover:bg-green-100">Accetta</button>
                       <button @click.stop="cambiaStato(p.id,'rifiutato')" x-show="p.stato==='inviato'" class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Rifiuta</button>
+                      <button @click.stop="revisiona(p)" x-show="['inviato','accettato','rifiutato'].includes(p.stato)" class="btn-tap text-xs text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg hover:bg-purple-100">🔁 Revisiona</button>
                       <button @click.stop="elimina(p.id)"                                               class="btn-tap text-xs text-red-600 bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100">Elimina</button>
                     </div>
                   </div>
@@ -1641,23 +1641,48 @@
               <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
                 <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">💾 Salva</p>
                 <div class="space-y-2">
-                  <button @click="salva('bozza')"
-                          :disabled="!clienteValido || righe.length === 0 || salvando"
-                          class="btn-tap w-full bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-40 text-sm">
-                    <span x-text="preventivoId ? '💾 Aggiorna bozza' : '💾 Salva bozza'"></span>
+                  <!-- Salvataggio: nascosto per gli stati in sola lettura -->
+                  <template x-if="!soloLettura">
+                    <div class="space-y-2">
+                      <button @click="salva('bozza')"
+                              :disabled="!clienteValido || righe.length === 0 || salvando"
+                              class="btn-tap w-full bg-slate-100 text-slate-700 font-semibold py-2.5 rounded-xl hover:bg-slate-200 disabled:opacity-40 text-sm">
+                        <span x-text="preventivoId ? '💾 Aggiorna bozza' : '💾 Salva bozza'"></span>
+                      </button>
+                      <button @click="salva('inviato')"
+                              :disabled="!clienteValido || righe.length === 0 || salvando"
+                              class="btn-tap w-full bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 disabled:opacity-40 text-sm flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
+                        <span x-text="salvando ? 'Salvataggio…' : 'Salva e invia'"></span>
+                      </button>
+                    </div>
+                  </template>
+
+                  <!-- Sola lettura: avviso -->
+                  <template x-if="soloLettura">
+                    <p class="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 text-center">
+                      Preventivo in sola lettura (<span x-text="statoCorrente"></span>). Crea una revisione per modificarlo.
+                    </p>
+                  </template>
+
+                  <!-- Revisiona (In attesa / Accettato / Rifiutato) -->
+                  <button x-show="puoRevisionare" @click="revisionaCorrente()"
+                          class="btn-tap w-full bg-purple-600 text-white font-semibold py-2.5 rounded-xl hover:bg-purple-700 text-sm flex items-center justify-center gap-2">
+                    🔁 Crea nuova revisione
                   </button>
-                  <button @click="salva('inviato')"
-                          :disabled="!clienteValido || righe.length === 0 || salvando"
-                          class="btn-tap w-full bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 disabled:opacity-40 text-sm flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/></svg>
-                    <span x-text="salvando ? 'Salvataggio…' : 'Salva e invia'"></span>
+
+                  <!-- Invia su WhatsApp -->
+                  <button x-show="preventivoId && $store.db.whatsappPronto" @click="inviaWA()"
+                          class="btn-tap w-full bg-green-600 text-white font-semibold py-2.5 rounded-xl hover:bg-green-700 text-sm flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163a11.867 11.867 0 01-1.587-5.945C.16 5.335 5.495 0 12.05 0a11.817 11.817 0 018.413 3.488 11.824 11.824 0 013.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 01-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 001.51 5.26l-.999 3.648 3.567-.955z"/></svg>
+                    Invia su WhatsApp
                   </button>
                 </div>
                 <!-- Validità cliente -->
-                <template x-if="!clienteValido">
+                <template x-if="!soloLettura && !clienteValido">
                   <p class="text-xs text-amber-600 mt-3 text-center">Seleziona o crea un cliente</p>
                 </template>
-                <template x-if="clienteValido && righe.length === 0">
+                <template x-if="!soloLettura && clienteValido && righe.length === 0">
                   <p class="text-xs text-amber-600 mt-3 text-center">Aggiungi almeno un prodotto</p>
                 </template>
               </div>
