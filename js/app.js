@@ -2276,14 +2276,25 @@ function bandiPage() {
     },
     aggiornaSettore() { /* getter auto-calcola */ },
 
-    async init() {
+    async ricarica() {
       this.caricamento = true;
+      this.erroreDB = "";
       try {
         this.tuttiBandi = await SP.getBandi();
       } catch (e) {
-        this.erroreDB = "Impossibile caricare i bandi: " + e.message;
+        const msg = e.message || "";
+        if (/issued at future|jwt|token/i.test(msg)) {
+          this.erroreDB = "Sessione non ancora valida (orario del token in anticipo). "
+            + "Riprova tra qualche istante o ricarica la pagina: se l'orologio del computer è sfasato, sincronizzalo (Impostazioni → Data e ora → automatico).";
+        } else {
+          this.erroreDB = "Impossibile caricare i bandi: " + msg;
+        }
       }
       this.caricamento = false;
+    },
+
+    async init() {
+      await this.ricarica();
       window.addEventListener("precompila-bandi", (e) => {
         this.ateco    = e.detail.ateco    || "";
         this.regione  = e.detail.regione  || "tutte";

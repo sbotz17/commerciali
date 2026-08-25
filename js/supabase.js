@@ -778,11 +778,19 @@ const SP = {
   // BANDI INCENTIVI
   // ----------------------------------------------------------
   async getBandi() {
-    const { data, error } = await _sb
+    const query = () => _sb
       .from("bandi_incentivi")
       .select("*")
       .neq("stato", "scaduto")
       .order("data_chiusura", { ascending: true, nullsFirst: false });
+    let { data, error } = await query();
+    // "JWT issued at future" / errori sul token: rinnova la sessione e riprova
+    // una volta (skew d'orario transitorio tra il token e il server).
+    if (error && /jwt|issued at future|token/i.test(error.message || "")) {
+      try { await _sb.auth.refreshSession(); } catch (_) {}
+      await new Promise(r => setTimeout(r, 400));
+      ({ data, error } = await query());
+    }
     if (error) throw new Error(error.message);
     return data || [];
   },
