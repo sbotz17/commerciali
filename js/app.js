@@ -703,9 +703,11 @@ function appShell() {
       const permesse = VOCI_MENU_OP
         .filter(v => (!v.permesso || s.haPermesso(v.permesso)) && s.pianoConsente(v.pagina))
         .map(v => ({ ...v, icon: icone[v.pagina] }));
-      // Se l'utente ha un menu personalizzato non vuoto, filtra ulteriormente
+      // Se l'utente ha un menu personalizzato non vuoto, filtra ulteriormente.
+      // Il super admin vede SEMPRE tutte le pagine consentite (così le nuove
+      // funzionalità non restano nascoste da un vecchio menu personalizzato).
       const menuUtente = s.utente?.menu_utente;
-      if (Array.isArray(menuUtente) && menuUtente.length > 0) {
+      if (!s.isSuperAdmin && Array.isArray(menuUtente) && menuUtente.length > 0) {
         return permesse.filter(v => menuUtente.includes(v.pagina));
       }
       return permesse;
