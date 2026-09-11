@@ -138,4 +138,87 @@ app.post("/disconnect", async (req, res) => {
   res.json({ ok: true });
 });
 
+// ============================================================
+// PROMEMORIA GIRO VISITE (scheduler)
+// ------------------------------------------------------------
+// Interroga periodicamente Supabase per le visite con un promemoria
+// scaduto e non ancora inviato, manda il messaggio WhatsApp e marca la
+// riga come inviata. Richiede la Tappa 13 dello schema e le variabili
+// SUPABASE_URL + SUPABASE_SERVICE_KEY (service role: bypassa le RLS).
+// Se non sono impostate, lo scheduler resta semplicemente spento.
+// ============================================================
+const SUPABASE_URL     = process.env.SUPABASE_URL || "";
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || "";
+const POLL_MS          = Number(process.env.PROMEMORIA_POLL_MS || 60000);
+
+let sb = null;
+let ultimoGiro = { at: null, inviati: 0, errori: 0 };
+
+function messaggioPromemoria(v) {
+  const ora = (v.ora || "").slice(0, 5);
+  const righe = [
+    "🔔 *Promemoria visita*",
+    "",
+    "👤 " + (v.cliente_nome || "Cliente"),
+    ora ? "🕑 Oggi alle " + ora : "",
+    v.indirizzo ? "📍 " + v.indirizzo : "",
+    v.telefono ? "📞 " + v.telefono : "",
+  ];
+  return righe.filter(Boolean).join("\n");
+}
+
+async function giroPromemoria() {
+  if (!sb || !connected || !sock) return;
+  try {
+    const ora = new Date().toISOString();
+    const { data, error } = await sb
+      .from("giro_visite")
+      .select("id, cliente_nome, telefono, indirizzo, ora, promemoria_numero")
+      .not("promemoria_at", "is", null)
+      .is("promemoria_inviato_at", null)
+      .lte("promemoria_at", ora)
+      .in("stato", ["da_fare", "rinviata"])
+      .limit(50);
+    if (error) { console.error("promemoria/select:", error.message); return; }
+    if (!data || !data.length) return;
+
+    let inviati = 0, errori = 0;
+    for (const v of data) {
+      if (!v.promemoria_numero) {
+        // niente destinatario: marca come gestita per non riprovare all'infinito
+        await sb.from("giro_visite").update({ promemoria_inviato_at: new Date().toISOString() }).eq("id", v.id);
+        continue;
+      }
+      try {
+        await sock.sendMessage(toJid(v.promemoria_numero), { text: messaggioPromemoria(v) });
+        await sb.from("giro_visite")
+          .update({ promemoria_inviato_at: new Date().toISOString() })
+          .eq("id", v.id);
+        inviati++;
+      } catch (e) {
+        errori++;
+        console.error("promemoria/send", v.id, e?.message || e);
+      }
+    }
+    ultimoGiro = { at: new Date().toISOString(), inviati, errori };
+    if (inviati || errori) console.log(`Promemoria: ${inviati} inviati, ${errori} errori`);
+  } catch (e) {
+    console.error("promemoria:", e?.message || e);
+  }
+}
+
+if (SUPABASE_URL && SUPABASE_SERVICE_KEY) {
+  const { createClient } = require("@supabase/supabase-js");
+  sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, { auth: { persistSession: false } });
+  setInterval(giroPromemoria, POLL_MS);
+  console.log("Scheduler promemoria attivo (ogni " + Math.round(POLL_MS / 1000) + "s)");
+} else {
+  console.log("Scheduler promemoria NON attivo: imposta SUPABASE_URL e SUPABASE_SERVICE_KEY");
+}
+
+// Diagnostica dello scheduler
+app.get("/promemoria/stato", (req, res) => res.json({
+  attivo: !!sb, pollMs: POLL_MS, ultimoGiro,
+}));
+
 app.listen(PORT, () => console.log("Server WhatsApp in ascolto sulla porta " + PORT));
