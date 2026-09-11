@@ -39,6 +39,7 @@ const VOCI_MENU_OP = [
   { pagina: "dashboard",  label: "Dashboard",         emoji: "🏠", permesso: null },
   { pagina: "preventivi", label: "Configura richiesta", emoji: "📋", permesso: "preventivi_propri" },
   { pagina: "clienti",    label: "Clienti",           emoji: "👤", permesso: "clienti" },
+  { pagina: "giroVisite", label: "Giro Visite",       emoji: "🗺️", permesso: "clienti" },
   { pagina: "catalogo",   label: "Catalogo prodotti", emoji: "📦", permesso: "listino" },
   { pagina: "bandi",      label: "Bandi & Agevolaz.", emoji: "💰", permesso: "bandi" },
 ];
@@ -50,7 +51,7 @@ const PERMESSI_DEF = [
   { id: "preventivi_propri",  label: "Vedi propri prev.",   emoji: "📋", pagine: ["preventivi", "nuovo-preventivo"] },
   { id: "preventivi_tutti",   label: "Vedi tutti i prev.",  emoji: "🔴", pagine: ["preventivi"] },
   { id: "approva_preventivi", label: "Approva preventivi",  emoji: "🔐", pagine: [] },
-  { id: "clienti",            label: "Gestione clienti",    emoji: "👤", pagine: ["clienti"] },
+  { id: "clienti",            label: "Gestione clienti",    emoji: "👤", pagine: ["clienti", "giroVisite"] },
   { id: "bandi",              label: "Bandi & Agevolaz.",   emoji: "💰", pagine: ["bandi"] },
   { id: "gestione_categorie", label: "Gestione categorie",  emoji: "🏷️",  pagine: ["categorie"] },
   { id: "gestione_utenti",    label: "Gestione utenti",     emoji: "👥", pagine: ["utenti"] },
@@ -81,7 +82,7 @@ const PAGINE_CONFIG = [
   { key: "impostazioni", label: "Impostazioni",      path: "/impostazioni" },
 ];
 // Pagine "figlie" che seguono l'abilitazione del genitore
-const PAGINA_PADRE = { "nuovo-preventivo": "preventivi", "importBandi": "ruoli" };
+const PAGINA_PADRE = { "nuovo-preventivo": "preventivi", "importBandi": "ruoli", "giroVisite": "clienti" };
 
 // Fallback permessi quando la tabella ruoli non è ancora stata creata (schema v3)
 const PERMESSI_FALLBACK = {
@@ -657,6 +658,7 @@ const _ICONS = {
   users:   '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>',
   catalog: '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>',
   money:   '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+  route:   '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>',
   tag:     '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.648.43 2.583-1.298 4.944-3.263 6.742-5.862.597-.847.373-2.006-.52-2.689L7.527 3.659A2.25 2.25 0 005.936 3z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6z"/></svg>',
   shield:  '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/></svg>',
   upload:   '<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>',
@@ -696,7 +698,7 @@ function appShell() {
     // Nav operativo: filtrato per permessi ruolo + eventuale menu personalizzato per utente
     get navOperativo() {
       const s = Alpine.store("sessione");
-      const icone = { dashboard: _ICONS.home, preventivi: _ICONS.doc, clienti: _ICONS.users, catalogo: _ICONS.catalog, bandi: _ICONS.money };
+      const icone = { dashboard: _ICONS.home, preventivi: _ICONS.doc, clienti: _ICONS.users, giroVisite: _ICONS.route, catalogo: _ICONS.catalog, bandi: _ICONS.money };
       // Partenza: voci permesse dal ruolo E abilitate dal piano
       const permesse = VOCI_MENU_OP
         .filter(v => (!v.permesso || s.haPermesso(v.permesso)) && s.pianoConsente(v.pagina))
@@ -1563,6 +1565,209 @@ function clientiPage() {
     vaBandi(cliente) {
       Alpine.store("ui").vai("bandi");
       setTimeout(() => window.dispatchEvent(new CustomEvent("precompila-bandi", { detail: cliente })), 80);
+    },
+  };
+}
+
+// ==========================================================
+// COMPONENTE: giroVisitePage — pianificazione visite giornaliere
+// ==========================================================
+function giroVisitePage() {
+  return {
+    data:         _oggiISO(),
+    visite:       [],
+    caricamento:  false,
+    erroreDB:     "",
+    // Filtro venditore (per i responsabili che vedono tutta la rete)
+    filtroUtente: "",
+    venditori:    [],
+    // Modale "aggiungi visita"
+    modaleAperto:  false,
+    ricercaCliente: "",
+    nuovaOra:      "",
+    // Modale esito
+    esitoVisita:   null,
+    esitoTesto:    "",
+    _aperta:       false,
+
+    // Caricata alla PRIMA apertura della pagina (via x-effect), non all'avvio
+    // di Alpine: così l'azienda attiva è già impostata dopo il login.
+    async apri() {
+      if (this._aperta) return;
+      this._aperta = true;
+      if (this.isManager) {
+        try { this.venditori = await SP.getUtenti(); } catch (_) { this.venditori = []; }
+      }
+      await this.ricarica();
+    },
+
+    // È un responsabile (vede/gestisce le visite di tutta la rete)?
+    get isManager() {
+      const s = Alpine.store("sessione");
+      return s.haPermesso("preventivi_tutti") || s.haPermesso("gestione_utenti");
+    },
+    get mioUtenteId() { return Alpine.store("sessione").utente?.id || null; },
+
+    // ID venditore effettivo per la query: un commerciale vede solo le proprie
+    // visite; un responsabile può filtrare per venditore o vedere tutta la rete.
+    get _utenteQuery() {
+      if (this.isManager) return this.filtroUtente || null;
+      return this.mioUtenteId;
+    },
+
+    async ricarica() {
+      this.caricamento = true;
+      this.erroreDB = "";
+      try {
+        this.visite = await SP.getVisite(this.data, this._utenteQuery);
+      } catch (e) {
+        const msg = e.message || "";
+        if (/issued at future|jwt|token/i.test(msg)) {
+          this.erroreDB = "Sessione non ancora valida (orario del token in anticipo). Riprova tra qualche istante.";
+        } else if (/relation|does not exist|giro_visite/i.test(msg)) {
+          this.erroreDB = "Tabella non trovata: esegui supabase-schema-multitenant-12-giro-visite.sql su Supabase.";
+        } else {
+          this.erroreDB = "Impossibile caricare il giro visite: " + msg;
+        }
+      }
+      this.caricamento = false;
+    },
+
+    // ── Navigazione giornata ──────────────────────────────────
+    cambiaData(delta) {
+      const d = new Date(this.data + "T00:00:00");
+      d.setDate(d.getDate() + delta);
+      this.data = d.toISOString().slice(0, 10);
+      this.ricarica();
+    },
+    oggi() { this.data = _oggiISO(); this.ricarica(); },
+    get dataLabel() {
+      const d = new Date(this.data + "T00:00:00");
+      return d.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+    },
+    get isOggi() { return this.data === _oggiISO(); },
+
+    // ── Riepilogo ─────────────────────────────────────────────
+    get prog() {
+      const tot = this.visite.length;
+      const fatte = this.visite.filter(v => v.stato === "completata").length;
+      return {
+        tot, fatte,
+        daFare:    this.visite.filter(v => v.stato === "da_fare").length,
+        rinviate:  this.visite.filter(v => v.stato === "rinviata").length,
+        annullate: this.visite.filter(v => v.stato === "annullata").length,
+        pct: tot ? Math.round((fatte / tot) * 100) : 0,
+      };
+    },
+
+    // ── Clienti disponibili per la modale ─────────────────────
+    get clientiDisponibili() {
+      const q = this.ricercaCliente.toLowerCase();
+      return (Alpine.store("db").clienti || []).filter(c =>
+        !q || c.nome.toLowerCase().includes(q) || (c.citta || "").toLowerCase().includes(q)
+      ).slice(0, 60);
+    },
+
+    apriAggiungi() { this.ricercaCliente = ""; this.nuovaOra = ""; this.modaleAperto = true; },
+
+    _indirizzoCliente(c) {
+      return [c.indirizzo, c.civico, [c.cap, c.citta].filter(Boolean).join(" "), c.provincia]
+        .filter(Boolean).join(", ");
+    },
+
+    async aggiungi(c) {
+      const nuova = {
+        cliente_id:   c.id,
+        cliente_nome: c.nome,
+        telefono:     c.telefono || "",
+        indirizzo:    this._indirizzoCliente(c),
+        data:         this.data,
+        ora:          this.nuovaOra || null,
+        ordine:       this.visite.length,
+        // assegnazione: un responsabile assegna al venditore filtrato (o a sé
+        // se "tutta la rete"); un commerciale la assegna a sé stesso.
+        utente_id:    (this.isManager ? (this.filtroUtente || this.mioUtenteId) : this.mioUtenteId),
+      };
+      const ris = await SP.aggiungiVisita(nuova);
+      if (ris && ris.__errore) {
+        Alpine.store("ui").mostraToast("Errore: " + ris.__errore, "error");
+        return;
+      }
+      if (ris) this.visite.push(ris);
+      Alpine.store("ui").mostraToast(c.nome + " aggiunto al giro");
+      // resta aperta per aggiungere più clienti velocemente
+      this.ricercaCliente = "";
+    },
+
+    // ── Stato ─────────────────────────────────────────────────
+    async setStato(v, stato) {
+      const ris = await SP.aggiornaVisita(v.id, { stato });
+      if (ris && !ris.__errore) { v.stato = stato; }
+      else Alpine.store("ui").mostraToast("Errore aggiornamento stato", "error");
+    },
+
+    // ── Esito ─────────────────────────────────────────────────
+    apriEsito(v) { this.esitoVisita = v; this.esitoTesto = v.esito || ""; },
+    async salvaEsito() {
+      if (!this.esitoVisita) return;
+      const ris = await SP.aggiornaVisita(this.esitoVisita.id, { esito: this.esitoTesto });
+      if (ris && !ris.__errore) {
+        this.esitoVisita.esito = this.esitoTesto;
+        Alpine.store("ui").mostraToast("Esito salvato");
+      } else {
+        Alpine.store("ui").mostraToast("Errore salvataggio esito", "error");
+      }
+      this.esitoVisita = null;
+    },
+
+    // ── Elimina ───────────────────────────────────────────────
+    async elimina(v) {
+      if (!confirm("Rimuovere " + v.cliente_nome + " dal giro visite?")) return;
+      if (await SP.eliminaVisita(v.id)) {
+        this.visite = this.visite.filter(x => x.id !== v.id);
+      } else Alpine.store("ui").mostraToast("Errore eliminazione", "error");
+    },
+
+    // ── Riordino ──────────────────────────────────────────────
+    async _sposta(i, j) {
+      if (j < 0 || j >= this.visite.length) return;
+      const arr = this.visite;
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      // riassegna ordine progressivo e persiste
+      arr.forEach((v, idx) => v.ordine = idx);
+      this.visite = [...arr];
+      SP.riordinaVisite(arr.map(v => ({ id: v.id, ordine: v.ordine }))).catch(() => {});
+    },
+    spostaSu(i)  { this._sposta(i, i - 1); },
+    spostaGiu(i) { this._sposta(i, i + 1); },
+
+    // ── Azioni rapide ─────────────────────────────────────────
+    chiama(v) { if (v.telefono) window.location.href = "tel:" + v.telefono.replace(/\s+/g, ""); },
+    whatsapp(v) {
+      Alpine.store("wa").apri({ numero: v.telefono, testo: "", titolo: "WhatsApp a " + v.cliente_nome });
+    },
+    naviga(v) {
+      const dest = v.indirizzo || v.cliente_nome;
+      window.open("https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(dest), "_blank");
+    },
+    creaPreventivo(v) {
+      Alpine.store("ui").vai("nuovo-preventivo");
+      setTimeout(() => window.dispatchEvent(new CustomEvent("nuovo-preventivo-vuoto")), 50);
+      if (v.cliente_id) {
+        setTimeout(() => window.dispatchEvent(new CustomEvent("preseleziona-cliente", { detail: { id: v.cliente_id } })), 90);
+      }
+    },
+
+    nomeVenditore(id) {
+      const u = this.venditori.find(v => v.id == id);
+      return u ? (u.nome || u.username || "") : "";
+    },
+
+    // ── Stili stato ───────────────────────────────────────────
+    statoLabelV(s)  { return statoLabelVisita(s); },
+    statoClasseV(s) { return statoClasseVisita(s); },
+    statoBordo(s) {
+      return { completata: "border-l-4 border-l-green-500", annullata: "border-l-4 border-l-red-400", rinviata: "border-l-4 border-l-amber-400" }[s] || "border-l-4 border-l-slate-200";
     },
   };
 }
@@ -2653,6 +2858,22 @@ function statoClasse(stato) {
     revisionato: "bg-purple-100 text-purple-700",
     annullato:   "bg-red-50 text-red-400",
   }[stato] || "bg-slate-100 text-slate-600";
+}
+// Oggi in formato ISO locale (YYYY-MM-DD), non UTC
+function _oggiISO() {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+function statoLabelVisita(s) {
+  return { da_fare: "Da fare", completata: "Completata", annullata: "Annullata", rinviata: "Rinviata" }[s] || s;
+}
+function statoClasseVisita(s) {
+  return {
+    da_fare:    "bg-slate-100 text-slate-600",
+    completata: "bg-green-100 text-green-700",
+    annullata:  "bg-red-100 text-red-600",
+    rinviata:   "bg-amber-100 text-amber-700",
+  }[s] || "bg-slate-100 text-slate-600";
 }
 function tipoBandoLabel(tipo) {
   return { credito_imposta: "Credito Imposta", contributo: "Contributo", voucher: "Voucher", garanzia: "Garanzia", finanziamento_agevolato: "Finanziamento Agevolato", contributo_interessi: "Contributo Interessi" }[tipo] || tipo;

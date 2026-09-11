@@ -16,10 +16,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- ?v=… serve per il cache-busting: aumenta il numero a ogni rilascio per forzare il browser a scaricare la versione nuova -->
-  <script src="js/bandi-data.js?v=48"></script>
-  <script src="js/supabase.js?v=48"></script>
-  <script src="js/auth.js?v=48"></script>
-  <script src="js/app.js?v=48"></script>
+  <script src="js/bandi-data.js?v=49"></script>
+  <script src="js/supabase.js?v=49"></script>
+  <script src="js/auth.js?v=49"></script>
+  <script src="js/app.js?v=49"></script>
 
   <style>
     [x-cloak] { display: none !important; }
@@ -383,7 +383,7 @@
 
         <!-- Titolo pagina -->
         <h2 class="text-sm font-semibold text-slate-700 flex-1 truncate"
-            x-text="{dashboard:'Dashboard',catalogo:'Catalogo Prodotti',clienti:'Clienti',preventivi:'Configura richiesta','nuovo-preventivo':'Nuova richiesta',bandi:'Bandi & Agevolazioni',categorie:'Categorie',utenti:'Gestione Utenti',ruoli:'Ruoli & Permessi',importBandi:'Import Bandi',impostazioni:'Impostazioni',superadmin:'Tutte le aziende (Super Admin)'}[pagina] || pagina">
+            x-text="{dashboard:'Dashboard',catalogo:'Catalogo Prodotti',clienti:'Clienti',giroVisite:'Giro Visite',preventivi:'Configura richiesta','nuovo-preventivo':'Nuova richiesta',bandi:'Bandi & Agevolazioni',categorie:'Categorie',utenti:'Gestione Utenti',ruoli:'Ruoli & Permessi',importBandi:'Import Bandi',impostazioni:'Impostazioni',superadmin:'Tutte le aziende (Super Admin)'}[pagina] || pagina">
         </h2>
 
         <!-- Azioni topbar: pulsante "Nuova richiesta" solo nelle pagine operative
@@ -1071,6 +1071,162 @@
               <div class="h-4"></div>
             </div>
           </div>
+        </section>
+
+        <!-- ================================================
+             GIRO VISITE
+        ================================================ -->
+        <section x-show="pagina === 'giroVisite'" x-data="giroVisitePage()" x-effect="if (pagina === 'giroVisite') apri()">
+
+          <!-- Barra: giornata + filtro venditore + aggiungi -->
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            <div class="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <button @click="cambiaData(-1)" class="btn-tap px-3 py-2.5 text-slate-500 hover:bg-slate-100" title="Giorno precedente">‹</button>
+              <input type="date" x-model="data" @change="ricarica()" class="px-2 py-2.5 text-sm focus:outline-none border-x border-slate-100" />
+              <button @click="cambiaData(1)" class="btn-tap px-3 py-2.5 text-slate-500 hover:bg-slate-100" title="Giorno successivo">›</button>
+            </div>
+            <button @click="oggi()" x-show="!isOggi" class="btn-tap text-sm font-medium text-blue-700 bg-blue-50 px-3 py-2.5 rounded-xl hover:bg-blue-100">Oggi</button>
+            <select x-show="isManager" x-model="filtroUtente" @change="ricarica()" class="text-sm bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="">Tutta la rete</option>
+              <template x-for="v in venditori" :key="v.id"><option :value="v.id" x-text="v.nome || v.username"></option></template>
+            </select>
+            <button @click="apriAggiungi()" class="btn-tap ml-auto flex items-center gap-2 bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-800 shadow-sm shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+              Aggiungi visita
+            </button>
+          </div>
+
+          <!-- Riepilogo giornata -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 mb-4 max-w-3xl">
+            <div class="flex items-center justify-between">
+              <p class="text-sm font-semibold text-slate-700 capitalize" x-text="dataLabel"></p>
+              <p class="text-sm text-slate-500"><span class="font-bold text-green-600" x-text="prog.fatte"></span> / <span x-text="prog.tot"></span> completate</p>
+            </div>
+            <div class="h-2 bg-slate-100 rounded-full mt-2 overflow-hidden">
+              <div class="h-2 bg-green-500 rounded-full transition-all" :style="'width:' + prog.pct + '%'"></div>
+            </div>
+            <div class="flex flex-wrap gap-x-4 gap-y-1 mt-3 text-xs text-slate-500">
+              <span>🕓 Da fare: <b x-text="prog.daFare"></b></span>
+              <span>✓ Completate: <b x-text="prog.fatte"></b></span>
+              <span>↻ Rinviate: <b x-text="prog.rinviate"></b></span>
+              <span>✕ Annullate: <b x-text="prog.annullate"></b></span>
+            </div>
+          </div>
+
+          <!-- Errore -->
+          <template x-if="!caricamento && erroreDB">
+            <div class="bg-red-50 border border-red-200 rounded-2xl p-5 mb-4 max-w-3xl">
+              <p class="text-sm font-semibold text-red-700 mb-1">⚠️ Impossibile caricare il giro visite</p>
+              <p class="text-xs text-red-600" x-text="erroreDB"></p>
+              <button @click="ricarica()" class="btn-tap mt-3 text-xs font-semibold text-red-700 bg-red-100 px-3 py-1.5 rounded-lg hover:bg-red-200">↻ Riprova</button>
+            </div>
+          </template>
+
+          <!-- Caricamento -->
+          <template x-if="caricamento">
+            <p class="text-sm text-slate-400 py-8 text-center">Caricamento…</p>
+          </template>
+
+          <!-- Lista visite (ordinata) -->
+          <div class="space-y-3 max-w-3xl" x-show="!caricamento && !erroreDB">
+            <template x-for="(v, i) in visite" :key="v.id">
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4" :class="statoBordo(v.stato)">
+                <div class="flex items-start gap-3">
+                  <!-- Ordine + frecce -->
+                  <div class="flex flex-col items-center gap-1 shrink-0">
+                    <button @click="spostaSu(i)" :disabled="i===0" class="btn-tap text-slate-300 hover:text-slate-600 disabled:opacity-20 leading-none">▲</button>
+                    <span class="w-7 h-7 rounded-full bg-slate-100 text-slate-600 font-bold text-sm flex items-center justify-center" x-text="i+1"></span>
+                    <button @click="spostaGiu(i)" :disabled="i===visite.length-1" class="btn-tap text-slate-300 hover:text-slate-600 disabled:opacity-20 leading-none">▼</button>
+                  </div>
+                  <!-- Contenuto -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                      <p class="font-semibold text-slate-800 truncate" x-text="v.cliente_nome"></p>
+                      <span class="text-xs px-2 py-0.5 rounded-full font-medium shrink-0" :class="statoClasseV(v.stato)" x-text="statoLabelV(v.stato)"></span>
+                    </div>
+                    <p x-show="v.ora" class="text-xs text-slate-500 mt-0.5">🕑 <span x-text="(v.ora||'').slice(0,5)"></span></p>
+                    <p x-show="v.indirizzo" class="text-xs text-slate-500 mt-0.5" x-text="v.indirizzo"></p>
+                    <p x-show="isManager && v.utente_id" class="text-xs text-indigo-500 mt-0.5">👤 <span x-text="nomeVenditore(v.utente_id)"></span></p>
+                    <p x-show="v.esito" class="text-xs text-slate-600 bg-slate-50 rounded-lg px-3 py-2 mt-2" x-text="v.esito"></p>
+
+                    <!-- Azioni rapide -->
+                    <div class="flex flex-wrap gap-1.5 mt-3">
+                      <button x-show="v.telefono" @click="chiama(v)" class="btn-tap text-xs font-medium text-blue-700 bg-blue-50 px-2.5 py-1.5 rounded-lg hover:bg-blue-100">📞 Chiama</button>
+                      <button x-show="v.telefono && $store.db.whatsappPronto" @click="whatsapp(v)" class="btn-tap text-xs font-medium text-green-700 bg-green-50 px-2.5 py-1.5 rounded-lg hover:bg-green-100">WhatsApp</button>
+                      <button x-show="v.indirizzo" @click="naviga(v)" class="btn-tap text-xs font-medium text-teal-700 bg-teal-50 px-2.5 py-1.5 rounded-lg hover:bg-teal-100">🗺️ Naviga</button>
+                      <button @click="creaPreventivo(v)" class="btn-tap text-xs font-medium text-slate-700 bg-slate-100 px-2.5 py-1.5 rounded-lg hover:bg-slate-200">+ Preventivo</button>
+                      <button @click="apriEsito(v)" class="btn-tap text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1.5 rounded-lg hover:bg-slate-200">📝 Esito</button>
+                      <button @click="elimina(v)" class="btn-tap text-xs font-medium text-red-600 bg-red-50 px-2.5 py-1.5 rounded-lg hover:bg-red-100">✕</button>
+                    </div>
+
+                    <!-- Cambio stato -->
+                    <div class="grid grid-cols-2 gap-1.5 mt-2">
+                      <button @click="setStato(v,'completata')" :class="v.stato==='completata' ? 'bg-green-600 text-white' : 'bg-green-50 text-green-700 hover:bg-green-100'" class="btn-tap text-xs font-semibold px-2.5 py-2 rounded-lg">✓ Fatta</button>
+                      <button @click="setStato(v,'rinviata')"   :class="v.stato==='rinviata'   ? 'bg-amber-500 text-white' : 'bg-amber-50 text-amber-700 hover:bg-amber-100'" class="btn-tap text-xs font-semibold px-2.5 py-2 rounded-lg">↻ Rinvia</button>
+                      <button @click="setStato(v,'annullata')"  :class="v.stato==='annullata'  ? 'bg-red-500 text-white'   : 'bg-red-50 text-red-600 hover:bg-red-100'" class="btn-tap text-xs font-semibold px-2.5 py-2 rounded-lg">✕ Annulla</button>
+                      <button @click="setStato(v,'da_fare')"    :class="v.stato==='da_fare'    ? 'bg-slate-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'" class="btn-tap text-xs font-semibold px-2.5 py-2 rounded-lg">Da fare</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- Vuoto -->
+            <template x-if="visite.length===0">
+              <div class="bg-white rounded-2xl border border-dashed border-slate-300 p-10 text-center">
+                <p class="text-4xl mb-2">🗺️</p>
+                <p class="text-sm text-slate-500">Nessuna visita pianificata per questa giornata.</p>
+                <button @click="apriAggiungi()" class="btn-tap mt-4 text-sm font-semibold text-white bg-blue-700 px-4 py-2.5 rounded-xl hover:bg-blue-800">+ Aggiungi il primo cliente</button>
+              </div>
+            </template>
+          </div>
+
+          <!-- MODALE: aggiungi visita -->
+          <div x-show="modaleAperto" x-cloak class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" @click.self="modaleAperto=false">
+            <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl max-h-[85vh] flex flex-col">
+              <div class="p-5 border-b border-slate-100">
+                <div class="flex items-center justify-between mb-3">
+                  <h3 class="font-semibold text-slate-800">Aggiungi al giro</h3>
+                  <button @click="modaleAperto=false" class="btn-tap text-slate-400 hover:text-slate-600">✕</button>
+                </div>
+                <input x-model="ricercaCliente" type="search" placeholder="Cerca cliente…" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" />
+                <label class="text-xs text-slate-500 flex items-center gap-2">Orario previsto (opzionale)
+                  <input x-model="nuovaOra" type="time" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-sm focus:outline-none" />
+                </label>
+              </div>
+              <div class="overflow-y-auto p-2 flex-1">
+                <template x-for="c in clientiDisponibili" :key="c.id">
+                  <button @click="aggiungi(c)" class="btn-tap w-full text-left px-3 py-2.5 rounded-xl hover:bg-blue-50 flex items-center justify-between gap-2">
+                    <span class="min-w-0">
+                      <span class="block text-sm font-medium text-slate-800 truncate" x-text="c.nome"></span>
+                      <span class="block text-xs text-slate-400 truncate" x-text="[c.citta, c.provincia].filter(Boolean).join(' ') || '—'"></span>
+                    </span>
+                    <span class="text-blue-600 text-lg shrink-0">+</span>
+                  </button>
+                </template>
+                <template x-if="clientiDisponibili.length===0">
+                  <p class="text-sm text-slate-400 text-center py-8">Nessun cliente trovato</p>
+                </template>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODALE: esito visita -->
+          <div x-show="esitoVisita" x-cloak class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4" @click.self="esitoVisita=null">
+            <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-xl p-5">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-slate-800">Esito visita</h3>
+                <button @click="esitoVisita=null" class="btn-tap text-slate-400 hover:text-slate-600">✕</button>
+              </div>
+              <p class="text-xs text-slate-500 mb-2" x-text="esitoVisita?.cliente_nome"></p>
+              <textarea x-model="esitoTesto" rows="4" placeholder="Note sull'esito della visita…" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+              <div class="flex gap-2 mt-3">
+                <button @click="esitoVisita=null" class="btn-tap flex-1 border border-slate-200 text-slate-600 font-semibold py-2.5 rounded-xl hover:bg-slate-50 text-sm">Annulla</button>
+                <button @click="salvaEsito()" class="btn-tap flex-1 bg-blue-700 text-white font-semibold py-2.5 rounded-xl hover:bg-blue-800 text-sm">Salva</button>
+              </div>
+            </div>
+          </div>
+
         </section>
 
         <!-- ================================================

@@ -803,6 +803,60 @@ const SP = {
   },
 
   // ----------------------------------------------------------
+  // GIRO VISITE (Tappa 12) — pianificazione visite giornaliere
+  // ----------------------------------------------------------
+  async getVisite(data, utenteId) {
+    let q = _scopeAzienda(_sb.from("giro_visite").select("*").eq("data", data));
+    if (utenteId) q = q.eq("utente_id", utenteId);
+    const { data: rows, error } = await q
+      .order("ordine", { ascending: true })
+      .order("ora", { ascending: true, nullsFirst: true });
+    if (error) { console.error("getVisite:", error.message); throw new Error(error.message); }
+    return rows || [];
+  },
+
+  async aggiungiVisita(dati) {
+    const { data, error } = await _sb.from("giro_visite").insert([{
+      azienda_id:   _aziendaAttiva,
+      utente_id:    dati.utente_id  || null,
+      cliente_id:   dati.cliente_id || null,
+      cliente_nome: dati.cliente_nome || "",
+      telefono:     dati.telefono   || null,
+      indirizzo:    dati.indirizzo  || null,
+      data:         dati.data,
+      ora:          dati.ora || null,
+      ordine:       dati.ordine ?? 0,
+      stato:        dati.stato || "da_fare",
+      note:         dati.note  || null,
+    }]).select().single();
+    if (error) { console.error("aggiungiVisita:", error.message); return { __errore: error.message }; }
+    return data;
+  },
+
+  async aggiornaVisita(id, patch) {
+    const { data, error } = await _sb.from("giro_visite")
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq("id", id).select().single();
+    if (error) { console.error("aggiornaVisita:", error.message); return { __errore: error.message }; }
+    return data;
+  },
+
+  async eliminaVisita(id) {
+    const { error } = await _sb.from("giro_visite").delete().eq("id", id);
+    if (error) { console.error("eliminaVisita:", error.message); return false; }
+    return true;
+  },
+
+  // Persiste il nuovo ordine di una lista di visite: [{id, ordine}, …]
+  async riordinaVisite(ordini) {
+    for (const o of ordini) {
+      await _sb.from("giro_visite").update({ ordine: o.ordine }).eq("id", o.id);
+    }
+    return true;
+  },
+
+
+  // ----------------------------------------------------------
   // BANDI FONTI — gestione multi-fonte
   // ----------------------------------------------------------
   async getFontiBandi() {
