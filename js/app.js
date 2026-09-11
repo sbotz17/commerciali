@@ -1652,13 +1652,133 @@ function giroVisitePage() {
     // ── Riepilogo ─────────────────────────────────────────────
     get prog() {
       const tot = this.visite.length;
-      const fatte = this.visite.filter(v => v.stato === "completata").length;
+      const st  = s => this.visite.filter(v => v.stato === s).length;
+      // "Visitate" = il sopralluogo è avvenuto, qualunque sia il seguito
+      const preventivo = st("fare_preventivo") + st("completata"); // completata = legacy
+      const prossimo   = st("prossimo_appuntamento");
+      const visitate   = preventivo + prossimo;
       return {
-        tot, fatte,
-        daFare:    this.visite.filter(v => v.stato === "da_fare").length,
-        rinviate:  this.visite.filter(v => v.stato === "rinviata").length,
-        annullate: this.visite.filter(v => v.stato === "annullata").length,
-        pct: tot ? Math.round((fatte / tot) * 100) : 0,
+        tot, visitate, preventivo, prossimo,
+        daFare:    st("da_fare"),
+        rinviate:  st("rinviata"),
+        annullate: st("annullata"),
+        pct: tot ? Math.round((visitate / tot) * 100) : 0,
+      };
+    },
+
+    // ── Filtro per stato (lista della giornata) ───────────────
+    filtroStato: "tutti",
+    STATI_FILTRO: [
+      { id: "tutti",                 l: "Tutte"            },
+      { id: "da_fare",               l: "Da fare"          },
+      { id: "fare_preventivo",       l: "Fare preventivo"  },
+      { id: "prossimo_appuntamento", l: "Prossimo appunt." },
+      { id: "rinviata",              l: "Rinviate"         },
+      { id: "annullata",             l: "Annullate"        },
+    ],
+    get visiteFiltrate() {
+      if (this.filtroStato === "tutti") return this.visite;
+      if (this.filtroStato === "fare_preventivo") {
+        return this.visite.filter(v => v.stato === "fare_preventivo" || v.stato === "completata");
+      }
+      return this.visite.filter(v => v.stato === this.filtroStato);
+    },
+    contaStato(id) {
+      if (id === "tutti") return this.visite.length;
+      if (id === "fare_preventivo") return this.visite.filter(v => v.stato === "fare_preventivo" || v.stato === "completata").length;
+      return this.visite.filter(v => v.stato === id).length;
+    },
+
+    // ── Storico sopralluoghi del cliente (catena) ─────────────
+    storicoVisite:  null,
+    storicoCliente: "",
+    storicoCarica:  false,
+    async apriStorico(v) {
+      this.storicoCliente = v.cliente_nome || "Cliente";
+      this.storicoVisite  = [];
+      this.storicoCarica  = true;
+      try {
+        this.storicoVisite = v.cliente_id
+          ? await SP.getVisiteCliente(v.cliente_id)
+          : [v];
+      } catch (_) { this.storicoVisite = [v]; }
+      this.storicoCarica = false;
+    },
+    chiudiStorico() { this.storicoVisite = null; },
+
+    // ── Vista: giornata / statistiche ─────────────────────────
+    vista: "giornata",
+    periodo: "30",
+    statsVisite: [],
+    statsCarica: false,
+    statsErrore: "",
+
+    async apriStatistiche() {
+      this.vista = "statistiche";
+      await this.caricaStats();
+    },
+    async caricaStats() {
+      this.statsCarica = true;
+      this.statsErrore = "";
+      try {
+        const al  = new Date();
+        const dal = new Date(al.getTime() - (Number(this.periodo) - 1) * 86400000);
+        const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+        this.statsVisite = await SP.getVisitePeriodo(iso(dal), iso(al), this._utenteQuery);
+      } catch (e) {
+        this.statsErrore = "Impossibile caricare le statistiche: " + (e.message || "");
+      }
+      this.statsCarica = false;
+    },
+
+    get stats() {
+      const vs = this.statsVisite;
+      const st = s => vs.filter(v => v.stato === s).length;
+      const preventivo = st("fare_preventivo") + st("completata");
+      const prossimo   = st("prossimo_appuntamento");
+      const visitate   = preventivo + prossimo;
+      const tot = vs.length;
+
+      // Andamento per giorno
+      const perGiorno = {};
+      vs.forEach(v => { perGiorno[v.data] = (perGiorno[v.data] || 0) + 1; });
+      const giorni = Object.keys(perGiorno).sort();
+      const maxGiorno = Math.max(1, ...giorni.map(g => perGiorno[g]));
+      const andamento = giorni.slice(-30).map(g => ({
+        data: g, label: _dataBreve(g), n: perGiorno[g],
+        pct: Math.round((perGiorno[g] / maxGiorno) * 100),
+      }));
+
+      // Classifica venditori
+      const perVend = {};
+      vs.forEach(v => {
+        const k = v.utente_id || "—";
+        perVend[k] = perVend[k] || { id: k, tot: 0, visitate: 0, preventivo: 0 };
+        perVend[k].tot++;
+        if (v.stato === "fare_preventivo" || v.stato === "completata") { perVend[k].preventivo++; perVend[k].visitate++; }
+        if (v.stato === "prossimo_appuntamento") perVend[k].visitate++;
+      });
+      const venditori = Object.values(perVend).sort((a, b) => b.tot - a.tot).slice(0, 10);
+
+      // Clienti più visitati
+      const perCliente = {};
+      vs.forEach(v => {
+        const k = v.cliente_nome || "—";
+        perCliente[k] = (perCliente[k] || 0) + 1;
+      });
+      const clienti = Object.entries(perCliente)
+        .map(([nome, n]) => ({ nome, n }))
+        .sort((a, b) => b.n - a.n).slice(0, 8);
+
+      return {
+        tot, visitate, preventivo, prossimo,
+        daFare:    st("da_fare"),
+        rinviate:  st("rinviata"),
+        annullate: st("annullata"),
+        pctVisitate: tot ? Math.round((visitate / tot) * 100) : 0,
+        pctPreventivo: tot ? Math.round((preventivo / tot) * 100) : 0,
+        mediaGiorno: giorni.length ? (tot / giorni.length).toFixed(1) : "0",
+        andamento, venditori, clienti,
       };
     },
 
@@ -1740,16 +1860,23 @@ function giroVisitePage() {
 
     // ── Modifica visita (data, ora, promemoria) ───────────────
     visitaMod:  null,
-    modoRinvio: false,
+    modoPianifica: "",   // "" = modifica · "rinvio" · "prossimo"
     formMod:    { data: "", ora: "", promemoria_min: "", promemoria_numero: "" },
     salvandoMod: false,
+    get modoRinvio()   { return this.modoPianifica === "rinvio"; },
+    get modoProssimo() { return this.modoPianifica === "prossimo"; },
+    get titoloMod() {
+      return this.modoRinvio ? "Rinvia visita"
+           : this.modoProssimo ? "Prossimo appuntamento"
+           : "Data, ora e promemoria";
+    },
 
     // Numero WhatsApp personale su cui ricevere i promemoria
     get mioNumeroWA() { return Alpine.store("db").impostazioni?.mio_whatsapp || ""; },
 
     apriModifica(v) {
       this.visitaMod  = v;
-      this.modoRinvio = false;
+      this.modoPianifica = "";
       this.formMod = {
         data: v.data || this.data,
         ora:  (v.ora || "").slice(0, 5),
@@ -1759,13 +1886,13 @@ function giroVisitePage() {
       this.salvandoMod = false;
     },
 
-    // "Rinvia": la visita di oggi resta marcata come rinviata (storico) e se
-    // ne ricrea una nuova alla data/ora scelte, da fare.
-    rinvia(v) {
-      this.visitaMod  = v;
-      this.modoRinvio = true;
+    // Apre la riprogrammazione: "rinvio" (visita non fatta, spostata) oppure
+    // "prossimo" (sopralluogo fatto, ne serve un altro: resta agganciato).
+    _apriPianifica(v, modo, giorniAvanti) {
+      this.visitaMod = v;
+      this.modoPianifica = modo;
       const d = new Date((v.data || this.data) + "T00:00:00");
-      d.setDate(d.getDate() + 1); // proposta: domani
+      d.setDate(d.getDate() + giorniAvanti);
       this.formMod = {
         data: d.toISOString().slice(0, 10),
         ora:  (v.ora || "").slice(0, 5),
@@ -1774,7 +1901,10 @@ function giroVisitePage() {
       };
       this.salvandoMod = false;
     },
-    chiudiModifica() { this.visitaMod = null; this.modoRinvio = false; },
+    rinvia(v)               { this._apriPianifica(v, "rinvio", 1); },
+    prossimoAppuntamento(v) { this._apriPianifica(v, "prossimo", 7); },
+
+    chiudiModifica() { this.visitaMod = null; this.modoPianifica = ""; },
 
     // Istante esatto dell'invio promemoria (data+ora della visita − anticipo).
     // Calcolato dall'app, che conosce il fuso orario locale del commerciale.
@@ -1810,11 +1940,12 @@ function giroVisitePage() {
         Alpine.store("db").salvaImpostazione("mio_whatsapp", campiPromemoria.promemoria_numero);
       }
 
-      // ── RINVIO: marca questa come rinviata e ricrea la visita alla nuova data
-      if (this.modoRinvio) {
+      // ── RINVIO / PROSSIMO APPUNTAMENTO: chiude questa e ne crea una nuova
+      if (this.modoPianifica) {
         const orig = this.visitaMod;
-        const segna = await SP.aggiornaVisita(orig.id, { stato: "rinviata" });
-        if (segna && !segna.__errore) orig.stato = "rinviata";
+        const statoOrig = this.modoRinvio ? "rinviata" : "prossimo_appuntamento";
+        const segna = await SP.aggiornaVisita(orig.id, { stato: statoOrig });
+        if (segna && !segna.__errore) orig.stato = statoOrig;
         const nuova = await SP.aggiungiVisita({
           cliente_id:   orig.cliente_id,
           cliente_nome: orig.cliente_nome,
@@ -1826,16 +1957,19 @@ function giroVisitePage() {
           ordine:       0,
           stato:        "da_fare",
           note:         orig.note || null,
+          // aggancia il nuovo sopralluogo al precedente (catena)
+          visita_padre_id: orig.id,
           ...campiPromemoria,
         });
         this.salvandoMod = false;
         if (!nuova || nuova.__errore) {
-          Alpine.store("ui").mostraToast("Errore nel rinvio: " + (nuova?.__errore || "—"), "error");
+          Alpine.store("ui").mostraToast("Errore: " + (nuova?.__errore || "—"), "error");
           return;
         }
         if (f.data === this.data) this.visite.push(nuova);
+        const etichetta = this.modoRinvio ? "Visita rinviata al " : "Prossimo appuntamento fissato per ";
         this.chiudiModifica();
-        Alpine.store("ui").mostraToast("Visita rinviata al " + _dataBreve(f.data) + (f.ora ? " alle " + f.ora : ""));
+        Alpine.store("ui").mostraToast(etichetta + _dataBreve(f.data) + (f.ora ? " alle " + f.ora : ""));
         return;
       }
 
@@ -3095,7 +3229,14 @@ function _oggiISO() {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 function statoLabelVisita(s) {
-  return { da_fare: "Da fare", completata: "Completata", annullata: "Annullata", rinviata: "Rinviata" }[s] || s;
+  return {
+    da_fare:               "Da fare",
+    fare_preventivo:       "Fare preventivo",
+    prossimo_appuntamento: "Prossimo appunt.",
+    rinviata:              "Rinviata",
+    annullata:             "Annullata",
+    completata:            "Fare preventivo", // legacy pre-Tappa 14
+  }[s] || s;
 }
 // Data ISO (YYYY-MM-DD) in formato breve italiano: "lun 15/09"
 function _dataBreve(iso) {
@@ -3105,10 +3246,12 @@ function _dataBreve(iso) {
 }
 function statoClasseVisita(s) {
   return {
-    da_fare:    "bg-slate-100 text-slate-600",
-    completata: "bg-green-100 text-green-700",
-    annullata:  "bg-red-100 text-red-600",
-    rinviata:   "bg-amber-100 text-amber-700",
+    da_fare:               "bg-slate-100 text-slate-600",
+    fare_preventivo:       "bg-blue-100 text-blue-700",
+    prossimo_appuntamento: "bg-purple-100 text-purple-700",
+    rinviata:              "bg-amber-100 text-amber-700",
+    annullata:             "bg-red-100 text-red-600",
+    completata:            "bg-blue-100 text-blue-700", // legacy
   }[s] || "bg-slate-100 text-slate-600";
 }
 function tipoBandoLabel(tipo) {
