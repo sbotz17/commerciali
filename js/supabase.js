@@ -828,6 +828,7 @@ const SP = {
       ordine:       dati.ordine ?? 0,
       stato:        dati.stato || "da_fare",
       note:         dati.note  || null,
+      visita_padre_id:       dati.visita_padre_id || null,
       promemoria_min:        dati.promemoria_min ?? null,
       promemoria_at:         dati.promemoria_at  || null,
       promemoria_numero:     dati.promemoria_numero || null,
@@ -857,6 +858,26 @@ const SP = {
       await _sb.from("giro_visite").update({ ordine: o.ordine }).eq("id", o.id);
     }
     return true;
+  },
+
+  // Tutte le visite di un cliente (catena dei sopralluoghi), più recenti prima
+  async getVisiteCliente(clienteId) {
+    const { data, error } = await _scopeAzienda(_sb
+      .from("giro_visite").select("*").eq("cliente_id", clienteId))
+      .order("data", { ascending: false })
+      .order("ora",  { ascending: false, nullsFirst: false });
+    if (error) { console.error("getVisiteCliente:", error.message); return []; }
+    return data || [];
+  },
+
+  // Visite in un intervallo di date (per le statistiche)
+  async getVisitePeriodo(dal, al, utenteId) {
+    let q = _scopeAzienda(_sb.from("giro_visite").select("*"))
+      .gte("data", dal).lte("data", al);
+    if (utenteId) q = q.eq("utente_id", utenteId);
+    const { data, error } = await q.order("data", { ascending: true });
+    if (error) { console.error("getVisitePeriodo:", error.message); throw new Error(error.message); }
+    return data || [];
   },
 
 
