@@ -1738,6 +1738,197 @@ function giroVisitePage() {
       this.ricercaCliente = "";
     },
 
+    // ── Modifica visita (data, ora, promemoria) ───────────────
+    visitaMod:  null,
+    modoRinvio: false,
+    formMod:    { data: "", ora: "", promemoria_min: "", promemoria_numero: "" },
+    salvandoMod: false,
+
+    // Numero WhatsApp personale su cui ricevere i promemoria
+    get mioNumeroWA() { return Alpine.store("db").impostazioni?.mio_whatsapp || ""; },
+
+    apriModifica(v) {
+      this.visitaMod  = v;
+      this.modoRinvio = false;
+      this.formMod = {
+        data: v.data || this.data,
+        ora:  (v.ora || "").slice(0, 5),
+        promemoria_min: v.promemoria_min == null ? "" : String(v.promemoria_min),
+        promemoria_numero: v.promemoria_numero || this.mioNumeroWA,
+      };
+      this.salvandoMod = false;
+    },
+
+    // "Rinvia": la visita di oggi resta marcata come rinviata (storico) e se
+    // ne ricrea una nuova alla data/ora scelte, da fare.
+    rinvia(v) {
+      this.visitaMod  = v;
+      this.modoRinvio = true;
+      const d = new Date((v.data || this.data) + "T00:00:00");
+      d.setDate(d.getDate() + 1); // proposta: domani
+      this.formMod = {
+        data: d.toISOString().slice(0, 10),
+        ora:  (v.ora || "").slice(0, 5),
+        promemoria_min: v.promemoria_min == null ? "" : String(v.promemoria_min),
+        promemoria_numero: v.promemoria_numero || this.mioNumeroWA,
+      };
+      this.salvandoMod = false;
+    },
+    chiudiModifica() { this.visitaMod = null; this.modoRinvio = false; },
+
+    // Istante esatto dell'invio promemoria (data+ora della visita − anticipo).
+    // Calcolato dall'app, che conosce il fuso orario locale del commerciale.
+    _promemoriaAt(data, ora, min) {
+      if (!data || !ora || min === "" || min == null) return null;
+      const dt = new Date(data + "T" + (ora.length === 5 ? ora + ":00" : ora));
+      if (isNaN(dt)) return null;
+      return new Date(dt.getTime() - Number(min) * 60000).toISOString();
+    },
+
+    async salvaModifica() {
+      if (!this.visitaMod || this.salvandoMod) return;
+      const f = this.formMod;
+      if (f.promemoria_min !== "" && !f.ora) {
+        Alpine.store("ui").mostraToast("Per il promemoria serve l'orario della visita", "error");
+        return;
+      }
+      if (f.promemoria_min !== "" && !f.promemoria_numero.trim()) {
+        Alpine.store("ui").mostraToast("Indica il numero WhatsApp per il promemoria", "error");
+        return;
+      }
+      this.salvandoMod = true;
+      const promemoriaAt = this._promemoriaAt(f.data, f.ora, f.promemoria_min);
+      const campiPromemoria = {
+        promemoria_min:    f.promemoria_min === "" ? null : Number(f.promemoria_min),
+        promemoria_numero: f.promemoria_min === "" ? null : f.promemoria_numero.trim(),
+        promemoria_at:     promemoriaAt,
+        promemoria_inviato_at: null, // riprogrammato: torna da inviare
+      };
+
+      // Ricorda il numero personale per le prossime volte
+      if (campiPromemoria.promemoria_numero && campiPromemoria.promemoria_numero !== this.mioNumeroWA) {
+        Alpine.store("db").salvaImpostazione("mio_whatsapp", campiPromemoria.promemoria_numero);
+      }
+
+      // ── RINVIO: marca questa come rinviata e ricrea la visita alla nuova data
+      if (this.modoRinvio) {
+        const orig = this.visitaMod;
+        const segna = await SP.aggiornaVisita(orig.id, { stato: "rinviata" });
+        if (segna && !segna.__errore) orig.stato = "rinviata";
+        const nuova = await SP.aggiungiVisita({
+          cliente_id:   orig.cliente_id,
+          cliente_nome: orig.cliente_nome,
+          telefono:     orig.telefono,
+          indirizzo:    orig.indirizzo,
+          utente_id:    orig.utente_id,
+          data:         f.data,
+          ora:          f.ora || null,
+          ordine:       0,
+          stato:        "da_fare",
+          note:         orig.note || null,
+          ...campiPromemoria,
+        });
+        this.salvandoMod = false;
+        if (!nuova || nuova.__errore) {
+          Alpine.store("ui").mostraToast("Errore nel rinvio: " + (nuova?.__errore || "—"), "error");
+          return;
+        }
+        if (f.data === this.data) this.visite.push(nuova);
+        this.chiudiModifica();
+        Alpine.store("ui").mostraToast("Visita rinviata al " + _dataBreve(f.data) + (f.ora ? " alle " + f.ora : ""));
+        return;
+      }
+
+      // ── MODIFICA semplice
+      const patch = { data: f.data, ora: f.ora || null, ...campiPromemoria };
+      const ris = await SP.aggiornaVisita(this.visitaMod.id, patch);
+      this.salvandoMod = false;
+      if (!ris || ris.__errore) {
+        Alpine.store("ui").mostraToast("Errore salvataggio: " + (ris?.__errore || "—"), "error");
+        return;
+      }
+      const cambiataData = patch.data !== this.data;
+      Object.assign(this.visitaMod, ris);
+      this.chiudiModifica();
+      if (cambiataData) {
+        // la visita è stata spostata in un altro giorno: esce da questa lista
+        this.visite = this.visite.filter(x => x.id !== ris.id);
+        Alpine.store("ui").mostraToast("Visita spostata al " + _dataBreve(patch.data));
+      } else {
+        Alpine.store("ui").mostraToast("Visita aggiornata");
+      }
+    },
+
+    etichettaPromemoria(v) {
+      if (v.promemoria_min == null) return "";
+      const m = Number(v.promemoria_min);
+      if (m >= 1440) return (m / 1440) + "g prima";
+      if (m >= 60)   return (m / 60) + "h prima";
+      return m + " min prima";
+    },
+
+    // ── Agenda (calendario) ───────────────────────────────────
+    _eventoVisita(v) {
+      const inizio = new Date((v.data || this.data) + "T" + ((v.ora || "09:00").length === 5 ? (v.ora || "09:00") + ":00" : (v.ora || "09:00:00")));
+      const fine   = new Date(inizio.getTime() + 60 * 60000);
+      return {
+        titolo: "Visita: " + (v.cliente_nome || "Cliente"),
+        luogo:  v.indirizzo || "",
+        note:   [v.telefono ? "Tel: " + v.telefono : "", v.esito || "", v.note || ""].filter(Boolean).join("\n"),
+        inizio, fine,
+        allarme: v.promemoria_min == null ? 30 : Number(v.promemoria_min),
+      };
+    },
+    _utc(d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); },
+
+    // Apre Google Calendar con l'evento già compilato (account dell'utente)
+    agendaGoogle(v) {
+      const e = this._eventoVisita(v);
+      const url = "https://calendar.google.com/calendar/render?action=TEMPLATE"
+        + "&text="     + encodeURIComponent(e.titolo)
+        + "&dates="    + this._utc(e.inizio) + "/" + this._utc(e.fine)
+        + "&details="  + encodeURIComponent(e.note)
+        + "&location=" + encodeURIComponent(e.luogo);
+      window.open(url, "_blank");
+    },
+
+    _vevent(v) {
+      const e = this._eventoVisita(v);
+      const esc = s => String(s || "").replace(/([,;\\])/g, "\\$1").replace(/\n/g, "\\n");
+      return [
+        "BEGIN:VEVENT",
+        "UID:visita-" + v.id + "@configuratore",
+        "DTSTAMP:" + this._utc(new Date()),
+        "DTSTART:" + this._utc(e.inizio),
+        "DTEND:"   + this._utc(e.fine),
+        "SUMMARY:" + esc(e.titolo),
+        e.luogo ? "LOCATION:" + esc(e.luogo) : "",
+        e.note  ? "DESCRIPTION:" + esc(e.note) : "",
+        "BEGIN:VALARM",
+        "TRIGGER:-PT" + e.allarme + "M",
+        "ACTION:DISPLAY",
+        "DESCRIPTION:" + esc(e.titolo),
+        "END:VALARM",
+        "END:VEVENT",
+      ].filter(Boolean).join("\r\n");
+    },
+
+    _scaricaIcs(eventi, nomeFile) {
+      const ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Configuratore Commerciali//Giro Visite//IT", "CALSCALE:GREGORIAN"]
+        .concat(eventi).concat(["END:VCALENDAR"]).join("\r\n");
+      const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = nomeFile;
+      document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    },
+    agendaIcs(v)  { this._scaricaIcs([this._vevent(v)], "visita-" + (v.cliente_nome || "cliente").replace(/\W+/g, "-").toLowerCase() + ".ics"); },
+    agendaGiorno() {
+      if (!this.visite.length) { Alpine.store("ui").mostraToast("Nessuna visita da esportare", "error"); return; }
+      this._scaricaIcs(this.visite.map(v => this._vevent(v)), "giro-visite-" + this.data + ".ics");
+    },
+
     // ── Stato ─────────────────────────────────────────────────
     async setStato(v, stato) {
       const ris = await SP.aggiornaVisita(v.id, { stato });
@@ -2905,6 +3096,12 @@ function _oggiISO() {
 }
 function statoLabelVisita(s) {
   return { da_fare: "Da fare", completata: "Completata", annullata: "Annullata", rinviata: "Rinviata" }[s] || s;
+}
+// Data ISO (YYYY-MM-DD) in formato breve italiano: "lun 15/09"
+function _dataBreve(iso) {
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "2-digit" });
 }
 function statoClasseVisita(s) {
   return {

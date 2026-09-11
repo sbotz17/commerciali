@@ -828,6 +828,10 @@ const SP = {
       ordine:       dati.ordine ?? 0,
       stato:        dati.stato || "da_fare",
       note:         dati.note  || null,
+      promemoria_min:        dati.promemoria_min ?? null,
+      promemoria_at:         dati.promemoria_at  || null,
+      promemoria_numero:     dati.promemoria_numero || null,
+      promemoria_inviato_at: dati.promemoria_inviato_at || null,
     }]).select().single();
     if (error) { console.error("aggiungiVisita:", error.message); return { __errore: error.message }; }
     return data;
