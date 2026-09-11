@@ -1670,7 +1670,44 @@ function giroVisitePage() {
       ).slice(0, 60);
     },
 
-    apriAggiungi() { this.ricercaCliente = ""; this.nuovaOra = ""; this.modaleAperto = true; },
+    apriAggiungi() {
+      this.ricercaCliente = "";
+      this.nuovaOra = "";
+      this.modoNuovoCliente = false;
+      this.modaleAperto = true;
+    },
+
+    // ── Nuovo cliente al volo (dal modale del giro) ───────────
+    modoNuovoCliente: false,
+    salvandoNuovo:    false,
+    formNuovo: { nome: "", referente: "", telefono: "", indirizzo: "", civico: "", cap: "", citta: "", provincia: "" },
+
+    apriNuovoCliente() {
+      this.formNuovo = { nome: this.ricercaCliente.trim(), referente: "", telefono: "", indirizzo: "", civico: "", cap: "", citta: "", provincia: "" };
+      this.modoNuovoCliente = true;
+    },
+    annullaNuovoCliente() { this.modoNuovoCliente = false; },
+    get nuovoValido() { return (this.formNuovo.nome || "").trim().length > 1; },
+
+    // Crea il cliente in anagrafica e lo aggiunge subito al giro del giorno
+    async creaClienteEAggiungi() {
+      if (!this.nuovoValido || this.salvandoNuovo) return;
+      this.salvandoNuovo = true;
+      try {
+        const c = await Alpine.store("db").aggiungiCliente({
+          ...this.formNuovo,
+          nome: this.formNuovo.nome.trim(),
+        });
+        if (!c) { Alpine.store("ui").mostraToast("Errore: cliente non creato", "error"); return; }
+        if (c.__errDuplicato) { Alpine.store("ui").mostraToast("Esiste già un cliente con questi dati", "error"); return; }
+        await this.aggiungi(c);
+        this.modoNuovoCliente = false;
+        this.ricercaCliente = "";
+      } finally {
+        this.salvandoNuovo = false;
+      }
+    },
+
 
     _indirizzoCliente(c) {
       return [c.indirizzo, c.civico, [c.cap, c.citta].filter(Boolean).join(" "), c.provincia]
