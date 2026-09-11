@@ -1871,8 +1871,21 @@ function giroVisitePage() {
            : "Data, ora e promemoria";
     },
 
-    // Numero WhatsApp personale su cui ricevere i promemoria
-    get mioNumeroWA() { return Alpine.store("db").impostazioni?.mio_whatsapp || ""; },
+    // Numero WhatsApp personale su cui ricevere i promemoria.
+    // Letto dallo store e, in fallback, da localStorage (sopravvive al reload).
+    get mioNumeroWA() {
+      const daStore = Alpine.store("db").impostazioni?.mio_whatsapp;
+      if (daStore) return daStore;
+      try { return localStorage.getItem("cfg_mio_whatsapp") || ""; } catch (_) { return ""; }
+    },
+
+    // Ricorda il numero: localStorage (sempre) + store + database (best-effort)
+    _ricordaNumero(num) {
+      try { localStorage.setItem("cfg_mio_whatsapp", num); } catch (_) {}
+      const db = Alpine.store("db");
+      db.impostazioni = { ...db.impostazioni, mio_whatsapp: num };
+      try { SP.salvaImpostazione("mio_whatsapp", num).catch(() => {}); } catch (_) {}
+    },
 
     apriModifica(v) {
       this.visitaMod  = v;
@@ -1927,6 +1940,17 @@ function giroVisitePage() {
         return;
       }
       this.salvandoMod = true;
+      try {
+        await this._salva(f);
+      } catch (e) {
+        console.error("salvaModifica:", e);
+        Alpine.store("ui").mostraToast("Errore imprevisto: " + (e?.message || e), "error");
+      } finally {
+        this.salvandoMod = false;
+      }
+    },
+
+    async _salva(f) {
       const promemoriaAt = this._promemoriaAt(f.data, f.ora, f.promemoria_min);
       const campiPromemoria = {
         promemoria_min:    f.promemoria_min === "" ? null : Number(f.promemoria_min),
@@ -1937,7 +1961,7 @@ function giroVisitePage() {
 
       // Ricorda il numero personale per le prossime volte
       if (campiPromemoria.promemoria_numero && campiPromemoria.promemoria_numero !== this.mioNumeroWA) {
-        Alpine.store("db").salvaImpostazione("mio_whatsapp", campiPromemoria.promemoria_numero);
+        this._ricordaNumero(campiPromemoria.promemoria_numero);
       }
 
       // ── RINVIO / PROSSIMO APPUNTAMENTO: chiude questa e ne crea una nuova
@@ -1961,7 +1985,6 @@ function giroVisitePage() {
           visita_padre_id: orig.id,
           ...campiPromemoria,
         });
-        this.salvandoMod = false;
         if (!nuova || nuova.__errore) {
           Alpine.store("ui").mostraToast("Errore: " + (nuova?.__errore || "—"), "error");
           return;
@@ -1977,7 +2000,6 @@ function giroVisitePage() {
       // ── MODIFICA semplice
       const patch = { data: f.data, ora: f.ora || null, ...campiPromemoria };
       const ris = await SP.aggiornaVisita(this.visitaMod.id, patch);
-      this.salvandoMod = false;
       if (!ris || ris.__errore) {
         Alpine.store("ui").mostraToast("Errore salvataggio: " + (ris?.__errore || "—"), "error");
         return;
