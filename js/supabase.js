@@ -805,6 +805,18 @@ const SP = {
   // ----------------------------------------------------------
   // GIRO VISITE (Tappa 12) — pianificazione visite giornaliere
   // ----------------------------------------------------------
+  // Colonne introdotte dalle Tappe 13/14: se lo schema non è ancora
+  // aggiornato, il salvataggio non deve fallire del tutto — si riprova
+  // senza di esse, segnalandolo con __senzaPromemoria.
+  _COLONNE_EXTRA_VISITA: ["promemoria_min", "promemoria_at", "promemoria_numero", "promemoria_inviato_at", "visita_padre_id"],
+  _senzaExtra(obj) {
+    const o = { ...obj };
+    this._COLONNE_EXTRA_VISITA.forEach(c => delete o[c]);
+    return o;
+  },
+  _colonnaMancante(msg) {
+    return /schema cache|column .* does not exist|could not find the .* column/i.test(msg || "");
+  },
   async getVisite(data, utenteId) {
     let q = _scopeAzienda(_sb.from("giro_visite").select("*").eq("data", data));
     if (utenteId) q = q.eq("utente_id", utenteId);
@@ -816,7 +828,7 @@ const SP = {
   },
 
   async aggiungiVisita(dati) {
-    const { data, error } = await _sb.from("giro_visite").insert([{
+    const riga = {
       azienda_id:   _aziendaAttiva,
       utente_id:    dati.utente_id  || null,
       cliente_id:   dati.cliente_id || null,
@@ -833,15 +845,28 @@ const SP = {
       promemoria_at:         dati.promemoria_at  || null,
       promemoria_numero:     dati.promemoria_numero || null,
       promemoria_inviato_at: dati.promemoria_inviato_at || null,
-    }]).select().single();
+    };
+    const ins = r => _sb.from("giro_visite").insert([r]).select().single();
+    let { data, error } = await ins(riga);
+    // Schema non ancora aggiornato (Tappe 13/14): riprova senza i campi extra
+    if (error && this._colonnaMancante(error.message)) {
+      ({ data, error } = await ins(this._senzaExtra(riga)));
+      if (!error && data) { data.__senzaPromemoria = true; return data; }
+    }
     if (error) { console.error("aggiungiVisita:", error.message); return { __errore: error.message }; }
     return data;
   },
 
   async aggiornaVisita(id, patch) {
-    const { data, error } = await _sb.from("giro_visite")
-      .update({ ...patch, updated_at: new Date().toISOString() })
+    const upd = p => _sb.from("giro_visite")
+      .update({ ...p, updated_at: new Date().toISOString() })
       .eq("id", id).select().single();
+    let { data, error } = await upd(patch);
+    // Schema non ancora aggiornato (Tappe 13/14): salva almeno data/ora/stato
+    if (error && this._colonnaMancante(error.message)) {
+      ({ data, error } = await upd(this._senzaExtra(patch)));
+      if (!error && data) { data.__senzaPromemoria = true; return data; }
+    }
     if (error) { console.error("aggiornaVisita:", error.message); return { __errore: error.message }; }
     return data;
   },

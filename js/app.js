@@ -1970,6 +1970,7 @@ function giroVisitePage() {
         const etichetta = this.modoRinvio ? "Visita rinviata al " : "Prossimo appuntamento fissato per ";
         this.chiudiModifica();
         Alpine.store("ui").mostraToast(etichetta + _dataBreve(f.data) + (f.ora ? " alle " + f.ora : ""));
+        if (nuova.__senzaPromemoria) this._avvisoSchema();
         return;
       }
 
@@ -1991,6 +1992,15 @@ function giroVisitePage() {
       } else {
         Alpine.store("ui").mostraToast("Visita aggiornata");
       }
+      if (ris.__senzaPromemoria) this._avvisoSchema();
+    },
+
+    // Lo schema non ha ancora le colonne del promemoria: l'appuntamento è
+    // salvato, ma il promemoria non può essere memorizzato.
+    _avvisoSchema() {
+      Alpine.store("ui").mostraToast(
+        "Appuntamento salvato, ma il promemoria no: esegui supabase-schema-multitenant-13-promemoria.sql su Supabase.",
+        "error");
     },
 
     etichettaPromemoria(v) {
