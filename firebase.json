@@ -4,5 +4,29 @@
     "location": "europe-west8",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "worker/**",
+      "docs/**",
+      "scripts/**",
+      "supabase/**",
+      "*.sql",
+      "*.md",
+      "*.bat",
+      "opendata-export.json",
+      "package.json",
+      "package-lock.json"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
   }
 }
