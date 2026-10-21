@@ -1,6 +1,7 @@
 ---
 description: Censisce gli oggetti del progetto e segnala duplicati
 agent: coordinatore
+model: deepseek/deepseek-flash#high
 ---
 
 Leggi il codice e `docs/progetto/catalogo.md`.

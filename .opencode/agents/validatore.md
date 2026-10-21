@@ -1,6 +1,8 @@
 ---
 description: Dà l'APPROVATO o il RESPINTO finale dopo il tester
 mode: subagent
+model: deepseek/deepseek-v4-pro#high
+steps: 8
 permissions:
   - action: edit
     resource: "*"

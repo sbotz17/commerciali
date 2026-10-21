@@ -1,6 +1,7 @@
 ---
 description: "Prepara un export Firestore verificato"
 agent: coordinatore
+model: deepseek/deepseek-flash#low
 ---
 
 Chiama `guardiano-produzione` e prepara un export Firestore verificato dello staging.

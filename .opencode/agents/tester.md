@@ -1,6 +1,8 @@
 ---
 description: Verifica ogni sviluppo o correzione e scrive il report; non corregge
 mode: subagent
+model: deepseek/deepseek-flash#low
+steps: 20
 permissions:
   - action: edit
     resource: "*"

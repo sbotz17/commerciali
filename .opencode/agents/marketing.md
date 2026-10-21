@@ -1,6 +1,8 @@
 ---
 description: Prepara materiali di marketing solo su richiesta esplicita
 mode: subagent
+model: deepseek/deepseek-flash#low
+steps: 6
 permissions:
   - action: edit
     resource: "*"

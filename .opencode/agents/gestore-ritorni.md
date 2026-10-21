@@ -1,6 +1,8 @@
 ---
 description: Classifica le segnalazioni e aggiorna il registro dei ritorni
 mode: subagent
+model: deepseek/deepseek-flash#low
+steps: 6
 permissions:
   - action: edit
     resource: "*"

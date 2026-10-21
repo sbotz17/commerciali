@@ -1,6 +1,7 @@
 ---
 description: "Riepilogo del progetto: in corso, in sospeso, da validare"
 agent: coordinatore
+model: deepseek/deepseek-flash#low
 ---
 
 Leggi `docs/progetto/registro-decisioni.md`, `docs/progetto/da-validare.md`, `docs/progetto/ritorni.md`,

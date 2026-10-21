@@ -1,6 +1,8 @@
 ---
 description: Implementa interfaccia e collegamento ai dati
 mode: subagent
+model: deepseek/deepseek-flash#high
+steps: 20
 permissions:
   - action: shell
     resource: "git push *"

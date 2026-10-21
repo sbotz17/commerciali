@@ -1,6 +1,8 @@
 ---
 description: Verifica la checklist di rilascio e dà GO/NO-GO
 mode: subagent
+model: deepseek/deepseek-v4-pro#high
+steps: 8
 permissions:
   - action: edit
     resource: "*"

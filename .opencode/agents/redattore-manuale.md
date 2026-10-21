@@ -1,6 +1,8 @@
 ---
 description: Aggiorna manuale utente e note di rilascio
 mode: subagent
+model: deepseek/deepseek-flash#low
+steps: 6
 permissions:
   - action: edit
     resource: "*"

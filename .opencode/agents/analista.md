@@ -1,6 +1,8 @@
 ---
 description: Trasforma la richiesta in requisiti e criteri di accettazione verificabili
 mode: subagent
+model: deepseek/deepseek-flash#low
+steps: 6
 permissions:
   - action: edit
     resource: "*"

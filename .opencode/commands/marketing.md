@@ -1,6 +1,7 @@
 ---
 description: "Attiva l'agente marketing su richiesta esplicita"
 agent: coordinatore
+model: deepseek/deepseek-flash#low
 ---
 
 Attiva l'agente `marketing` solo perché Andrea lo ha chiesto.

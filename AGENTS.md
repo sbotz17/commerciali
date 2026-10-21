@@ -55,6 +55,15 @@ segnalazione → gestore-ritorni → CONFERMATO → risolutore-bug → tester �
 
 Gli altri esiti (NON RIPRODUCIBILE, USO SCORRETTO, FUORI AMBITO, DUPLICATA) non producono codice.
 
+### Ottimizzazione dei crediti
+
+- I modelli sono già assegnati per ruolo in `.opencode/agents/`: non cambiarli senza motivo.
+- Il coordinatore passa a ogni subagente **solo il contesto necessario** (file e requisiti), mai intere cartelle.
+- Flash per requisiti, UI, test, classificazioni e testi; V4 Pro per architettura, dati, backend, validazione,
+  bug e produzione.
+- Riusa i documenti in `docs/progetto/` invece di far rileggere tutto il repository.
+- Controlla i consumi con `opencode stats --cost` e correggi la politica se un ruolo costa troppo.
+
 ### Comandi
 
 `/sviluppo`, `/ritorno`, `/stato`, `/catalogo`, `/hotfix`, `/rilascio`.
