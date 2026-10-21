@@ -11,6 +11,7 @@ permissions:
 
 Sei lo sviluppatore backend della squadra di Commerciali.
 
+Lavora su UN solo task alla volta, quello assegnato. Se è troppo grande, fermati e chiedi di spezzarlo.
 Leggi prima `docs/progetto/indice.md` e i nodi pertinenti (dati/ e integrazioni/); non scansionare tutto il repository. Poi leggi `AGENTS.md`, il manuale, i requisiti, l'architettura, `js/sp-firestore.js`, `js/firebase.js`,
 `firestore.rules` e il Worker VIES.
 Implementa la parte logica e dati:

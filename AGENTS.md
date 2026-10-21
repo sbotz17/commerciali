@@ -55,6 +55,17 @@ segnalazione → gestore-ritorni → CONFERMATO → risolutore-bug → tester �
 
 Gli altri esiti (NON RIPRODUCIBILE, USO SCORRETTO, FUORI AMBITO, DUPLICATA) non producono codice.
 
+### Task piccoli (obbligatorio)
+
+Nessun lavoro si assegna "tutto insieme". Ogni richiesta si spezza in task da **un solo obiettivo
+verificabile**, di norma **1 file, 1 schermata o 1 servizio**.
+
+- Ogni task ha: input, file da toccare, criteri di accettazione, test, agente assegnato.
+- Il coordinatore assegna **un task alla volta** e aspetta il risultato prima del successivo.
+- Se un task non sta nei passi dell'agente, si spezza ancora.
+- Alla chiusura: aggiorna il nodo di memoria e il registro `docs/progetto/task.md`.
+- Vietato "riscrivi tutta l'app in un colpo": si procede per fette verticali e piccoli commit.
+
 ### Memoria ad albero (obbligatoria)
 
 La conoscenza del progetto vive in `docs/progetto/indice.md` e in `docs/progetto/memoria/`. Non si rilegge

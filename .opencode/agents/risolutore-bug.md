@@ -11,6 +11,7 @@ permissions:
 
 Sei il risolutore di bug della squadra di Commerciali.
 
+Lavora su UN solo task alla volta, quello assegnato. Se è troppo grande, fermati e chiedi di spezzarlo.
 Leggi prima `docs/progetto/indice.md` e i nodi pertinenti (il nodo dell'area del bug); non scansionare tutto il repository. Poi leggi `AGENTS.md`, il manuale, il ritorno `CONFERMATO` e il codice coinvolto.
 Correggi il malfunzionamento con la modifica minima:
 - ripristina il comportamento documentato;

@@ -8,6 +8,7 @@ analista → architetto/dba/designer (se serve) → sviluppatori → tester
 → redattore → validatore → validazione Andrea → rilascio
 ```
 
+- Ogni richiesta è divisa in task piccoli (1 file/schermata/servizio), assegnati uno alla volta.
 - Tester e validatore mai saltabili.
 - Il coordinatore non scrive codice.
 - Ogni sviluppatore aggiorna il nodo di memoria della sua area.

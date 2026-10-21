@@ -2,7 +2,7 @@
 description: Definisce struttura tecnica, flussi e contratti; non scrive codice
 mode: subagent
 model: deepseek/deepseek-v4-pro#high
-steps: 8
+steps: 12
 permissions:
   - action: edit
     resource: "*"

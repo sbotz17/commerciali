@@ -27,10 +27,12 @@ docs/progetto/
 ├── diario.md                     ← log del lavoro
 ├── ritorni.md                    ← segnalazioni R-
 ├── motore-modelli.md             ← modelli e costi
+├── task.md                       ← registro dei task piccoli
 └── memoria/
     ├── ui/
     │   ├── index.md              ← mappa delle schermate
     │   ├── login.md              ← accesso, Google, recupero, onboarding
+    │   ├── dashboard.md          ← conteggi, valore aperto, ultimi preventivi
     │   ├── clienti.md            ← lista, form, P.IVA, duplicati
     │   ├── catalogo.md           ← prodotti e categorie
     │   ├── preventivi.md         ← preventivi, revisioni, numerazione
@@ -56,6 +58,7 @@ docs/progetto/
 | Richiesta | Nodi da leggere |
 |---|---|
 | Login, registrazione, Google, password | `ui/login.md` |
+| Dashboard, conteggi, ultimi preventivi | `ui/dashboard.md` |
 | Clienti, P.IVA, duplicati | `ui/clienti.md`, `integrazioni/vies.md` |
 | Prodotti, categorie, prezzi | `ui/catalogo.md` |
 | Preventivi, PDF, revisioni, numeri | `ui/preventivi.md`, `dati/contatori.md` |
