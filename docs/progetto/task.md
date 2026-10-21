@@ -8,7 +8,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | ID | Area | Task | Criteri di accettazione | Agente | Stato |
 |---|---|---|---|---|---|
 | F01 | Fondamenta | Creare `flutter_app/` (web, Android, iOS) con dipendenze Firebase | `flutter create` ok, `pub get` ok, `flutter analyze` 0 errori | sviluppatore-backend | FATTO |
-| F02 | Fondamenta | Configurare Firebase (`firebase_options.dart`, init in `main.dart`) | app web si avvia senza errori Firebase; `flutter analyze` 0 | sviluppatore-backend | DA FARE |
+| F02 | Fondamenta | Configurare Firebase (`firebase_options.dart`, init in `main.dart`) | app web si avvia senza errori Firebase; `flutter analyze` 0 | sviluppatore-backend | FATTO |
 | F03 | Fondamenta | Tema Material 3, router `go_router`, shell responsive vuota | rotte principali definite; shell telefono/desktop; analyze 0 | sviluppatore-frontend | DA FARE |
 | F04 | Auth | `AuthService` + `SpService` per profilo/aziende/membri | login email/password reale su staging; profilo letto; analyze 0 | sviluppatore-backend | DA FARE |
 | F05 | Auth | Schermata login email/password | login riuscito, errore leggibile, logout; widget test | sviluppatore-frontend | DA FARE |
