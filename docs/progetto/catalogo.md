@@ -20,3 +20,11 @@ oggetto con nome, percorso, scopo e dove è usato.
 `aziende`, `utenti`, `membri`, `ruoli`, `licenze`, `piani_config`, `whatsapp_config`, `impostazioni`,
 `prodotti`, `categorie`, `clienti`, `preventivi`, `giro_visite`, `bandi_fonti`, `bandi_incentivi`,
 `bandi_sync_log`, `contatori`.
+
+## Memoria ad albero
+
+| Oggetto | Percorso | Scopo |
+|---|---|---|
+| Indice radice | `docs/progetto/indice.md` | mappa del progetto e regole di lettura |
+| Nodi di memoria | `docs/progetto/memoria/**` | conoscenza per area, max 50 righe per nodo |
+| Controllo | `scripts/controlla-indice.mjs` | verifica nodi, date e file chiave non mappati |

@@ -11,7 +11,7 @@ permissions:
 
 Sei lo sviluppatore frontend della squadra di Commerciali.
 
-Leggi `AGENTS.md`, il manuale, i requisiti, il design, `index.html` e `js/app.js`.
+Leggi prima `docs/progetto/indice.md` e i nodi pertinenti (ui/); non scansionare tutto il repository. Poi leggi `AGENTS.md`, il manuale, i requisiti, il design, `index.html` e `js/app.js`.
 Implementa la UI:
 - riusa i componenti e gli stili esistenti (Alpine.js, Tailwind);
 - gestisci stati vuoto, caricamento, errore e permessi;

@@ -55,6 +55,19 @@ segnalazione → gestore-ritorni → CONFERMATO → risolutore-bug → tester �
 
 Gli altri esiti (NON RIPRODUCIBILE, USO SCORRETTO, FUORI AMBITO, DUPLICATA) non producono codice.
 
+### Memoria ad albero (obbligatoria)
+
+La conoscenza del progetto vive in `docs/progetto/indice.md` e in `docs/progetto/memoria/`. Non si rilegge
+tutto il repository a ogni richiesta.
+
+1. Ogni lavoro parte da `docs/progetto/indice.md`.
+2. Si aprono **solo** i nodi pertinenti alla richiesta, non l'intero albero.
+3. Il coordinatore indica al subagente i nodi da leggere e i file toccati.
+4. Chi modifica il codice aggiorna il nodo della sua area (max 50 righe) e l'indice se nasce un'area nuova.
+5. Un nodo con file mancanti o senza `Ultima revisione` è da aggiornare: segnalarlo, non ignorarlo.
+6. Non incollare interi file nei prompt: cita percorso e nodo.
+7. Tester e validatore eseguono `node scripts/controlla-indice.mjs`: se fallisce, il lavoro non è completo.
+
 ### Ottimizzazione dei crediti
 
 - I modelli sono già assegnati per ruolo in `.opencode/agents/`: non cambiarli senza motivo.
@@ -66,7 +79,7 @@ Gli altri esiti (NON RIPRODUCIBILE, USO SCORRETTO, FUORI AMBITO, DUPLICATA) non 
 
 ### Comandi
 
-`/sviluppo`, `/ritorno`, `/stato`, `/catalogo`, `/hotfix`, `/rilascio`.
+`/sviluppo`, `/ritorno`, `/stato`, `/catalogo`, `/indice`, `/hotfix`, `/rilascio`.
 <!-- SQUADRA-AGENTI:FINE -->
 
 ## Contesto del progetto
