@@ -34,26 +34,27 @@ Fuori perimetro: F06 login Google e deploy.
 
 ## Problemi e limiti
 
-1. **Login reale non eseguito**: non è stato fatto un accesso vero contro il progetto Firebase di staging.
-   Va coperto in F06/F07.
-2. **Dizione errore login**: il messaggio della nuova app dice "credenziali non corrette", la vecchia app dice
-   "credenziali non valide". Differenza solo testuale, da allineare o accettare consapevolmente.
+1. **Login reale non eseguito**: nessun accesso vero contro il progetto Firebase di staging. La prova reale è
+   spostata esplicitamente al task F06.
+2. **Dizione errore login**: "credenziali non corrette" (nuova) vs "non valide" (vecchia); solo testuale.
 3. **Nessun test end-to-end** su browser contro dati reali: i test sono unitari/widget con Firebase simulato.
-4. **`node scripts/controlla-indice.mjs`** non eseguito in questo task: va lanciato in validazione.
-5. **Regressioni**: nessuna; radice e `firestore.rules` invariati rispetto a `origin/staging`.
+4. **Milestone committato**: F01–F05 è nel commit `300904c` (`feat(flutter): F05 login e allineamento criteri
+   milestone`); criteri F04a/F05 allineati, login email validato con unit/widget test.
+5. **Indice**: `node scripts/controlla-indice.mjs` eseguito dal coordinatore → `INDICE OK` (19 nodi, 9 file chiave).
+6. **Modifiche documentali**: regola task piccoli in `AGENTS.md` e nodo `memoria/ui/dashboard.md` giustificati in
+   `docs/progetto/registro-decisioni.md`.
+7. **Regressioni**: nessuna; radice e `firestore.rules` invariati rispetto a `origin/staging`.
 
 ## Chiusura
 
 **SUPERATO con riserva**
 
-Le fondamenta F01–F05 sono verdi su analisi, test e build, senza segreti né modifiche a regole o vecchia app.
-La riserva riguarda il login reale su staging e l'allineamento della dizione dell'errore, da chiudere prima
-della parità con la vecchia app.
+F01–F05 verdi su analisi, test e build (`300904c`), senza segreti né modifiche a regole o vecchia app; indice OK.
+La riserva è limitata a: login reale su staging e login Google (F06) e prova su dispositivo mobile reale.
 
 ## Resta da verificare
 
-- Accesso reale email/password su staging (F06/F07).
+- Accesso reale email/password su staging (F06).
 - Login Google (F06).
 - Comportamento su dispositivo mobile reale (Android/iOS), non solo web.
-- Scelta sulla dizione "non corrette" / "non validi".
-- Esecuzione di `node scripts/controlla-indice.mjs` in fase di validazione.
+- Dizione "non corrette" / "non validi" (solo testuale).
