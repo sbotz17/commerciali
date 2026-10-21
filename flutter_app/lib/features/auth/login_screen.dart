@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/ui/google_icon.dart';
+import '../../data/services/auth_service.dart';
 import '../../state/auth_providers.dart';
 
 /// Validazione dell'email per il form di accesso.
@@ -72,6 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   bool _passwordVisibile = false;
   bool _inCorso = false;
+  bool _inCorsoGoogle = false;
   String? _errore;
 
   @override
@@ -116,6 +119,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _errore = messaggioErroreAccesso(errore));
     } finally {
       if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  Future<void> _accediConGoogle() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _errore = null);
+    setState(() => _inCorsoGoogle = true);
+    try {
+      final servizio = ref.read(authServiceProvider);
+      await servizio.signInWithGoogleWeb();
+      if (!mounted) return;
+      context.go('/');
+    } catch (errore) {
+      if (!mounted) return;
+      setState(() => _errore = messaggioErroreGoogle(errore));
+    } finally {
+      if (mounted) setState(() => _inCorsoGoogle = false);
     }
   }
 
@@ -229,7 +249,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                   : () => context.go('/reset-password'),
                               child: const Text('Password dimenticata?'),
                             ),
-                            const Divider(height: AppSpazi.xl),
+                            const SizedBox(height: AppSpazi.m),
+                            Row(
+                              children: const [
+                                Expanded(child: Divider()),
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpazi.s,
+                                  ),
+                                  child: Text('oppure'),
+                                ),
+                                Expanded(child: Divider()),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpazi.m),
+                            OutlinedButton(
+                              key: const Key('pulsante-google'),
+                              onPressed: (_inCorso || _inCorsoGoogle)
+                                  ? null
+                                  : _accediConGoogle,
+                              child: _inCorsoGoogle
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        GoogleIcon(size: 18),
+                                        SizedBox(width: AppSpazi.s),
+                                        Text('Accedi con Google'),
+                                      ],
+                                    ),
+                            ),
+                            const SizedBox(height: AppSpazi.l),
                             Text.rich(
                               TextSpan(
                                 style: tema.textTheme.bodySmall?.copyWith(

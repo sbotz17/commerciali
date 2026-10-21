@@ -24,6 +24,7 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Router | `flutter_app/lib/routing/app_router.dart` | Rotte `go_router` e pagine segnaposto |
 | Shell | `flutter_app/lib/features/shell/app_shell.dart` | `NavigationBar`/`NavigationRail` responsive e drawer |
 | Segnaposto | `flutter_app/lib/core/ui/placeholder_screen.dart` | Corpo condiviso per schermate non ancora implementate |
+| Test login Google | `flutter_app/test/google_auth_test.dart` | Unit test `messaggioErroreGoogle` + widget test pulsante Google |
 
 ## Collezioni Firestore
 

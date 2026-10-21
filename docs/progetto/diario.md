@@ -78,6 +78,14 @@
 - Test: 13 test sui validator + 5 widget test; `flutter analyze` e `flutter test` verdi (35 test).
 - Aggiornati router, task board, catalogo e memoria Flutter.
 
+## 2026-10-22 — Task F06a: test login Google (chiusura)
+
+- `test/google_auth_test.dart` (nuovo): 9 unit test di `messaggioErroreGoogle` (7 codici noti + fallback
+  per codice sconosciuto + errore generico non `FirebaseAuthException`) e 1 widget test che monta il login
+  in `ProviderScope` e verifica il pulsante `pulsante-google` e il testo "Accedi con Google".
+- `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (45 test).
+- Nessuna modifica a `lib/`; aggiornati task board, catalogo e diario.
+
 ## 2026-10-22 — Milestone F01–F05 APPROVATO
 
 - Tester: `SUPERATO con riserva` (login reale e Google spostati a F06; prova su mobile reale ancora da fare).

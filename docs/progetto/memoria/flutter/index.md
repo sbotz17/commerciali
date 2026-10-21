@@ -25,7 +25,8 @@ flutter_app/lib/
 - F04a auth email/password + profilo: fatto.
 - F04b `SpService` base (aziende, membri, seed): fatto.
 - F05 login email/password: fatto.
-- Prossimo: F06 login Google.
+- F06a login Google web: fatto.
+- Prossimo: F06b Google mobile, F06c prova reale email.
 
 ## Punti fermi
 

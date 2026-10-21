@@ -3,7 +3,15 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/user_profile.dart';
 
-/// Servizio di autenticazione email/password e profilo.
+/// Risultato di un accesso riuscito: credenziale Auth e profilo Firestore.
+class LoginRisultato {
+  const LoginRisultato({required this.credential, required this.profile});
+
+  final UserCredential credential;
+  final UserProfile? profile;
+}
+
+/// Servizio di autenticazione email/password, Google e profilo.
 ///
 /// Incapsula `FirebaseAuth` (credenziali) e `FirebaseFirestore` (profilo in
 /// `utenti`). Nessuna UI: viene iniettato dai provider e usato dagli strati
@@ -23,6 +31,25 @@ class AuthService {
       email: _normalizzaEmail(email),
       password: password,
     );
+  }
+
+  /// Accesso con Google via popup (solo web).
+  ///
+  /// Usa `signInWithPopup` con `GoogleAuthProvider`. Dopo l'accesso carica il
+  /// profilo dell'utente; se è disabilitato (`attivo == false`) esegue il
+  /// logout e lancia un [FirebaseAuthException] con codice `user-disabled`,
+  /// traducibile con [messaggioErroreGoogle].
+  Future<LoginRisultato> signInWithGoogleWeb() async {
+    final credenziale = await _auth.signInWithPopup(GoogleAuthProvider());
+    final profilo = await loadProfile(credenziale.user?.email ?? '');
+    if (isDisabled(profilo)) {
+      await signOut();
+      throw FirebaseAuthException(
+        code: 'user-disabled',
+        message: 'Utente disabilitato',
+      );
+    }
+    return LoginRisultato(credential: credenziale, profile: profilo);
   }
 
   /// Disconnette l'utente corrente.
@@ -59,4 +86,32 @@ class AuthService {
       profile != null && profile.attivo == false;
 
   String _normalizzaEmail(String email) => email.trim().toLowerCase();
+}
+
+/// Messaggio in italiano per gli errori dell'accesso con Google (popup web).
+///
+/// Funzione pura: distingue popup chiuso o bloccato, errori di rete, account
+/// collegato a un altro metodo, accesso disabilitato e utente non attivo.
+String messaggioErroreGoogle(Object errore) {
+  if (errore is FirebaseAuthException) {
+    switch (errore.code) {
+      case 'popup-closed-by-user':
+        return 'Accesso annullato. Riprova per accedere con Google.';
+      case 'cancelled-popup-request':
+        return 'Operazione annullata. Riprova.';
+      case 'popup-blocked':
+        return 'Pop-up bloccato dal browser. Consenti i pop-up e riprova.';
+      case 'network-request-failed':
+        return 'Connessione assente. Controlla la rete e riprova.';
+      case 'account-exists-with-different-credential':
+        return 'Esiste già un account con questa email collegato a un altro metodo di accesso.';
+      case 'operation-not-allowed':
+        return 'Accesso con Google non disponibile.';
+      case 'user-disabled':
+        return 'Utente disabilitato. Contatta l\'amministratore.';
+      default:
+        return 'Accesso con Google non riuscito. Riprova.';
+    }
+  }
+  return 'Accesso con Google non riuscito. Controlla la connessione e riprova.';
 }
