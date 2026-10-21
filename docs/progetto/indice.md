@@ -44,6 +44,8 @@ docs/progetto/
     │   ├── collezioni.md         ← collezioni e campi
     │   ├── regole.md             ← firestore.rules e multi-azienda
     │   └── contatori.md          ← numerazione preventivi
+    ├── flutter/
+    │   └── index.md            ← app Flutter: struttura e stato
     ├── integrazioni/
     │   ├── index.md              ← integrazioni esterne
     │   └── vies.md               ← verifica P.IVA
@@ -67,6 +69,7 @@ docs/progetto/
 | Utenti, ruoli, permessi, licenze | `ui/impostazioni.md`, `dati/regole.md` |
 | Nuova collezione o campo | `dati/collezioni.md`, `dati/regole.md` |
 | Dati, query, `SP` | `dati/index.md`, `dati/collezioni.md` |
+| Lavorare sull'app Flutter | `flutter/index.md`, `architettura.md` §Flutter |
 | Verifica P.IVA / VIES | `integrazioni/vies.md` |
 | Rilascio o deploy | `processi/rilascio.md`, `ambienti.md` |
 | Bug o segnalazione | `processi/bug.md` |

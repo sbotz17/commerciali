@@ -55,3 +55,18 @@
 - `lib/data/services/auth_service.dart`: parametri inizializzanti `this._auth`/`this._firestore` (lint `prefer_initializing_formals`);
   i nomi pubblici restano `auth`/`firestore` (Dart rimuove l'underscore), quindi il chiamante non cambia.
 - `flutter analyze` → `No issues found! (ran in 3.9s)`; `flutter test` → `All tests passed!` (11 test).
+
+## 2026-10-22 — Task F04b: servizio dati base Flutter
+
+- `lib/data/models/azienda.dart` (nuovo): campi `id`, `nome`, `logo`, `ruolo`, `whatsappAttivo`; `fromMap` con
+  default `nome="Azienda"`, `ruolo="commerciale"`, `whatsappAttivo=false`; il campo Firestore `whatsapp_attivo`
+  è esposto in camelCase, coerente con `UserProfile`.
+- `lib/data/services/sp_service.dart` (nuovo): `SpService(FirebaseFirestore)` con `setAziendaAttiva`/`getAziendaAttiva`,
+  `getAziendeUtente` (query `membri` per `utente_id` + lettura `aziende/{id}`), `assicuraProfilo` (cerca `utenti`
+  per email, altrimenti crea `utenti/{uid}` con uid da `FirebaseAuth.instance.currentUser`), `creaAzienda`
+  (`created_by`, `created_at`, anagrafica base), `aggiungiMembro` (`membri/{aziendaId}_{utenteId}` con merge) e
+  `seedAzienda` (batch con 2 ruoli, 3 categorie e licenza trial: stessi dati di `SP.seedAzienda`).
+- `lib/state/azienda_providers.dart` (nuovo): `spServiceProvider`, `aziendaAttivaProvider` (`StateProvider<String?>`,
+  da `flutter_riverpod/legacy.dart`), `aziendeUtenteProvider` (`FutureProvider<List<Azienda>>` che osserva `profileProvider`).
+- `test/azienda_test.dart` (nuovo): 6 test di `Azienda.fromMap`.
+- `flutter analyze` → `No issues found! (ran in 3.6s)`; `flutter test` → `All tests passed!` (17 test).
