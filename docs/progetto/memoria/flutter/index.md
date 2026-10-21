@@ -24,7 +24,8 @@ flutter_app/lib/
 - F03 tema, router, shell responsive: fatto.
 - F04a auth email/password + profilo: fatto.
 - F04b `SpService` base (aziende, membri, seed): fatto.
-- Prossimo: F05 schermata login.
+- F05 login email/password: fatto.
+- Prossimo: F06 login Google.
 
 ## Punti fermi
 

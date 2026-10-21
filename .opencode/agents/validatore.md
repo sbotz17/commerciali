@@ -10,6 +10,15 @@ permissions:
   - action: shell
     resource: "*"
     effect: deny
+  - action: shell
+    resource: "git diff *"
+    effect: allow
+  - action: shell
+    resource: "git status *"
+    effect: allow
+  - action: shell
+    resource: "git log *"
+    effect: allow
 ---
 
 Sei il validatore della squadra di Commerciali.

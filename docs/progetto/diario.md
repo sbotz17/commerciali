@@ -70,3 +70,10 @@
   da `flutter_riverpod/legacy.dart`), `aziendeUtenteProvider` (`FutureProvider<List<Azienda>>` che osserva `profileProvider`).
 - `test/azienda_test.dart` (nuovo): 6 test di `Azienda.fromMap`.
 - `flutter analyze` → `No issues found! (ran in 3.6s)`; `flutter test` → `All tests passed!` (17 test).
+
+## 2026-10-22 — Task F05: schermata login Flutter
+
+- Creata `LoginScreen` (email/password, validazione, loading, errori in italiano, link reset).
+- `AuthService` usato solo al submit; nessun provider Firebase nel build.
+- Test: 13 test sui validator + 5 widget test; `flutter analyze` e `flutter test` verdi (35 test).
+- Aggiornati router, task board, catalogo e memoria Flutter.

@@ -2,23 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/ui/placeholder_screen.dart';
+import '../features/auth/login_screen.dart';
 import '../features/shell/app_shell.dart';
 
 /// Costruisce il router dell'app.
 ///
-/// Le schermate sono ancora segnaposto: i flussi reali arriveranno con i task
-/// successivi. Login, recupero password e onboarding restano fuori dalla shell,
-/// tutte le altre rotte usano la navigazione responsive.
+/// Login è reale (F05); le altre schermate sono ancora segnaposto e i flussi
+/// arriveranno con i task successivi. Login, recupero password e onboarding
+/// restano fuori dalla shell, tutte le altre rotte usano la navigazione
+/// responsive.
 GoRouter creaAppRouter({String initialLocation = '/'}) {
   return GoRouter(
     initialLocation: initialLocation,
     routes: [
       GoRoute(
         path: '/login',
-        builder: (context, state) => const _PaginaAutonoma(
-          titolo: 'Accesso',
-          icona: Icons.login,
-        ),
+        builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: '/reset-password',
