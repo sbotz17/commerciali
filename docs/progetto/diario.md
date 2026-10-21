@@ -77,3 +77,10 @@
 - `AuthService` usato solo al submit; nessun provider Firebase nel build.
 - Test: 13 test sui validator + 5 widget test; `flutter analyze` e `flutter test` verdi (35 test).
 - Aggiornati router, task board, catalogo e memoria Flutter.
+
+## 2026-10-22 — Milestone F01–F05 APPROVATO
+
+- Tester: `SUPERATO con riserva` (login reale e Google spostati a F06; prova su mobile reale ancora da fare).
+- Validatore: `APPROVATO` dopo allineamento dei criteri F04a/F05.
+- Verifiche: `flutter analyze` 0, 35 test verdi, `flutter build web` OK, `firestore.rules` invariato, vecchia app intatta.
+- Prossimo: F06 (Google + login reale su staging) e F07 (recupero password + onboarding).
