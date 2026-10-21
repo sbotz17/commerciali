@@ -15,6 +15,16 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Regole | `firestore.rules` | Sicurezza multi-azienda |
 | Worker VIES | `worker/src/index.js` | Proxy verifica P.IVA |
 
+## Flutter (`flutter_app/`)
+
+| Oggetto | Percorso | Scopo |
+|---|---|---|
+| App/root | `flutter_app/lib/app.dart` | `MaterialApp.router` con tema e router |
+| Tema | `flutter_app/lib/core/theme/app_theme.dart` | Colori, spazi, raggi, breakpoint e Material 3 |
+| Router | `flutter_app/lib/routing/app_router.dart` | Rotte `go_router` e pagine segnaposto |
+| Shell | `flutter_app/lib/features/shell/app_shell.dart` | `NavigationBar`/`NavigationRail` responsive e drawer |
+| Segnaposto | `flutter_app/lib/core/ui/placeholder_screen.dart` | Corpo condiviso per schermate non ancora implementate |
+
 ## Collezioni Firestore
 
 `aziende`, `utenti`, `membri`, `ruoli`, `licenze`, `piani_config`, `whatsapp_config`, `impostazioni`,
