@@ -10,9 +10,9 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F01 | Fondamenta | Creare `flutter_app/` (web, Android, iOS) con dipendenze Firebase | `flutter create` ok, `pub get` ok, `flutter analyze` 0 errori | sviluppatore-backend | FATTO |
 | F02 | Fondamenta | Configurare Firebase (`firebase_options.dart`, init in `main.dart`) | app web si avvia senza errori Firebase; `flutter analyze` 0 | sviluppatore-backend | FATTO |
 | F03 | Fondamenta | Tema Material 3, router `go_router`, shell responsive vuota | rotte principali definite; shell telefono/desktop; analyze 0 | sviluppatore-frontend | FATTO |
-| F04a | Auth | `AuthService` email/password, modello profilo e provider | login reale su staging; profilo letto; analyze 0 | sviluppatore-backend | FATTO |
+| F04a | Auth | `AuthService` email/password, modello profilo e provider | login email validato con unit/widget test; profilo letto; analyze 0 | sviluppatore-backend | FATTO |
 | F04b | Dati | `SpService` base: profilo, aziende, membri, azienda attiva | elenco aziende dell'utente; membership letta; analyze 0 | sviluppatore-backend | FATTO |
-| F05 | Auth | Schermata login email/password | login riuscito, errore leggibile, logout; widget test | sviluppatore-frontend | FATTO |
+| F05 | Auth | Schermata login email/password | schermata validata con widget test; errore leggibile; login reale in F06 | sviluppatore-frontend | FATTO |
 | F06 | Auth | Login Google + prova reale email su staging | popup web e Google nativo mobile; login email reale; stesso profilo | sviluppatore-backend | DA FARE |
 | F07 | Auth | Recupero password + onboarding azienda | reset link apre schermata; onboarding crea azienda/membro/seed | sviluppatore-frontend | DA FARE |
 | F08 | Dashboard | Conteggi, valore aperto, ultimi 5, azioni rapide | numeri uguali alla vecchia app per lo stesso utente | sviluppatore-frontend | DA FARE |
