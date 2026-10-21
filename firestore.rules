@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+    function isSuper() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/utenti/$(uid()))
+        && get(/databases/$(database)/documents/utenti/$(uid())).data.super_admin == true;
+    }
+    function memberOf(az) {
+      return signedIn()
+        && az is string
+        && exists(/databases/$(database)/documents/membri/$(az + "_" + uid()));
+    }
+    function isAdminOf(az) {
+      return memberOf(az)
+        && get(/databases/$(database)/documents/membri/$(az + "_" + uid())).data.ruolo == "admin";
+    }
+    function canManage(az) {
+      return isSuper() || isAdminOf(az);
+    }
+
+    // ---------- profili ----------
+    match /utenti/{userId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && userId == uid();
+      allow update: if signedIn() && (userId == uid() || isSuper());
+      allow delete: if isSuper();
+    }
+
+    // ---------- aziende ----------
+    match /aziende/{az} {
+      allow read: if signedIn() && (memberOf(az) || isSuper());
+      allow create: if signedIn()
+        && request.resource.data.created_by == uid();
+      allow update: if canManage(az);
+      allow delete: if isSuper();
+    }
+
+    // ---------- membri (id = azienda_uid) ----------
+    match /membri/{id} {
+      allow read: if signedIn() && (
+        isSuper()
+        || resource.data.utente_id == uid()
+        || memberOf(resource.data.azienda_id)
+      );
+      allow create: if signedIn() && (
+        canManage(request.resource.data.azienda_id)
+        || (
+          request.resource.data.utente_id == uid()
+          && get(/databases/$(database)/documents/aziende/$(request.resource.data.azienda_id)).data.created_by == uid()
+        )
+      );
+      allow update, delete: if canManage(resource.data.azienda_id);
+    }
+
+    // ---------- collezioni per azienda ----------
+    match /prodotti/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id);
+      allow update, delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /categorie/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id);
+      allow update, delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /clienti/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id);
+      allow update, delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /preventivi/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id);
+      allow update, delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /giro_visite/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id);
+      allow update, delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /impostazioni/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id);
+      allow update, delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /contatori/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id);
+      allow update: if memberOf(resource.data.azienda_id) || isSuper();
+      allow delete: if isSuper();
+    }
+
+    // ---------- ruoli e licenze: gestione admin/piattaforma ----------
+    match /ruoli/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if isAdminOf(request.resource.data.azienda_id);
+      allow update, delete: if isAdminOf(resource.data.azienda_id) || isSuper();
+    }
+    match /licenze/{az} {
+      allow read: if memberOf(az) || isSuper();
+      allow create: if isSuper() || (
+        signedIn()
+        && get(/databases/$(database)/documents/aziende/$(az)).data.created_by == uid()
+        && request.resource.data.piano == "trial"
+      );
+      allow update, delete: if isSuper();
+    }
+
+    // ---------- configurazioni di piattaforma ----------
+    match /piani_config/{id} {
+      allow read: if signedIn();
+      allow write: if isSuper();
+    }
+    match /whatsapp_config/{id} {
+      allow read: if signedIn();
+      allow write: if isSuper();
+    }
+    // I bandi sono dati pubblici: la lettura non richiede login.
+    match /bandi_fonti/{id} {
+      allow read: if true;
+      allow write: if isSuper();
+    }
+    match /bandi_incentivi/{id} {
+      allow read: if true;
+      allow write: if isSuper();
+    }
+    match /bandi_sync_log/{id} {
+      allow read: if true;
+      allow write: if isSuper();
+    }
+  }
+}

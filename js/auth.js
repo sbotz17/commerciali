@@ -1,25 +1,18 @@
 // ============================================================
-// auth.js — Autenticazione tramite Supabase Auth (email + password)
-//           + profilo utente (ruolo, menu, permessi) dalla tabella "utenti"
+// auth.js — Autenticazione Firebase (email/password + Google)
+//           + profilo utente nella collezione "utenti"
 // ============================================================
-// Il login NON usa più l'hash SHA-256 in tabella: le password sono
-// gestite in modo sicuro (bcrypt + salt) da Supabase Auth e non sono
-// mai esposte. La tabella "utenti" conserva solo il profilo, collegato
-// all'account di login tramite l'email.
+// Le password sono gestite da Firebase Auth e non sono mai esposte.
+// Il profilo (ruolo, menu, permessi) vive in Firestore.
 // ============================================================
 
 const AUTH_KEY = "configuratore_utente";
 
-// ------------------------------------------------------------
-// Cache locale del profilo (per un rendering immediato)
-// ------------------------------------------------------------
 function getUtenteSessione() {
   try {
     const raw = sessionStorage.getItem(AUTH_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+  } catch (_) { return null; }
 }
 
 function salvaSessione(utente) {
@@ -31,6 +24,7 @@ function salvaSessione(utente) {
     email:       utente.email       || null,
     avatar:      utente.avatar      || null,
     menu_utente: utente.menu_utente || null,
+    super_admin: !!utente.super_admin,
   }));
 }
 
@@ -38,79 +32,115 @@ function cancellaSessione() {
   sessionStorage.removeItem(AUTH_KEY);
 }
 
-// Hash SHA-256 — mantenuto solo per compatibilità con vecchi record.
-// NON è più usato per il login (lo gestisce Supabase Auth).
+// Mantenuto per compatibilità con vecchi record; non usato dal login.
 async function hashPassword(password) {
-  const data   = new TextEncoder().encode(password);
+  const data = new TextEncoder().encode(password);
   const buffer = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
+  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 // ------------------------------------------------------------
-// Profilo utente (ruolo, menu, ecc.) letto dalla tabella "utenti"
-// in base all'email dell'account autenticato.
+// Profilo utente (collezione "utenti", collegato all'email)
 // ------------------------------------------------------------
 async function caricaProfilo(email) {
   const em = (email || "").trim().toLowerCase();
   if (!em) return null;
-  const { data, error } = await _sb
-    .from("utenti")
-    .select("id, username, nome, ruolo, attivo, avatar, menu_utente, email")
-    .eq("email", em)
-    .maybeSingle();
-  if (error) { console.error("caricaProfilo:", error.message); return null; }
-  if (!data) return null;
-  // Flag super_admin: colonna aggiunta dalla Tappa 5. Query separata e
-  // tollerante: se la colonna non esiste ancora, il login non deve rompersi.
   try {
-    const { data: sa } = await _sb
-      .from("utenti").select("super_admin").eq("email", em).maybeSingle();
-    if (sa && typeof sa.super_admin !== "undefined") data.super_admin = !!sa.super_admin;
-  } catch (_) { /* colonna non presente: ignora */ }
-  return data;
+    const q = await fbDb.collection("utenti").where("email", "==", em).limit(1).get();
+    if (q.empty) return null;
+    const d = q.docs[0];
+    const data = d.data();
+    return { id: d.id, ...data, super_admin: !!data.super_admin };
+  } catch (e) {
+    console.error("caricaProfilo:", e.message);
+    return null;
+  }
+}
+
+function messaggioAuth(e) {
+  const code = (e && e.code) || "";
+  if (code.includes("wrong-password") || code.includes("invalid-credential")) return "Email o password non validi";
+  if (code.includes("user-not-found")) return "Email o password non validi";
+  if (code.includes("email-already-in-use")) return "Esiste già un account con questa email";
+  if (code.includes("weak-password")) return "La password deve avere almeno 6 caratteri";
+  if (code.includes("invalid-email")) return "Email non valida";
+  if (code.includes("popup-closed-by-user")) return "Accesso Google annullato";
+  if (code.includes("too-many-requests")) return "Troppi tentativi: riprova tra qualche minuto";
+  return (e && e.message) || "Errore di autenticazione";
+}
+
+function authPronta() {
+  return new Promise(resolve => {
+    const unsub = fbAuth.onAuthStateChanged(u => { unsub(); resolve(u); });
+  });
 }
 
 // ------------------------------------------------------------
-// Login con email + password (Supabase Auth)
+// Login email + password
 // ------------------------------------------------------------
 async function login(email, password) {
   const em = (email || "").trim().toLowerCase();
-  const { data, error } = await _sb.auth.signInWithPassword({ email: em, password });
-  if (error || !data?.session) return { ok: false };
-
+  try {
+    await fbAuth.signInWithEmailAndPassword(em, password);
+  } catch (e) {
+    console.error("login:", e.message);
+    return { ok: false, error: messaggioAuth(e) };
+  }
   const prof = await caricaProfilo(em);
   if (prof && prof.attivo === false) {
-    // Profilo disabilitato → nega
-    await _sb.auth.signOut();
+    await fbAuth.signOut();
     return { ok: false, disabilitato: true };
   }
   if (prof) salvaSessione(prof);
-  // Se non c'è profilo/azienda, l'utente andrà all'onboarding (gestito dallo store)
   return { ok: true, email: em, profilo: prof || null };
 }
 
-// Registrazione self-service: crea l'account di autenticazione
-async function registrati(email, password) {
-  const em = (email || "").trim().toLowerCase();
-  const { data, error } = await _sb.auth.signUp({ email: em, password });
-  if (error) { console.error("registrati:", error.message); return { ok: false, error: error.message }; }
-  return { ok: true, email: em, sessione: !!data?.session };
+// ------------------------------------------------------------
+// Login Google
+// ------------------------------------------------------------
+async function loginConGoogle() {
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
+    const cred = await fbAuth.signInWithPopup(provider);
+    const em = (cred.user.email || "").trim().toLowerCase();
+    const prof = await caricaProfilo(em);
+    if (prof && prof.attivo === false) {
+      await fbAuth.signOut();
+      return { ok: false, disabilitato: true };
+    }
+    if (prof) salvaSessione(prof);
+    return { ok: true, email: em, profilo: prof || null };
+  } catch (e) {
+    console.error("loginConGoogle:", e.message);
+    return { ok: false, error: messaggioAuth(e) };
+  }
 }
 
 // ------------------------------------------------------------
-// Ripristino sessione all'avvio (se già autenticato in precedenza)
+// Registrazione self-service
+// ------------------------------------------------------------
+async function registrati(email, password) {
+  const em = (email || "").trim().toLowerCase();
+  try {
+    await fbAuth.createUserWithEmailAndPassword(em, password);
+    return { ok: true, email: em, sessione: true };
+  } catch (e) {
+    console.error("registrati:", e.message);
+    return { ok: false, error: messaggioAuth(e) };
+  }
+}
+
+// ------------------------------------------------------------
+// Ripristino sessione all'avvio
 // ------------------------------------------------------------
 async function ripristinaSessione() {
-  const { data } = await _sb.auth.getSession();
-  const session = data?.session;
-  if (!session?.user?.email) { cancellaSessione(); return { authed: false }; }
-
-  const em = session.user.email;
+  const u = await authPronta();
+  if (!u || !u.email) { cancellaSessione(); return { authed: false }; }
+  const em = u.email;
   const prof = await caricaProfilo(em);
   if (prof && prof.attivo === false) {
-    await _sb.auth.signOut();
+    await fbAuth.signOut();
     cancellaSessione();
     return { authed: false };
   }
@@ -122,70 +152,80 @@ async function ripristinaSessione() {
 // Logout
 // ------------------------------------------------------------
 async function authLogout() {
-  try { await _sb.auth.signOut(); } catch (_) {}
+  try { await fbAuth.signOut(); } catch (_) {}
   cancellaSessione();
 }
 
 // ------------------------------------------------------------
-// Recupero password: invia l'email con il link per reimpostarla
+// Recupero password
 // ------------------------------------------------------------
 async function richiediRecuperoPassword(email) {
   const em = (email || "").trim().toLowerCase();
-  const redirectTo = window.location.origin + window.location.pathname;
-  const { error } = await _sb.auth.resetPasswordForEmail(em, { redirectTo });
-  if (error) console.error("richiediRecuperoPassword:", error.message);
-  // Ritorna comunque true: non riveliamo se l'email è registrata (anti-enumerazione).
+  try {
+    await fbAuth.sendPasswordResetEmail(em, {
+      url: window.location.origin + window.location.pathname,
+    });
+  } catch (e) {
+    // Non riveliamo se l'email esiste (anti-enumerazione).
+    console.error("richiediRecuperoPassword:", e.message);
+  }
   return true;
 }
 
-// ------------------------------------------------------------
-// Imposta una nuova password per l'utente attualmente autenticato.
-// Usato sia dopo il link di recupero, sia dal cambio password.
-// ------------------------------------------------------------
+// Imposta la nuova password: con oobCode (link email) o da utente autenticato.
 async function impostaNuovaPassword(nuovaPassword) {
-  const { error } = await _sb.auth.updateUser({ password: nuovaPassword });
-  if (error) { console.error("impostaNuovaPassword:", error.message); return false; }
-  return true;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const oob = params.get("oobCode");
+    if (oob) {
+      await fbAuth.verifyPasswordResetCode(oob);
+      await fbAuth.confirmPasswordReset(oob, nuovaPassword);
+    } else if (fbAuth.currentUser) {
+      await fbAuth.currentUser.updatePassword(nuovaPassword);
+    } else {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("impostaNuovaPassword:", e.message);
+    return false;
+  }
 }
 
-// True se la pagina è stata aperta dal link di recupero password.
-// Usa il flag catturato in modo sincrono all'avvio (vedi supabase.js),
-// perché la libreria Supabase ripulisce l'hash dall'URL subito dopo l'init.
+// True se la pagina è stata aperta dal link di recupero Firebase.
 function inRecuperoPassword() {
-  return !!window.__IN_RECOVERY
-    || (typeof _RECOVERY_FLAG !== "undefined" && _RECOVERY_FLAG)
-    || (window.location.hash || "").includes("type=recovery");
+  const params = new URLSearchParams(window.location.search);
+  return params.get("mode") === "resetPassword" || !!params.get("oobCode");
 }
 
-// Sottoscrive l'evento di recupero password (link email, anche flusso PKCE)
 function onRecuperoPassword(cb) {
-  try { _sb.auth.onAuthStateChange((event) => { if (event === "PASSWORD_RECOVERY") cb(); }); }
-  catch (_) {}
+  if (inRecuperoPassword()) { try { cb(); } catch (_) {} }
 }
 
 // ------------------------------------------------------------
-// Crea un account di login (Supabase Auth) SENZA sloggare l'admin,
-// usando un client secondario. Best-effort: se i signup sono
-// disabilitati o serve conferma email, ritorna il messaggio.
+// Crea un account di login SENZA sloggare l'admin (app secondaria)
 // ------------------------------------------------------------
 async function creaAccountLogin(email, password) {
   const em = (email || "").trim().toLowerCase();
   if (!em || !password) return { ok: false, msg: "Email e password obbligatorie" };
+  const nome = "crea-utente-" + Date.now();
+  let app2 = null;
   try {
-    const tmp = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    });
-    const { error } = await tmp.auth.signUp({ email: em, password });
-    if (error) { console.error("creaAccountLogin:", error.message); return { ok: false, msg: error.message }; }
+    app2 = firebase.initializeApp(FIREBASE_CONFIG, nome);
+    const auth2 = firebase.auth(app2);
+    await auth2.createUserWithEmailAndPassword(em, password);
+    await auth2.signOut();
     return { ok: true };
   } catch (e) {
-    console.error("creaAccountLogin:", e);
-    return { ok: false, msg: String(e) };
+    console.error("creaAccountLogin:", e.message);
+    return { ok: false, msg: messaggioAuth(e) };
+  } finally {
+    if (app2) { try { await app2.delete(); } catch (_) {} }
   }
 }
 
 // ------------------------------------------------------------
-// Permessi per ruolo (fallback legacy usato in altre parti) — invariato
+// Permessi legacy (invariati)
 // ------------------------------------------------------------
 const PERMESSI = {
   admin: ["dashboard", "catalogo", "preventivi", "nuovo-preventivo", "clienti", "bandi",

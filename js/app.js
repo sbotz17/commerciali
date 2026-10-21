@@ -229,6 +229,15 @@ document.addEventListener("alpine:init", () => {
       return true; // lo store decide se app o onboarding via loggato/needsOnboarding
     },
 
+    async eseguiLoginGoogle() {
+      const r = await loginConGoogle();
+      if (!r.ok) return r;
+      this.authEmail = r.email;
+      this.utente    = r.profilo || null;
+      if (r.profilo) await this._caricaAziende();
+      return { ok: true };
+    },
+
     // Registrazione self-service
     async registra(email, password) {
       const r = await registrati(email, password);
@@ -1151,6 +1160,21 @@ function loginPage() {
         // altrimenti manca l'azienda → parte l'onboarding (needsOnboarding)
       } else {
         this.errore = "Email o password non validi, oppure utente disabilitato";
+      }
+      this.caricando = false;
+    },
+
+    async eseguiGoogle() {
+      this.caricando = true;
+      this.errore    = "";
+      const r = await Alpine.store("sessione").eseguiLoginGoogle();
+      if (r.ok) {
+        if (Alpine.store("sessione").loggato) {
+          await Alpine.store("db").ricarica();
+          Alpine.store("ui").pagina = "dashboard";
+        }
+      } else {
+        this.errore = r.error || "Accesso Google non riuscito";
       }
       this.caricando = false;
     },
