@@ -26,8 +26,9 @@ Stato: in preparazione. Ramo `feature/firebase-migrazione`.
    creazione account da parte dell'admin.
 4. **Security Rules** che riproducono le RLS: isolamento per azienda, super admin, ruoli.
 5. **Cloud Functions**:
-   - `creditsafe`: proxy con secrets `CREDITSAFE_USERNAME` / `CREDITSAFE_PASSWORD`;
-   - `sync-bandi`: schedulata o script locale con Admin SDK.
+   - `vies`: proxy verso l'API VIES della Commissione europea per la verifica P.IVA
+     (il browser non può chiamarla direttamente per CORS). Richiede il piano **Blaze**;
+   - `sync-bandi`: schedulata o script locale con Admin SDK (facoltativa).
 6. **Migrazione dati** da Supabase (produzione).
 7. **Collaudo** su Firebase Emulator Suite prima del passaggio reale.
 8. **Taglio**: configurazione Firebase in produzione, blocco scritture su Supabase, verifica.

@@ -808,27 +808,41 @@ const SP = {
     } catch (e) { return { ok: false, error: e.message }; }
   },
 
-  async cercaVIES(piva) {
+  // ---------- VIES (verifica P.IVA) ----------
+  async _vies(piva) {
+    const p = String(piva || "").replace(/^IT/i, "").replace(/\D/g, "");
     try {
-      const res = await fetch(CLOUD_FUNCTIONS_BASE + "/creditsafe", {
+      const res = await fetch(CLOUD_FUNCTIONS_BASE + "/vies", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "vies", piva }),
+        body: JSON.stringify({ piva: p }),
       });
       const testo = await res.text();
-      try { return JSON.parse(testo); } catch (_) { return { ok: false, error: testo.substring(0, 200) }; }
+      try {
+        const j = JSON.parse(testo);
+        if (!res.ok && !j.error) j.error = `HTTP ${res.status}`;
+        return j;
+      } catch (_) {
+        return { ok: false, error: `HTTP ${res.status} — ${testo.substring(0, 200)}` };
+      }
     } catch (e) { return { ok: false, error: e.message }; }
   },
 
+  async cercaVIES(piva) {
+    return this._vies(piva);
+  },
+
   async verificaPIVA(piva) {
-    try {
-      const res = await fetch(CLOUD_FUNCTIONS_BASE + "/creditsafe", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ piva }),
-      });
-      const testo = await res.text();
-      try { return JSON.parse(testo); }
-      catch (_) { return { ok: false, error: `HTTP ${res.status} — ${testo.substring(0, 300)}` }; }
-    } catch (e) { return { ok: false, error: e.message }; }
+    const r = await this._vies(piva);
+    if (!r || !r.ok) return r || { ok: false, error: "Risposta VIES non valida" };
+    return {
+      ok: true,
+      valido: !!r.valido,
+      ragioneSociale: r.name || "",
+      piva: r.piva || piva,
+      indirizzo: r.address || "",
+      stato: r.valido ? "Attiva nel VIES" : "Non valida nel VIES",
+      fonte: "VIES",
+    };
   },
 
   // ---------- IMPOSTAZIONI ----------

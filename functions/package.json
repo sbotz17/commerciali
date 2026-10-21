@@ -1,0 +1,12 @@
+{
+  "name": "commerciali-functions",
+  "description": "Cloud Functions per Commerciali",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-functions": "^5.0.1"
+  },
+  "private": true
+}
