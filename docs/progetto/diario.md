@@ -48,3 +48,10 @@
 - `test/widget_test.dart`: monta l'app senza Firebase, verifica "Dashboard", `NavigationBar` sotto 600 px,
   `NavigationRail` da 600 px e drawer "Altro" con le voci secondarie.
 - `flutter analyze` → `No issues found! (ran in 4.2s)`; `flutter test` → `All tests passed!` (4 test).
+
+## 2026-10-22 — Task F04a-fix: chiusura F04a
+
+- `lib/state/auth_providers.dart`: sostituito `valueOrNull` con `asData?.value` (Riverpod 3 non espone `valueOrNull`).
+- `lib/data/services/auth_service.dart`: parametri inizializzanti `this._auth`/`this._firestore` (lint `prefer_initializing_formals`);
+  i nomi pubblici restano `auth`/`firestore` (Dart rimuove l'underscore), quindi il chiamante non cambia.
+- `flutter analyze` → `No issues found! (ran in 3.9s)`; `flutter test` → `All tests passed!` (11 test).
