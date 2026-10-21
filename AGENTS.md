@@ -55,6 +55,14 @@ segnalazione → gestore-ritorni → CONFERMATO → risolutore-bug → tester �
 
 Gli altri esiti (NON RIPRODUCIBILE, USO SCORRETTO, FUORI AMBITO, DUPLICATA) non producono codice.
 
+### Autonomia
+
+La squadra procede senza chiedere conferma a ogni task. Il coordinatore decide, assegna i task piccoli e
+riferisce ad Andrea **a milestone concluse**. Chiede ad Andrea solo quando:
+- un nuovo sviluppo è pronto per la validazione prima della produzione;
+- servirebbe superare un limite invalicabile;
+- una decisione cambia requisiti, dati o regole.
+
 ### Task piccoli (obbligatorio)
 
 Nessun lavoro si assegna "tutto insieme". Ogni richiesta si spezza in task da **un solo obiettivo
