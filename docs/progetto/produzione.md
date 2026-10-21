@@ -1,5 +1,8 @@
 # Produzione — inventario e operazioni
 
+> **Stato attuale: produzione non ancora creata.** L'unico ambiente è lo staging (`commerciali-app`).
+> Questo file diventa operativo quando nascerà il progetto Firebase di produzione.
+
 ## Inventario
 
 - Hosting statico Firebase: `index.html`, `js/`, asset.

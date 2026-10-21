@@ -5,6 +5,9 @@ permissions:
   - action: edit
     resource: "*"
     effect: deny
+  - action: edit
+    resource: "docs/progetto/requisiti.md"
+    effect: allow
   - action: shell
     resource: "*"
     effect: deny

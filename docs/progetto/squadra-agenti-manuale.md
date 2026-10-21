@@ -340,9 +340,9 @@ Gli agenti leggono questi file prima di lavorare: è la memoria condivisa della 
   `membri/{aziendaId}_{uid}`. Il super admin è `utenti/{uid}.super_admin == true`.
 - **Integrazioni**: proxy VIES su Cloudflare Worker (`worker/`), endpoint
   `https://commerciali-vies.bottiandrea83.workers.dev`. Nessuna chiamata diretta a VIES dal browser (CORS).
-- **Ambienti**: un solo ramo di produzione `main`. Si lavora su `feature/`, `fix/`, `hotfix/` e si entra
-  solo con pull request. Non esiste un ramo `staging`: la separazione è garantita da PR + revisione.
-  Hosting: `https://commerciali-app.web.app`.
+- **Ambienti**: per ora esiste solo **staging** (ramo `staging` + Firebase `commerciali-app`).
+  Si lavora su `feature/`, `fix/`, `hotfix/` con PR verso `staging`. La produzione sarà un progetto Firebase
+  separato e il ramo `main` verrà usato solo allora. Hosting staging: `https://commerciali-app.web.app`.
 - **Versionamento**: Git. Nessuna operazione distruttiva sui dati; prima di modifiche ai dati fare un
   export Firestore verificato.
 - **Target**: PMI italiane — lingua italiana, formati data/valuta italiani, attenzione GDPR.

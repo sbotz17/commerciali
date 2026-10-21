@@ -69,11 +69,15 @@ Gli altri esiti (NON RIPRODUCIBILE, USO SCORRETTO, FUORI AMBITO, DUPLICATA) non 
 - `js/supabase.js` è legacy: non caricarlo e non aggiungerci funzioni.
 - Prima di lavorare leggi `docs/progetto/` (architettura, database, catalogo, registro decisioni).
 - Test: non esiste ancora una suite automatica; il tester verifica nel browser e con script mirati.
-- Branch: `feature/...`, `fix/...`, `hotfix/...`. Mai push diretto su `main`; le PR verso `main` le apre il
-  coordinatore e le unisce solo Andrea.
+- Branch: `feature/...`, `fix/...`, `hotfix/...`. Mai push diretto su `staging` o `main`; le PR verso `staging`
+  le apre il coordinatore e le unisce solo Andrea.
 
-## Adattamento ambienti
+## Ambienti
 
-Il manuale prevede `staging` + `main`; per Commerciali esiste solo `main` (produzione). Le PR dei rami
-`feature/`, `fix/`, `hotfix/` vanno quindi verso `main`. La separazione sviluppo/produzione è garantita da
-PR, revisione e deploy solo dopo il merge.
+- **Staging (unico ambiente disponibile ora)**: ramo `staging` + progetto Firebase `commerciali-app`
+  (`https://commerciali-app.web.app`). Qui si sviluppa, si testa e si pubblica.
+- **Produzione (quando ci sarà)**: ramo `main` + progetto Firebase separato. Non esiste ancora e non ci sono
+  credenziali di produzione.
+- Le PR dei rami `feature/`, `fix/`, `hotfix/` vanno verso `staging`. Nessun push diretto su `staging` o `main`.
+- Il passaggio `staging` → `main` avverrà solo quando l'ambiente di produzione sarà pronto e con la validazione
+  di Andrea.

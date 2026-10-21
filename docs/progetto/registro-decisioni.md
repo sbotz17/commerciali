@@ -1,5 +1,11 @@
 # Registro decisioni
 
+## 2026-10-22 — Un solo ambiente: staging
+
+Per ora esiste solo l'ambiente di **staging** (`staging` + progetto Firebase `commerciali-app`). La produzione
+sarà un progetto Firebase separato, da creare quando il prodotto sarà pronto. Fino ad allora non ci sono
+credenziali né deploy di produzione. Le PR vanno verso `staging`; `main` resta il futuro ramo di produzione.
+
 ## 2026-10-22 — Squadra di sviluppo strutturata
 
 Richiesta di Andrea: tutti gli sviluppi usano la squadra descritta in

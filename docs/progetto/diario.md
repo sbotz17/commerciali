@@ -10,3 +10,9 @@
 - Test in locale: registrazione, onboarding, clienti, prodotti, utenti, impostazioni.
 - Dati di test eliminati; database vuoto per la registrazione autonoma.
 - Creato account super admin `bottiandrea83@gmail.com` e azienda di appoggio VOLTY.
+
+## 2026-10-22 — Squadra e ambienti
+
+- Introdotta la regola della squadra in `AGENTS.md` e i 14 agenti OpenCode.
+- Creato il ramo `staging`, unico ambiente operativo con Firebase `commerciali-app`.
+- La produzione sarà un progetto Firebase separato, da creare più avanti.

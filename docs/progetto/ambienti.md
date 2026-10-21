@@ -1,28 +1,34 @@
 # Ambienti — Commerciali
 
+## Staging (attivo ora)
+
 | Cosa | Dove |
 |---|---|
-| Repository | `sbotz17/commerciali` |
-| Produzione | `main` → https://commerciali-app.web.app |
-| Hosting | Firebase Hosting, progetto `commerciali-app` |
-| Database | Firestore, regione `europe-west8`, database `(default)` |
-| Auth | Firebase Auth: email/password + Google |
-| Proxy VIES | https://commerciali-vies.bottiandrea83.workers.dev (Cloudflare Worker) |
-| Vecchio backend | Supabase `segbfdfoqxrnitboeyof` — **dismesso, non esiste più** |
+| Ramo | `staging` |
+| Hosting | https://commerciali-app.web.app |
+| Progetto Firebase | `commerciali-app` |
+| Firestore | database `(default)`, regione `europe-west8` |
+| Auth | email/password + Google |
+| Proxy VIES | https://commerciali-vies.bottiandrea83.workers.dev |
+| Vecchio backend | Supabase `segbfdfoqxrnitboeyof` — dismesso |
 
-## Come si pubblica
+## Produzione (da creare)
+
+Non esiste ancora. Quando servirà:
+
+1. Creare un **progetto Firebase separato** (es. `commerciali-prod`), con Firestore, Auth e Hosting propri.
+2. Aggiungere il dominio di produzione ai domini autorizzati Auth.
+3. Promuovere `staging` → `main` e pubblicare da `main`.
+4. Le credenziali di produzione non vanno mai nel repository né nelle sessioni degli agenti.
+
+## Pubblicazione staging
 
 ```sh
 firebase deploy --only hosting,firestore:rules --project commerciali-app
 ```
 
-Il Worker VIES si pubblica da `worker/`:
+Worker VIES:
 
 ```sh
 cd worker && npx wrangler deploy
 ```
-
-## Domini autorizzati Firebase Auth
-
-`localhost`, `commerciali-app.firebaseapp.com`, `commerciali-app.web.app`. Un eventuale dominio custom va
-aggiunto in Firebase → Authentication → Impostazioni → Domini autorizzati.

@@ -11,4 +11,5 @@ Urgenza: $ARGUMENTS
 2. `risolutore-bug` applica la correzione minima.
 3. `tester` e `validatore` obbligatori.
 4. `guardiano-produzione` dà GO/NO-GO.
+5. PR verso `staging`; la produzione, quando esisterà, seguirà la promozione.
 5. Se serve una migrazione o una zona protetta: è uno sviluppo, avvisa Andrea e fermati.
