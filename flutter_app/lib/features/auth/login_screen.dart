@@ -128,7 +128,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     setState(() => _inCorsoGoogle = true);
     try {
       final servizio = ref.read(authServiceProvider);
-      await servizio.signInWithGoogleWeb();
+      await servizio.signInWithGoogle();
       if (!mounted) return;
       context.go('/');
     } catch (errore) {

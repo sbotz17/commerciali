@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import 'package:commerciali_app/app.dart';
 import 'package:commerciali_app/data/services/auth_service.dart';
@@ -86,6 +87,73 @@ void main() {
       expect(
         messaggioErroreGoogle(Exception('errore generico')),
         'Accesso con Google non riuscito. Controlla la connessione e riprova.',
+      );
+    });
+
+    test('GoogleSignInException canceled', () {
+      expect(
+        messaggioErroreGoogle(
+          GoogleSignInException(code: GoogleSignInExceptionCode.canceled),
+        ),
+        'Accesso annullato. Riprova per accedere con Google.',
+      );
+    });
+
+    test('GoogleSignInException interrupted', () {
+      expect(
+        messaggioErroreGoogle(
+          GoogleSignInException(code: GoogleSignInExceptionCode.interrupted),
+        ),
+        'Accesso interrotto. Riprova.',
+      );
+    });
+
+    test('GoogleSignInException clientConfigurationError', () {
+      expect(
+        messaggioErroreGoogle(
+          GoogleSignInException(
+            code: GoogleSignInExceptionCode.clientConfigurationError,
+          ),
+        ),
+        'Configurazione di Google non valida. Contatta l\'assistenza.',
+      );
+    });
+
+    test('GoogleSignInException providerConfigurationError', () {
+      expect(
+        messaggioErroreGoogle(
+          GoogleSignInException(
+            code: GoogleSignInExceptionCode.providerConfigurationError,
+          ),
+        ),
+        'Configurazione di Google non valida. Contatta l\'assistenza.',
+      );
+    });
+
+    test('GoogleSignInException uiUnavailable', () {
+      expect(
+        messaggioErroreGoogle(
+          GoogleSignInException(code: GoogleSignInExceptionCode.uiUnavailable),
+        ),
+        'Impossibile mostrare la schermata Google. Riprova.',
+      );
+    });
+
+    test('GoogleSignInException userMismatch', () {
+      expect(
+        messaggioErroreGoogle(
+          GoogleSignInException(code: GoogleSignInExceptionCode.userMismatch),
+        ),
+        'Account Google diverso da quello atteso. Riprova.',
+      );
+    });
+
+    test('GoogleSignInException unknownError', () {
+      expect(
+        messaggioErroreGoogle(
+          GoogleSignInException(code: GoogleSignInExceptionCode.unknownError),
+        ),
+        'Accesso con Google non riuscito. Riprova.',
       );
     });
   });

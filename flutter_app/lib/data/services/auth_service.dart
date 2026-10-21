@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/user_profile.dart';
 
@@ -33,6 +35,14 @@ class AuthService {
     );
   }
 
+  /// Accesso con Google, adatto a web e mobile.
+  ///
+  /// Sul web usa il popup con [GoogleAuthProvider]; su Android/iOS usa il
+  /// flusso nativo di `google_sign_in` (vedi [signInWithGoogleMobile]).
+  Future<LoginRisultato> signInWithGoogle() {
+    return kIsWeb ? signInWithGoogleWeb() : signInWithGoogleMobile();
+  }
+
   /// Accesso con Google via popup (solo web).
   ///
   /// Usa `signInWithPopup` con `GoogleAuthProvider`. Dopo l'accesso carica il
@@ -41,6 +51,52 @@ class AuthService {
   /// traducibile con [messaggioErroreGoogle].
   Future<LoginRisultato> signInWithGoogleWeb() async {
     final credenziale = await _auth.signInWithPopup(GoogleAuthProvider());
+    return _finalizzaAccessoGoogle(credenziale);
+  }
+
+  /// Accesso con Google nativo (solo Android/iOS).
+  ///
+  /// Inizializza [GoogleSignIn] una sola volta con il `serverClientId` (client
+  /// ID web pubblico, non segreto), chiede l'account al sistema e scambia
+  /// l'ID token con una credenziale Firebase. Se il token manca lancia una
+  /// [GoogleSignInException] con codice `clientConfigurationError`.
+  Future<LoginRisultato> signInWithGoogleMobile() async {
+    await _inizializzaGoogleSignInMobile();
+    final account = await GoogleSignIn.instance.authenticate();
+    final idToken = account.authentication.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw GoogleSignInException(
+        code: GoogleSignInExceptionCode.clientConfigurationError,
+        description: 'Token Google non disponibile',
+      );
+    }
+    final credenziale = await _auth.signInWithCredential(
+      GoogleAuthProvider.credential(idToken: idToken),
+    );
+    return _finalizzaAccessoGoogle(credenziale);
+  }
+
+  /// Inizializza `google_sign_in` una sola volta (richiesto dall'API 7.x).
+  static Future<void>? _googleSignInInit;
+
+  Future<void> _inizializzaGoogleSignInMobile() {
+    return _googleSignInInit ??= GoogleSignIn.instance.initialize(
+      serverClientId: const String.fromEnvironment(
+        'GOOGLE_SERVER_CLIENT_ID',
+        defaultValue:
+            '686757330506-97f1qm6egpbbhbpa0mf7nkpqk8i7474t.apps.googleusercontent.com',
+      ),
+    );
+  }
+
+  /// Carica il profilo e controlla che l'utente sia attivo.
+  ///
+  /// Se disabilitato (`attivo == false`) esegue il logout e lancia una
+  /// [FirebaseAuthException] con codice `user-disabled`, traducibile con
+  /// [messaggioErroreGoogle].
+  Future<LoginRisultato> _finalizzaAccessoGoogle(
+    UserCredential credenziale,
+  ) async {
     final profilo = await loadProfile(credenziale.user?.email ?? '');
     if (isDisabled(profilo)) {
       await signOut();
@@ -110,6 +166,23 @@ String messaggioErroreGoogle(Object errore) {
       case 'user-disabled':
         return 'Utente disabilitato. Contatta l\'amministratore.';
       default:
+        return 'Accesso con Google non riuscito. Riprova.';
+    }
+  }
+  if (errore is GoogleSignInException) {
+    switch (errore.code) {
+      case GoogleSignInExceptionCode.canceled:
+        return 'Accesso annullato. Riprova per accedere con Google.';
+      case GoogleSignInExceptionCode.interrupted:
+        return 'Accesso interrotto. Riprova.';
+      case GoogleSignInExceptionCode.clientConfigurationError:
+      case GoogleSignInExceptionCode.providerConfigurationError:
+        return 'Configurazione di Google non valida. Contatta l\'assistenza.';
+      case GoogleSignInExceptionCode.uiUnavailable:
+        return 'Impossibile mostrare la schermata Google. Riprova.';
+      case GoogleSignInExceptionCode.userMismatch:
+        return 'Account Google diverso da quello atteso. Riprova.';
+      case GoogleSignInExceptionCode.unknownError:
         return 'Accesso con Google non riuscito. Riprova.';
     }
   }

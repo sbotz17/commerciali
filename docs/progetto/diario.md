@@ -86,9 +86,26 @@
 - `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (45 test).
 - Nessuna modifica a `lib/`; aggiornati task board, catalogo e diario.
 
+## 2026-10-22 — Task F06b: login Google mobile (chiusura)
+
+- `lib/features/auth/login_screen.dart`: sostituito `servizio.signInWithGoogleWeb()` con
+  `servizio.signInWithGoogle()`, così il flusso usa il popup sul web e il flusso nativo `google_sign_in` su mobile.
+- `test/google_auth_test.dart`: aggiunti 7 unit test di `messaggioErroreGoogle` per `GoogleSignInException`
+  con codici `canceled`, `interrupted`, `clientConfigurationError`, `providerConfigurationError`,
+  `uiUnavailable`, `userMismatch`, `unknownError`.
+- `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (52 test).
+
 ## 2026-10-22 — Milestone F01–F05 APPROVATO
 
 - Tester: `SUPERATO con riserva` (login reale e Google spostati a F06; prova su mobile reale ancora da fare).
 - Validatore: `APPROVATO` dopo allineamento dei criteri F04a/F05.
 - Verifiche: `flutter analyze` 0, 35 test verdi, `flutter build web` OK, `firestore.rules` invariato, vecchia app intatta.
 - Prossimo: F06 (Google + login reale su staging) e F07 (recupero password + onboarding).
+
+## 2026-10-22 — F06a/F06b/F06c: login Google e prova reale
+
+- F06a: login Google web con popup, pulsante dedicato e traduzione errori; 9 test.
+- F06b: login Google mobile con `google_sign_in` 7 e `serverClientId`; analisi statica verde (flusso mobile reale da provare su dispositivo).
+- F06c: prova reale su staging con utente temporaneo: login email riuscito e arrivo alla Dashboard; utente e profilo eliminati dopo il test.
+- `flutter analyze` 0, `flutter test` 52 verdi.
+- `node scripts/controlla-indice.mjs` → INDICE OK (19 nodi, 9 file chiave).
