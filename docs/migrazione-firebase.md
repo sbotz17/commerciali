@@ -25,10 +25,11 @@ Stato: in preparazione. Ramo `feature/firebase-migrazione`.
 3. **Firebase Auth** in `js/auth.js`: login, registrazione, recupero password, logout, sessione,
    creazione account da parte dell'admin.
 4. **Security Rules** che riproducono le RLS: isolamento per azienda, super admin, ruoli.
-5. **Cloud Functions**:
-   - `vies`: proxy verso l'API VIES della Commissione europea per la verifica P.IVA
-     (il browser non può chiamarla direttamente per CORS). Richiede il piano **Blaze**;
-   - `sync-bandi`: schedulata o script locale con Admin SDK (facoltativa).
+5. **Proxy VIES**:
+   - `worker/` è un Cloudflare Worker (piano gratuito, nessuna carta) che inoltra le richieste
+     all'API VIES della Commissione europea: il browser non può chiamarla direttamente per CORS.
+   - Endpoint: `https://commerciali-vies.bottiandrea83.workers.dev`
+   - Le Cloud Functions Firebase non sono usate (richiederebbero il piano Blaze).
 6. **Migrazione dati** da Supabase (produzione).
 7. **Collaudo** su Firebase Emulator Suite prima del passaggio reale.
 8. **Taglio**: configurazione Firebase in produzione, blocco scritture su Supabase, verifica.

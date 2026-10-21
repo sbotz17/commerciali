@@ -14,6 +14,11 @@ const FIREBASE_CONFIG = {
   appId:             "1:686757330506:web:a1a1e3429435be306330b3",
 };
 
+// Proxy VIES su Cloudflare Workers (piano gratuito, nessuna carta).
+// Lo URL viene impostato dopo il deploy del worker.
+const VIES_PROXY_BASE = "https://commerciali-vies.bottiandrea83.workers.dev";
+
+// Cloud Functions Firebase: non usate finché il progetto non passa a Blaze.
 const CLOUD_FUNCTIONS_BASE = "https://europe-west8-commerciali-app.cloudfunctions.net";
 
 firebase.initializeApp(FIREBASE_CONFIG);

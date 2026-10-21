@@ -812,7 +812,7 @@ const SP = {
   async _vies(piva) {
     const p = String(piva || "").replace(/^IT/i, "").replace(/\D/g, "");
     try {
-      const res = await fetch(CLOUD_FUNCTIONS_BASE + "/vies", {
+      const res = await fetch(VIES_PROXY_BASE + "/", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ piva: p }),
       });
