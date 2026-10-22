@@ -10,7 +10,7 @@ import '../features/clienti/clienti_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/preventivi/preventivo_edit_screen.dart';
 import '../features/preventivi/preventivi_screen.dart';
-import '../features/shell/app_shell.dart';
+import '../features/shell/auth_gate.dart';
 import '../features/visite/visite_screen.dart';
 
 /// Costruisce il router dell'app.
@@ -35,7 +35,7 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
       ),
       ShellRoute(
         builder: (context, state, child) =>
-            AppShell(percorso: state.uri.path, child: child),
+            AuthGate(percorso: state.uri.path, child: child),
         routes: [
           GoRoute(
             path: '/',

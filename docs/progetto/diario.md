@@ -236,3 +236,9 @@
 
 - `VisiteScreen` + `VisitaFormScreen`: data, lista, CRUD, stati, riordino con frecce, layout responsive.
 - Test funzioni pure e widget; `flutter analyze` 0, 262 test verdi.
+
+## 2026-10-22 — F07c: AuthGate
+
+- `AuthGate` nel `ShellRoute`: login se non autenticato, onboarding senza profilo/azienda, altrimenti shell.
+- Invalidazione del profilo dopo l'onboarding per evitare loop.
+- Test con provider sovrascritti; `flutter analyze` 0, 265 test verdi.

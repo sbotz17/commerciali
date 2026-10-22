@@ -117,6 +117,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await servizio.seedAzienda(aziendaId);
 
       ref.read(aziendaAttivaProvider.notifier).state = aziendaId;
+      // Il profilo è stato creato adesso: senza invalidarlo il `profileProvider`
+      // resta `null` in cache e `AuthGate` rimanderebbe all'onboarding.
+      ref.invalidate(profileProvider);
       ref.invalidate(aziendeUtenteProvider);
 
       if (!mounted) return;

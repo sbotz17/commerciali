@@ -18,7 +18,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F06c | Auth | Prova reale login email su staging | login con utente di test; profilo letto; nessun errore | tester | FATTO |
 | F07a | Auth | Schermata recupero password (invio link + nuova password) | reset link apre schermata; `oobCode` gestito; analyze 0 | sviluppatore-frontend | FATTO |
 | F07b | Auth | Onboarding azienda | crea profilo, azienda, membro e seed; analyze 0 | sviluppatore-frontend | FATTO |
-| F07c | Auth | Redirect di autenticazione | non loggato → login; senza azienda → onboarding; altrimenti shell | sviluppatore-frontend | RINVIATO (dopo F08) |
+| F07c | Auth | Redirect di autenticazione | non loggato → login; senza azienda → onboarding; altrimenti shell | sviluppatore-frontend | FATTO |
 | F08 | Dashboard | Conteggi, valore aperto, ultimi 5, azioni rapide | numeri uguali alla vecchia app per lo stesso utente | sviluppatore-frontend | FATTO |
 | F09a | Clienti | Modello `Cliente` + CRUD `SpService` + duplicati | CRUD completo; isolamento per azienda; test | sviluppatore-backend | FATTO |
 | F09b | Clienti | Schermata lista + form cliente | lista, ricerca, creazione/modifica/eliminazione | sviluppatore-frontend | FATTO |
