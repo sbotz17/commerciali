@@ -103,6 +103,8 @@ tutto il repository a ogni richiesta.
 
 ## Contesto del progetto
 
+- Nome prodotto: **Closer**. Il repository resta `commerciali`; il package Flutter resta `commerciali_app`; il progetto Firebase resta `commerciali-app`.
+
 - App gestionale per PMI: clienti, prodotti, preventivi, giro visite, bandi.
 - Stack: HTML + Alpine.js + Tailwind, Firebase (Firestore, Auth, Hosting), Cloudflare Worker per VIES.
 - File chiave: `index.html`, `js/app.js`, `js/sp-firestore.js`, `js/auth.js`, `js/firebase.js`,

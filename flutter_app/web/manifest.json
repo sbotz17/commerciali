@@ -1,11 +1,11 @@
 {
-    "name": "commerciali_app",
-    "short_name": "commerciali_app",
+    "name": "Closer",
+    "short_name": "Closer",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#070921",
+    "theme_color": "#070921",
+    "description": "Closer — gestionale per PMI",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

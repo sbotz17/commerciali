@@ -216,7 +216,7 @@ class CorpoImpostazioni extends StatelessWidget {
                       chiave: const Key('impostazioni-voce-intro'),
                       icona: Icons.install_mobile_outlined,
                       titolo: 'Come installare l\'app',
-                      sottotitolo: 'Aggiungi Commerciali al tuo dispositivo',
+                      sottotitolo: 'Aggiungi Closer al tuo dispositivo',
                       onTap: onApriIntro ?? () {},
                     ),
                   ],

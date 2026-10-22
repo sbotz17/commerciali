@@ -162,7 +162,7 @@ void main() {
       (tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: CommercialiApp(initialLocation: '/login'),
+        child: CloserApp(initialLocation: '/login'),
       ),
     );
     await tester.pumpAndSettle();

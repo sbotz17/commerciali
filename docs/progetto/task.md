@@ -42,6 +42,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F20 | Onboarding | Pagina introduttiva al primo accesso con istruzioni installazione | mostra una volta; “Ho capito” salva il flag; riapertura da Impostazioni; test | sviluppatore-frontend | FATTO |
 | F21 | Onboarding | Intro interattiva: scelta dispositivo e demo animata | selettore funzionante; mockup animati offline; test | sviluppatore-frontend | FATTO |
 | F22 | Prestazioni | Intro subito dopo il login, senza attendere profilo/aziende | `FirstRunGate` avvolge il contenuto appena c'è l'utente; aziende lette in parallelo; profilo per `uid` con fallback email; test | sviluppatore-frontend | FATTO |
+| F23 | Brand | Rinomina dell'app in Closer e nuova icona | web/Android/iOS, UI, manifest e launcher icons; test | sviluppatore-frontend | FATTO |
 
 ## Regole di gestione
 

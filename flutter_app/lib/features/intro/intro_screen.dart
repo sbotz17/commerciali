@@ -5,7 +5,7 @@ import '../../core/theme/app_theme.dart';
 /// Dispositivo scelto nella pagina introduttiva.
 enum DispositivoIntro { android, iphone, desktop }
 
-/// Pagina introduttiva con le istruzioni per installare Commerciali come app.
+/// Pagina introduttiva con le istruzioni per installare Closer come app.
 ///
 /// Funziona sia come primo avvio (dentro `FirstRunGate`) sia come rotta
 /// autonoma `/intro`, aperta dalle impostazioni. Il pulsante finale invoca
@@ -102,24 +102,20 @@ class _IntroScreenState extends State<IntroScreen>
               ),
               children: [
                 Center(
-                  child: Container(
+                  child: ClipRRect(
                     key: const Key('intro-icona-app'),
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: tema.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Icon(
-                      Icons.storefront,
-                      size: 44,
-                      color: tema.colorScheme.onPrimaryContainer,
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.asset(
+                      'assets/icon/closer_icon.png',
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
                 const SizedBox(height: AppSpazi.m),
                 Text(
-                  'Installa Commerciali',
+                  'Installa Closer',
                   textAlign: TextAlign.center,
                   style: tema.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
@@ -127,7 +123,7 @@ class _IntroScreenState extends State<IntroScreen>
                 ),
                 const SizedBox(height: AppSpazi.xs),
                 Text(
-                  'Puoi usare Commerciali come un\'app: si apre a tutto schermo '
+                  'Puoi usare Closer come un\'app: si apre a tutto schermo '
                   'e la trovi tra le applicazioni del dispositivo. '
                   'Scegli le istruzioni per il tuo dispositivo.',
                   textAlign: TextAlign.center,
@@ -189,7 +185,7 @@ class _IntroScreenState extends State<IntroScreen>
           passi: const [
             'Apri Chrome e tocca il menu ⋮ in alto a destra.',
             'Scegli "Installa app" oppure "Aggiungi a schermata Home".',
-            'Conferma: l\'icona di Commerciali compare tra le app.',
+            'Conferma: l\'icona di Closer compare tra le app.',
           ],
         );
       case DispositivoIntro.iphone:
@@ -198,7 +194,7 @@ class _IntroScreenState extends State<IntroScreen>
           titolo: 'iPhone e iPad (Safari)',
           mockup: _MockupIphone(pulsazione: _pulsazione),
           passi: const [
-            'Apri Commerciali in Safari e tocca l\'icona Condividi.',
+            'Apri Closer in Safari e tocca l\'icona Condividi.',
             'Scorri il menu e scegli "Aggiungi a Home".',
             'Conferma con "Aggiungi": l\'icona compare nella schermata Home.',
           ],
@@ -211,7 +207,7 @@ class _IntroScreenState extends State<IntroScreen>
           passi: const [
             'Clicca l\'icona di installazione nella barra degli indirizzi.',
             'Conferma con "Installa".',
-            'Commerciali si apre in una finestra dedicata, come un programma.',
+            'Closer si apre in una finestra dedicata, come un programma.',
           ],
         );
     }
@@ -687,7 +683,7 @@ class _MockupDesktop extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Installa Commerciali',
+                          'Installa Closer',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

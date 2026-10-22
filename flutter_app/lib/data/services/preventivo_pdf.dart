@@ -80,12 +80,12 @@ String numeroVisualizzatoPdf(Preventivo preventivo) {
 
 /// Genera il PDF di [preventivo] e ne restituisce i byte.
 ///
-/// [nomeAzienda] compare nell'intestazione; se vuoto si usa `Commerciali`.
+/// [nomeAzienda] compare nell'intestazione; se vuoto si usa `Closer`.
 Future<Uint8List> generaPdfPreventivo({
   required Preventivo preventivo,
-  String nomeAzienda = 'Commerciali',
+  String nomeAzienda = 'Closer',
 }) async {
-  final azienda = nomeAzienda.trim().isEmpty ? 'Commerciali' : nomeAzienda.trim();
+  final azienda = nomeAzienda.trim().isEmpty ? 'Closer' : nomeAzienda.trim();
   final documento = pw.Document();
 
   documento.addPage(

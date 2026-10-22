@@ -12,7 +12,7 @@ void main() {
   Future<void> apriReset(WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: CommercialiApp(initialLocation: '/reset-password'),
+        child: CloserApp(initialLocation: '/reset-password'),
       ),
     );
     await tester.pumpAndSettle();

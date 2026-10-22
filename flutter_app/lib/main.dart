@@ -12,7 +12,7 @@ Future<void> main() async {
   );
   runApp(
     ProviderScope(
-      child: CommercialiApp(initialLocation: _rottaIniziale()),
+      child: CloserApp(initialLocation: _rottaIniziale()),
     ),
   );
 }

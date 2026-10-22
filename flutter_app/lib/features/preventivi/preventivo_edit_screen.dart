@@ -595,7 +595,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       if (nome.isNotEmpty) return nome;
       break;
     }
-    return 'Commerciali';
+    return 'Closer';
   }
 
   /// Genera il PDF del preventivo e apre la condivisione di sistema.

@@ -8,17 +8,17 @@ import 'routing/app_router.dart';
 ///
 /// Non inizializza Firebase: lo fa `main.dart`, così i test possono montare
 /// l'app senza servizi esterni.
-class CommercialiApp extends StatefulWidget {
-  const CommercialiApp({super.key, this.initialLocation});
+class CloserApp extends StatefulWidget {
+  const CloserApp({super.key, this.initialLocation});
 
   /// Rotta iniziale opzionale, utile nei test.
   final String? initialLocation;
 
   @override
-  State<CommercialiApp> createState() => _CommercialiAppState();
+  State<CloserApp> createState() => _CloserAppState();
 }
 
-class _CommercialiAppState extends State<CommercialiApp> {
+class _CloserAppState extends State<CloserApp> {
   late final GoRouter _router = creaAppRouter(
     initialLocation: widget.initialLocation,
   );
@@ -32,7 +32,7 @@ class _CommercialiAppState extends State<CommercialiApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Commerciali',
+      title: 'Closer',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: _router,

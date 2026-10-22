@@ -15,7 +15,7 @@ class SplashScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Commerciali',
+              'Closer',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),

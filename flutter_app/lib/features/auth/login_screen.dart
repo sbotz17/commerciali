@@ -331,22 +331,18 @@ class _Intestazione extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: AppColors.primario,
-            borderRadius: BorderRadius.circular(AppRaggi.card),
-          ),
-          child: const Icon(
-            Icons.description_outlined,
-            color: Colors.white,
-            size: 32,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppRaggi.card),
+          child: Image.asset(
+            'assets/icon/closer_icon.png',
+            width: 64,
+            height: 64,
+            fit: BoxFit.cover,
           ),
         ),
         const SizedBox(height: AppSpazi.s),
         Text(
-          'Configuratore Commerciali',
+          'Closer',
           style: tema.textTheme.titleLarge,
           textAlign: TextAlign.center,
         ),

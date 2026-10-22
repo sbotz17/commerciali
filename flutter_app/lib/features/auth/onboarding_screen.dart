@@ -274,7 +274,7 @@ class _Intestazione extends StatelessWidget {
         ),
         const SizedBox(height: AppSpazi.xxs),
         Text(
-          'Crea l\'azienda per iniziare a usare Commerciali',
+          'Crea l\'azienda per iniziare a usare Closer',
           style: tema.textTheme.bodyMedium?.copyWith(
             color: tema.colorScheme.onSurfaceVariant,
           ),

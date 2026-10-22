@@ -98,7 +98,7 @@ class AppShell extends StatelessWidget {
         .where((voce) => voce.key != '/' && percorso.startsWith(voce.key))
         .toList()
       ..sort((a, b) => b.key.length.compareTo(a.key.length));
-    return corrispondenze.isEmpty ? 'Commerciali' : corrispondenze.first.value;
+    return corrispondenze.isEmpty ? 'Closer' : corrispondenze.first.value;
   }
 
   int get _indiceSelezionato {
@@ -247,7 +247,7 @@ class _DrawerAltro extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Commerciali', style: tema.textTheme.titleLarge),
+                  Text('Closer', style: tema.textTheme.titleLarge),
                   const SizedBox(height: AppSpazi.xxs),
                   Text(
                     'Altro',

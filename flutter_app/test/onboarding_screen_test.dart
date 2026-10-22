@@ -15,7 +15,7 @@ void main() {
   Future<void> apriOnboarding(WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: CommercialiApp(initialLocation: '/onboarding'),
+        child: CloserApp(initialLocation: '/onboarding'),
       ),
     );
     await tester.pumpAndSettle();

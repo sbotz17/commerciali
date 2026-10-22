@@ -267,3 +267,10 @@
 - `AuthGate` avvolge con `FirstRunGate` appena c'è l'utente: l'intro non aspetta profilo e aziende.
 - `getAziendeUtente` legge le aziende in parallelo; `loadProfile` prova prima `utenti/{uid}` e poi l'email.
 - Test specifico con provider in caricamento; `flutter analyze` 0, 290 test verdi.
+
+## 2026-10-22 — F23: rinomina in Closer e nuova icona
+
+- Nome visibile "Closer" su web, Android, iOS, login, splash, intro e PDF.
+- Icona fornita da Andrea convertita in 1024×1024, foreground adattivo e launcher icons generati per web/Android/iOS.
+- Icona usata anche nelle schermate di login e intro.
+- `flutter analyze` 0, 290 test verdi, deploy staging completato.

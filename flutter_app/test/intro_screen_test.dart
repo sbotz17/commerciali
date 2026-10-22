@@ -38,7 +38,7 @@ void main() {
       (tester) async {
     await mostraIntro(tester);
 
-    expect(find.text('Installa Commerciali'), findsOneWidget);
+    expect(find.text('Installa Closer'), findsOneWidget);
     expect(find.byKey(const Key('intro-icona-app')), findsOneWidget);
 
     // Selettore a tre scelte.

@@ -12,7 +12,7 @@ void main() {
   Future<void> apriLogin(WidgetTester tester) async {
     await tester.pumpWidget(
       const ProviderScope(
-        child: CommercialiApp(initialLocation: '/login'),
+        child: CloserApp(initialLocation: '/login'),
       ),
     );
     await tester.pumpAndSettle();
@@ -21,7 +21,7 @@ void main() {
   testWidgets('mostra i testi e i collegamenti del login', (tester) async {
     await apriLogin(tester);
 
-    expect(find.text('Configuratore Commerciali'), findsOneWidget);
+    expect(find.text('Closer'), findsOneWidget);
     expect(find.text('Accedi alla piattaforma'), findsOneWidget);
     expect(find.text('Accedi'), findsOneWidget);
     expect(find.text('Password dimenticata?'), findsOneWidget);
