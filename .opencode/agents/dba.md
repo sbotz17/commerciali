@@ -2,7 +2,7 @@
 description: Progetta collezioni, indici e regole Firestore; nessuna operazione distruttiva
 mode: subagent
 model: deepseek/deepseek-v4-pro#high
-steps: 8
+steps: 10
 permissions:
   - action: edit
     resource: "*"

@@ -2,7 +2,7 @@
 description: Definisce layout, componenti e stati della UI; non scrive codice
 mode: subagent
 model: deepseek/deepseek-flash#low
-steps: 6
+steps: 8
 permissions:
   - action: edit
     resource: "*"

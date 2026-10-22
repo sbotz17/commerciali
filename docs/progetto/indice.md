@@ -27,10 +27,13 @@ docs/progetto/
 ├── diario.md                     ← log del lavoro
 ├── ritorni.md                    ← segnalazioni R-
 ├── motore-modelli.md             ← modelli e costi
+├── task.md                       ← registro dei task piccoli
+├── definition-of-done.md         ← criteri obbligatori di rilascio
 └── memoria/
     ├── ui/
     │   ├── index.md              ← mappa delle schermate
     │   ├── login.md              ← accesso, Google, recupero, onboarding
+    │   ├── dashboard.md          ← conteggi, valore aperto, ultimi preventivi
     │   ├── clienti.md            ← lista, form, P.IVA, duplicati
     │   ├── catalogo.md           ← prodotti e categorie
     │   ├── preventivi.md         ← preventivi, revisioni, numerazione
@@ -42,6 +45,8 @@ docs/progetto/
     │   ├── collezioni.md         ← collezioni e campi
     │   ├── regole.md             ← firestore.rules e multi-azienda
     │   └── contatori.md          ← numerazione preventivi
+    ├── flutter/
+    │   └── index.md            ← app Flutter: struttura e stato
     ├── integrazioni/
     │   ├── index.md              ← integrazioni esterne
     │   └── vies.md               ← verifica P.IVA
@@ -56,6 +61,7 @@ docs/progetto/
 | Richiesta | Nodi da leggere |
 |---|---|
 | Login, registrazione, Google, password | `ui/login.md` |
+| Dashboard, conteggi, ultimi preventivi | `ui/dashboard.md` |
 | Clienti, P.IVA, duplicati | `ui/clienti.md`, `integrazioni/vies.md` |
 | Prodotti, categorie, prezzi | `ui/catalogo.md` |
 | Preventivi, PDF, revisioni, numeri | `ui/preventivi.md`, `dati/contatori.md` |
@@ -64,6 +70,7 @@ docs/progetto/
 | Utenti, ruoli, permessi, licenze | `ui/impostazioni.md`, `dati/regole.md` |
 | Nuova collezione o campo | `dati/collezioni.md`, `dati/regole.md` |
 | Dati, query, `SP` | `dati/index.md`, `dati/collezioni.md` |
+| Lavorare sull'app Flutter | `flutter/index.md`, `architettura.md` §Flutter |
 | Verifica P.IVA / VIES | `integrazioni/vies.md` |
 | Rilascio o deploy | `processi/rilascio.md`, `ambienti.md` |
 | Bug o segnalazione | `processi/bug.md` |

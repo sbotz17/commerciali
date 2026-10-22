@@ -55,6 +55,31 @@ segnalazione → gestore-ritorni → CONFERMATO → risolutore-bug → tester �
 
 Gli altri esiti (NON RIPRODUCIBILE, USO SCORRETTO, FUORI AMBITO, DUPLICATA) non producono codice.
 
+### Autonomia
+
+La squadra procede senza chiedere conferma a ogni task. Il coordinatore decide, assegna i task piccoli e
+riferisce ad Andrea **a milestone concluse**. Chiede ad Andrea solo quando:
+- un nuovo sviluppo è pronto per la validazione prima della produzione;
+- servirebbe superare un limite invalicabile;
+- una decisione cambia requisiti, dati o regole.
+
+### Definition of Done (obbligatoria)
+
+Nessun task o milestone è concluso senza `docs/progetto/definition-of-done.md`: analyze 0, test verdi,
+prova E2E reale su staging (login, azienda attiva, CRUD cliente e preventivo, nessun permission-denied)
+e nessuna pagina segnaposto nel perimetro. Tester e validatore devono verificare le prove, non solo il codice.
+
+### Task piccoli (obbligatorio)
+
+Nessun lavoro si assegna "tutto insieme". Ogni richiesta si spezza in task da **un solo obiettivo
+verificabile**, di norma **1 file, 1 schermata o 1 servizio**.
+
+- Ogni task ha: input, file da toccare, criteri di accettazione, test, agente assegnato.
+- Il coordinatore assegna **un task alla volta** e aspetta il risultato prima del successivo.
+- Se un task non sta nei passi dell'agente, si spezza ancora.
+- Alla chiusura: aggiorna il nodo di memoria e il registro `docs/progetto/task.md`.
+- Vietato "riscrivi tutta l'app in un colpo": si procede per fette verticali e piccoli commit.
+
 ### Memoria ad albero (obbligatoria)
 
 La conoscenza del progetto vive in `docs/progetto/indice.md` e in `docs/progetto/memoria/`. Non si rilegge
@@ -83,6 +108,8 @@ tutto il repository a ogni richiesta.
 <!-- SQUADRA-AGENTI:FINE -->
 
 ## Contesto del progetto
+
+- Nome prodotto: **Closer**. Il repository resta `commerciali`; il package Flutter resta `commerciali_app`; il progetto Firebase resta `commerciali-app`.
 
 - App gestionale per PMI: clienti, prodotti, preventivi, giro visite, bandi.
 - Stack: HTML + Alpine.js + Tailwind, Firebase (Firestore, Auth, Hosting), Cloudflare Worker per VIES.

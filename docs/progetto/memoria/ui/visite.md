@@ -14,4 +14,6 @@
 
 - Creare una visita, riordinarla, cambiare stato, filtrarla per data e cliente.
 
+**Flutter**: `VisiteScreen` e `VisitaFormScreen` in `flutter_app/lib/features/visite/visite_screen.dart`; stessi campi e stesso ordinamento.
+
 **Ultima revisione**: 2026-10-22

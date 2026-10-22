@@ -15,6 +15,43 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Regole | `firestore.rules` | Sicurezza multi-azienda |
 | Worker VIES | `worker/src/index.js` | Proxy verifica P.IVA |
 
+## Flutter (`flutter_app/`)
+
+| Oggetto | Percorso | Scopo |
+|---|---|---|
+| App/root | `flutter_app/lib/app.dart` | `MaterialApp.router` con tema e router |
+| Tema | `flutter_app/lib/core/theme/app_theme.dart` | Colori, spazi, raggi, breakpoint e Material 3 |
+| Router | `flutter_app/lib/routing/app_router.dart` | Rotte `go_router` e pagine segnaposto |
+| Shell | `flutter_app/lib/features/shell/app_shell.dart` | `NavigationBar`/`NavigationRail` responsive e drawer |
+| Segnaposto | `flutter_app/lib/core/ui/placeholder_screen.dart` | Corpo condiviso per schermate non ancora implementate |
+| Avviso errore | `flutter_app/lib/core/ui/avviso_errore.dart` | `AvvisoErrore(testo: ...)`: messaggio di errore in italiano con colori semantici e `liveRegion`; chiave passata dal chiamante per i test |
+| Onboarding | `flutter_app/lib/features/auth/onboarding_screen.dart` | `OnboardingScreen` (rotta `/onboarding`): primo avvio, crea profilo, azienda, membership admin e seed; validatori puri `validaNomeUtente`, `validaNomeAzienda`, `messaggioErroreOnboarding` |
+| Modello Prodotto | `flutter_app/lib/data/models/prodotto.dart` | `Prodotto` (`id`, `aziendaId`, `nome`, `categoria`, `prezzo` numerico, `descrizione`, `immagine` URL, `attivo`) con `fromMap`/`toMap` snake_case |
+| Modello Categoria | `flutter_app/lib/data/models/categoria.dart` | `Categoria` (`id`, `aziendaId`, `nome`, `icona`, `ordine`) con `fromMap`/`toMap` snake_case |
+| Servizio dati catalogo | `flutter_app/lib/data/services/sp_service.dart` | `getProdotti`/`inserisciProdotto`/`aggiornaProdotto`/`eliminaProdotto` e `getCategorie`/`inserisciCategoria`/`aggiornaCategoria`/`eliminaCategoria` (scope azienda attiva) |
+| Modello Preventivo | `flutter_app/lib/data/models/preventivo.dart` | `Preventivo` (id, `aziendaId`, `clienteId`/`clienteNome`, `utenteId`, `numero`, `revisione`, `righe`, totali, `stato`, `createdAt`) e `PreventivoRiga` con `fromMap`/`toMap`; funzioni pure `totaleRiga`, `calcolaTotali`/`PreventivoTotali`, `formatoNumeroPreventivo`, `numeroBasePreventivo`, `numeroRevisione` |
+| Servizio dati preventivo | `flutter_app/lib/data/services/sp_service.dart` | `getPreventivi` (filtro `azienda_id` + ordinamento client per `created_at` desc; `soloUtenteId` in memoria), `contaPreventivi`, `inserisciPreventivo` (progressivo transazionale `PRV-0001`), `aggiornaPreventivo` (patch con `sconto`), `aggiornaStato`, `eliminaPreventivo`, `creaRevisione` (`-R{n}` senza consumare il contatore) |
+| Editor preventivo | `flutter_app/lib/features/preventivi/preventivo_edit_screen.dart` | `PreventivoEditScreen`: cliente/stato, righe modificabili (card telefono, tabella desktop), note e sconto, riepilogo totali, pulsante "Salva preventivo" (`Key('salva-preventivo')`, spinner durante il salvataggio) ed errore `Key('preventivo-salvataggio-errore')`; funzioni pure `rigaPreventivoDaCampi`, `totaliEditorPreventivo`, `payloadPreventivoDaEditor`, `datiServizioPreventivo`, `messaggioErroreSalvataggioPreventivo` |
+| Test editor preventivo | `flutter_app/test/preventivo_edit_screen_test.dart` | Unit test dei formati numerici, righe da campi, totali, `payloadPreventivoDaEditor` (chiavi, righe serializzate, totali con/senza sconto) e `datiServizioPreventivo` |
+| Test preventivo | `flutter_app/test/preventivo_test.dart` | Unit test di `PreventivoRiga`/`Preventivo` (`fromMap`/`toMap`/default), calcolo totali e funzioni di numero/revisione |
+| Test catalogo | `flutter_app/test/catalogo_test.dart` | Unit test `fromMap`/`toMap`/default di `Prodotto` e `Categoria` |
+| Test login Google | `flutter_app/test/google_auth_test.dart` | Unit test `messaggioErroreGoogle` (`FirebaseAuthException` + `GoogleSignInException`) + widget test pulsante Google |
+| Test onboarding | `flutter_app/test/onboarding_screen_test.dart` | Widget test di `OnboardingScreen` (campi, pulsante, errori su campi vuoti/corti) + unit test dei validatori e di `messaggioErroreOnboarding` |
+| Modello Ruolo | `flutter_app/lib/data/models/ruolo.dart` | `Ruolo` (`id`, `aziendaId`, `nome`, `chiave`, `descrizione`, `scontoMax`, `permessi`, `sistema`) con `fromMap` snake_case |
+| Modello Licenza | `flutter_app/lib/data/models/licenza.dart` | `Licenza` (`id`, `aziendaId`, `piano`, `stato`, `dataInizio`, `dataFine`, `maxUtenti`, `maxPreventivi`, `note`) con `fromMap` snake_case |
+| Servizio dati amministrazione | `flutter_app/lib/data/services/sp_service.dart` | `getUtenti` (membri + profili con ruolo), `aggiornaRuoloUtente`, `eliminaMembro`, `getRuoli`, `getLicenzaAzienda`, `getTutteAziende` |
+| Test amministrazione | `flutter_app/test/amministrazione_test.dart` | Unit test `fromMap` di `Ruolo` e `Licenza` (permessi e date) |
+| Schermata Bandi | `flutter_app/lib/features/bandi/bandi_screen.dart` | Lista bandi con ricerca, filtri stato/regione, card/table responsive, dettaglio e link ufficiale |
+| Schermata Utenti | `flutter_app/lib/features/impostazioni/utenti_screen.dart` | Membri dell'azienda, cambio ruolo e rimozione con conferma |
+| Schermata Ruoli | `flutter_app/lib/features/impostazioni/ruoli_screen.dart` | Ruoli e permessi in sola lettura, con riepilogo per area |
+| Schermata Licenze | `flutter_app/lib/features/impostazioni/licenze_screen.dart` | Piano, stato effettivo (data fine), date, limiti e note |
+| Schermata Super admin | `flutter_app/lib/features/superadmin/superadmin_screen.dart` | Elenco aziende, ricerca e ingresso; guardia `superAdmin` |
+| Sync azienda attiva | `flutter_app/lib/state/azienda_providers.dart` | `aziendaAttivaSyncProvider`: imposta la prima azienda dopo il login e rispetta la scelta del super admin |
+| Test provider azienda | `flutter_app/test/azienda_providers_test.dart` | Unit test della sincronizzazione e del caso super admin |
+| Test schermate amministrazione | `flutter_app/test/utenti_screen_test.dart`, `ruoli_screen_test.dart`, `licenze_screen_test.dart`, `superadmin_screen_test.dart`, `bandi_screen_test.dart` | Test di funzioni pure, stati vuoti e layout |
+| E2E permessi | `scripts/e2e-staging.py` | Crea utente/azienda temporanei, verifica CRUD cliente con le Security Rules reali e pulisce |
+| E2E UI dati | `scripts/e2e-ui-dati.py` | Prepara e pulisce utente/azienda/ruoli/licenza per la prova manuale su staging |
+
 ## Collezioni Firestore
 
 `aziende`, `utenti`, `membri`, `ruoli`, `licenze`, `piani_config`, `whatsapp_config`, `impostazioni`,
