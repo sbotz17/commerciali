@@ -16,6 +16,7 @@ void main() {
         'tutti_ateco': false,
         'regioni': ['lombardia', 'veneto'],
         'tutte_regioni': false,
+        'province': ['MI', 'MB'],
         'forma_agevolazione': ['contributo'],
         'dimensioni': ['micro', 'piccola'],
         'settore_attivita': ['ristorazione', 'retail'],
@@ -40,6 +41,7 @@ void main() {
       expect(bando.tuttiAteco, isFalse);
       expect(bando.regioni, ['lombardia', 'veneto']);
       expect(bando.tutteRegioni, isFalse);
+      expect(bando.province, ['MI', 'MB']);
       expect(bando.formaAgevolazione, ['contributo']);
       expect(bando.dimensioni, ['micro', 'piccola']);
       expect(bando.settoreAttivita, ['ristorazione', 'retail']);
@@ -67,6 +69,7 @@ void main() {
       expect(bando.tuttiAteco, isFalse);
       expect(bando.regioni, isEmpty);
       expect(bando.tutteRegioni, isFalse);
+      expect(bando.province, isEmpty);
       expect(bando.formaAgevolazione, isEmpty);
       expect(bando.dimensioni, isEmpty);
       expect(bando.settoreAttivita, isEmpty);
@@ -79,6 +82,16 @@ void main() {
       expect(bando.fonte, isNull);
       expect(bando.ultimoAggiornamento, isNull);
       expect(bando.dataImportazione, isNull);
+    });
+
+    test('province: lista letta, valore non lista → vuota', () {
+      final conProvince = Bando.fromMap({
+        'province': ['MI', 'MB'],
+      }, id: 'b-1');
+      expect(conProvince.province, ['MI', 'MB']);
+
+      final senza = Bando.fromMap({'province': 'MI'}, id: 'b-2');
+      expect(senza.province, isEmpty);
     });
 
     test('booleani veri e agevolazioni numeriche (double) letti correttamente', () {
@@ -102,6 +115,7 @@ void main() {
         stato: 'attivo',
         codiciAteco: const ['56'],
         tuttiAteco: true,
+        province: const ['MI'],
         agevolazioneMax: 50000,
         linkUfficiale: 'https://example.com',
       );
@@ -114,6 +128,7 @@ void main() {
       expect(map['stato'], 'attivo');
       expect(map['codici_ateco'], ['56']);
       expect(map['tutti_ateco'], isTrue);
+      expect(map['province'], ['MI']);
       expect(map['agevolazione_max'], 50000);
       expect(map['link_ufficiale'], 'https://example.com');
     });
@@ -125,6 +140,7 @@ void main() {
         dataChiusura: '2026-12-31',
         stato: 'attivo',
         regioni: const ['lombardia'],
+        province: const ['MI', 'MB'],
         agevolazioneMax: 50000,
         fonte: 'incentivi.gov.it',
       );
@@ -138,6 +154,7 @@ void main() {
       expect(ricostruito.dataChiusura, originale.dataChiusura);
       expect(ricostruito.stato, originale.stato);
       expect(ricostruito.regioni, originale.regioni);
+      expect(ricostruito.province, originale.province);
       expect(ricostruito.agevolazioneMax, originale.agevolazioneMax);
       expect(ricostruito.fonte, originale.fonte);
     });

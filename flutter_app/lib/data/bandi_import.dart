@@ -89,6 +89,7 @@ Map<String, dynamic> normalizzaBandoIncentivi(
           .toList();
 
   final regioni = _listaStringhe(record['Regioni']);
+  final province = _province(record);
 
   return {
     'id': id,
@@ -102,6 +103,7 @@ Map<String, dynamic> normalizzaBandoIncentivi(
     'tutti_ateco': tuttiAteco,
     'regioni': regioni,
     'tutte_regioni': regioni.isEmpty,
+    'province': province,
     'forma_agevolazione': _listaStringhe(record['Forma_agevolazione']),
     'dimensioni': _listaStringhe(record['Dimensioni']),
     'settore_attivita': _listaStringhe(record['Settore_Attivita']),
@@ -162,6 +164,27 @@ num _numero(dynamic v) {
 List<String> _listaStringhe(dynamic v) {
   if (v is! List) return const [];
   return v.where((e) => e != null).map((e) => e.toString()).toList();
+}
+
+/// Province ammesse, lette in ordine di priorità:
+/// - `Province` (lista);
+/// - `Provincia` (stringa singola oppure lista);
+/// - `Comuni` (solo se lista di stringhe).
+/// Lista vuota se nessun campo è valorizzato.
+List<String> _province(Map<String, dynamic> record) {
+  final province = record['Province'];
+  if (province is List) return _listaStringhe(province);
+
+  final provincia = record['Provincia'];
+  if (provincia is List) return _listaStringhe(provincia);
+  if (provincia != null) {
+    final s = _stringa(provincia);
+    return s.isEmpty ? const [] : [s];
+  }
+
+  final comuni = record['Comuni'];
+  if (comuni is List) return _listaStringhe(comuni);
+  return const [];
 }
 
 /// Copia una [Map] generica in `Map<String, dynamic>`, scartando le chiavi non

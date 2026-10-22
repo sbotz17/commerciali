@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -7,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/stato_centrato.dart';
 import '../../data/models/bando.dart';
+import '../../data/province_italia.dart';
 import '../../state/azienda_providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -120,40 +122,88 @@ List<String> statiDisponibili(List<Bando> bandi) {
 
 /// `true` se il bando è compatibile con il codice ATECO inserito.
 ///
-/// - [ateco] vuoto → tutti i bandi sono compatibili;
+/// - [ateco] senza cifre (vuoto o solo punti) → tutti i bandi sono compatibili;
 /// - un bando aperto a tutti (`tuttiAteco`) o senza codici (`codiciAteco`
 ///   vuoto) è sempre compatibile;
-/// - altrimenti si confronta il prefisso di 2 caratteri del codice inserito
-///   con l'inizio di almeno un codice del bando (spazi esterni ignorati,
-///   senza distinzione tra maiuscole).
+/// - altrimenti si estraggono solo le cifre di [ateco] (così `62.01` diventa
+///   `6201`) e si confronta il prefisso di 2 cifre con l'inizio di almeno un
+///   codice del bando.
 bool matchAtecoBando(Bando bando, String ateco) {
-  final inserito = ateco.trim().toLowerCase();
+  final inserito = ateco.replaceAll(RegExp(r'[^0-9]'), '');
   if (inserito.isEmpty) return true;
   if (bando.tuttiAteco || bando.codiciAteco.isEmpty) return true;
 
-  final prefisso =
-      inserito.length > 2 ? inserito.substring(0, 2) : inserito;
+  final prefisso = inserito.length > 2 ? inserito.substring(0, 2) : inserito;
   for (final codice in bando.codiciAteco) {
-    final pulito = codice.trim().toLowerCase();
+    final pulito = codice.replaceAll(RegExp(r'[^0-9]'), '');
     if (pulito.isEmpty) continue;
     if (pulito.startsWith(prefisso)) return true;
   }
   return false;
 }
 
-/// Filtra i bandi per testo, stato, regione e codice ATECO.
+/// `true` se il bando è compatibile con la provincia indicata (sigla o nome).
+///
+/// - [provincia] vuota o non riconosciuta → tutti i bandi sono compatibili;
+/// - se il bando elenca le `province`, basta che contenga la sigla o il nome;
+/// - altrimenti si usa la regione della provincia: i bandi aperti a tutte le
+///   regioni (`tutteRegioni`) o senza regioni restano visibili, gli altri
+///   devono citare la stessa regione (confronto tollerante a varianti come
+///   `Trentino-Alto Adige` e `Trentino-Alto Adige/Südtirol`).
+bool matchProvinciaBando(Bando bando, String provincia) {
+  final cercata = provincia.trim().toLowerCase();
+  if (cercata.isEmpty) return true;
+
+  final dati = provinciaPerCodice(cercata);
+  if (dati == null) return true;
+
+  final sigla = dati.sigla.trim().toLowerCase();
+  final nome = dati.nome.trim().toLowerCase();
+
+  final provinceBando = bando.province
+      .map((p) => p.trim().toLowerCase())
+      .where((p) => p.isNotEmpty)
+      .toList();
+  if (provinceBando.isNotEmpty) {
+    return provinceBando.contains(sigla) || provinceBando.contains(nome);
+  }
+
+  if (bando.tutteRegioni || bando.regioni.isEmpty) return true;
+
+  final regioneProvincia = _normalizzaRegione(dati.regione);
+  for (final regione in bando.regioni) {
+    if (_normalizzaRegione(regione) == regioneProvincia) return true;
+  }
+  return false;
+}
+
+/// Normalizza il nome di una regione per il confronto: minuscole, senza la
+/// variante linguistica dopo `/` e con separatori uniformi.
+String _normalizzaRegione(String valore) {
+  final base = valore.trim().toLowerCase().split('/').first;
+  return base
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .replaceAll('-', ' ')
+      .replaceAll("'", ' ')
+      .trim();
+}
+
+/// Filtra i bandi per testo, stato, regione, provincia e codice ATECO.
 ///
 /// - [testo] cerca (senza distinzione tra maiuscole) in titolo e descrizione;
 /// - [stato] è una chiave Firestore (`attivo`, `in_scadenza`, …) o vuota per
 ///   tutti;
 /// - [regione] confronta le regioni del bando; i bandi aperti a tutte le
 ///   regioni (`tutteRegioni`) restano visibili con qualsiasi filtro;
+/// - [provincia] è la sigla (o il nome) della provincia: vedi
+///   [matchProvinciaBando];
 /// - [ateco] è il codice ATECO dell'azienda: vedi [matchAtecoBando].
 List<Bando> filtraBandi(
   List<Bando> bandi, {
   String testo = '',
   String stato = '',
   String regione = '',
+  String provincia = '',
   String ateco = '',
 }) {
   final cerca = testo.trim().toLowerCase();
@@ -176,7 +226,9 @@ List<Bando> filtraBandi(
 
     final okAteco = matchAtecoBando(bando, ateco);
 
-    return okTesto && okStato && okRegione && okAteco;
+    final okProvincia = matchProvinciaBando(bando, provincia);
+
+    return okTesto && okStato && okRegione && okProvincia && okAteco;
   }).toList();
 }
 
@@ -271,11 +323,15 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
   /// Regione selezionata; stringa vuota = tutte.
   String _filtroRegione = '';
 
+  /// Provincia selezionata (sigla); stringa vuota = tutte.
+  String _filtroProvincia = '';
+
   bool get _filtriAttivi =>
       _ricerca.text.trim().isNotEmpty ||
       _ateco.text.trim().isNotEmpty ||
       _filtroStato.isNotEmpty ||
-      _filtroRegione.isNotEmpty;
+      _filtroRegione.isNotEmpty ||
+      _filtroProvincia.isNotEmpty;
 
   @override
   void initState() {
@@ -324,6 +380,7 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
     setState(() {
       _filtroStato = '';
       _filtroRegione = '';
+      _filtroProvincia = '';
     });
   }
 
@@ -348,6 +405,7 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
           testo: _ricerca.text,
           stato: _filtroStato,
           regione: _filtroRegione,
+          provincia: _filtroProvincia,
           ateco: _ateco.text,
         );
 
@@ -361,15 +419,17 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
                 AppSpazi.s,
               ),
               child: _BarraBandi(
-                largo: largo,
                 controller: _ricerca,
                 ateco: _ateco,
                 stati: statiDisponibili(_bandi),
                 regioni: regioniDisponibili(_bandi),
                 filtroStato: _filtroStato,
                 filtroRegione: _filtroRegione,
+                filtroProvincia: _filtroProvincia,
                 onStato: (valore) => setState(() => _filtroStato = valore),
                 onRegione: (valore) => setState(() => _filtroRegione = valore),
+                onProvincia: (valore) =>
+                    setState(() => _filtroProvincia = valore),
               ),
             ),
             Expanded(
@@ -399,29 +459,31 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
   }
 }
 
-/// Barra di ricerca e filtri (ATECO, stato e regione se presenti nei dati).
+/// Barra di ricerca e filtri (ATECO, provincia, stato e regione).
 class _BarraBandi extends StatelessWidget {
   const _BarraBandi({
-    required this.largo,
     required this.controller,
     required this.ateco,
     required this.stati,
     required this.regioni,
     required this.filtroStato,
     required this.filtroRegione,
+    required this.filtroProvincia,
     required this.onStato,
     required this.onRegione,
+    required this.onProvincia,
   });
 
-  final bool largo;
   final TextEditingController controller;
   final TextEditingController ateco;
   final List<String> stati;
   final List<String> regioni;
   final String filtroStato;
   final String filtroRegione;
+  final String filtroProvincia;
   final ValueChanged<String> onStato;
   final ValueChanged<String> onRegione;
+  final ValueChanged<String> onProvincia;
 
   @override
   Widget build(BuildContext context) {
@@ -443,12 +505,15 @@ class _BarraBandi extends StatelessWidget {
       ),
     );
 
-    // Codice ATECO dell'azienda: filtrare per prefisso di 2 cifre.
+    // Codice ATECO dell'azienda: cifre e punto, filtra per prefisso di 2 cifre.
     final campoAteco = TextField(
       key: const Key('bandi-filtro-ateco'),
       controller: ateco,
-      keyboardType: TextInputType.number,
-      maxLength: 6,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+      ],
+      maxLength: 8,
       buildCounter: (
         context, {
         required currentLength,
@@ -458,7 +523,7 @@ class _BarraBandi extends StatelessWidget {
           null,
       decoration: InputDecoration(
         labelText: 'ATECO',
-        hintText: 'ATECO (es. 62)',
+        hintText: 'es. 62.01',
         suffixIcon: ateco.text.isEmpty
             ? null
             : IconButton(
@@ -508,38 +573,59 @@ class _BarraBandi extends StatelessWidget {
       onChanged: (valore) => onRegione(valore ?? ''),
     );
 
-    if (!largo) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          campoRicerca,
-          const SizedBox(height: AppSpazi.xs),
-          campoAteco,
-          const SizedBox(height: AppSpazi.xs),
-          Row(
-            children: [
-              Expanded(child: tendinaStato),
-              if (regioni.isNotEmpty) ...[
-                const SizedBox(width: AppSpazi.xs),
-                Expanded(child: tendinaRegione),
-              ],
-            ],
-          ),
+    // La chiave esterna cambia con la selezione così `initialValue` si
+    // riallinea quando i filtri vengono azzerati.
+    final tendinaProvincia = KeyedSubtree(
+      key: ValueKey('bandi-provincia-$filtroProvincia'),
+      child: DropdownButtonFormField<String>(
+        key: const Key('bandi-filtro-provincia'),
+        initialValue: filtroProvincia,
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Provincia'),
+        items: [
+          const DropdownMenuItem(value: '', child: Text('Tutte le province')),
+          for (final provincia in provinceItalia)
+            DropdownMenuItem(
+              value: provincia.sigla,
+              child: Text(
+                '${provincia.nome} (${provincia.sigla})',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
         ],
-      );
-    }
+        onChanged: (valore) => onProvincia(valore ?? ''),
+      ),
+    );
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Expanded(child: campoRicerca),
-        const SizedBox(width: AppSpazi.s),
-        SizedBox(width: 160, child: campoAteco),
-        const SizedBox(width: AppSpazi.s),
-        SizedBox(width: 200, child: tendinaStato),
-        if (regioni.isNotEmpty) ...[
-          const SizedBox(width: AppSpazi.s),
-          SizedBox(width: 220, child: tendinaRegione),
-        ],
+        campoRicerca,
+        const SizedBox(height: AppSpazi.xs),
+        Wrap(
+          spacing: AppSpazi.s,
+          runSpacing: AppSpazi.xs,
+          children: [
+            SizedBox(width: 160, child: campoAteco),
+            SizedBox(width: 190, child: tendinaProvincia),
+            SizedBox(width: 160, child: tendinaStato),
+            if (regioni.isNotEmpty)
+              SizedBox(width: 180, child: tendinaRegione),
+          ],
+        ),
+        if (filtroProvincia.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpazi.xs),
+            child: Text(
+              'La provincia filtra i bandi della sua regione quando il bando '
+              'non indica le province.',
+              key: const Key('bandi-nota-provincia'),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
       ],
     );
   }

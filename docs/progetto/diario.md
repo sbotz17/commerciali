@@ -345,3 +345,11 @@
   `docs/progetto/test/2026-10-22-amministrazione-bandi.md`.
 - Nessuna modifica a `firestore.rules`, collezioni o indici.
 - Validazione amministrazione/bandi: **APPROVATO** (22/10/2026); prove pulite, PRV di test eliminato, contatore azzerato.
+
+## 2026-10-22 — Bandi: ATECO con punto e filtro provincia
+
+- Il campo ATECO accetta ora anche il punto (`62.01`), con tastiera decimale su mobile, formatter `[0-9.]` e massimo 8 caratteri.
+- Il matching ATECO usa solo le cifre e confronta il prefisso di 2 cifre, quindi `62`, `62.0` e `62.01` funzionano.
+- Aggiunto il filtro **Provincia** con tutte le 107 province italiane; se il bando espone `province` il confronto è preciso, altrimenti si usa la regione della provincia (i dati open data spesso non hanno la provincia). Una nota nella UI lo spiega.
+- Modello `Bando` e parser di import aggiornati con il campo opzionale `province`.
+- Verifiche: `flutter analyze` 0, **509 test verdi**, deploy staging.

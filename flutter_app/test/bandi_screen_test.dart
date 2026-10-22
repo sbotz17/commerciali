@@ -15,6 +15,7 @@ void main() {
     String? stato = 'attivo',
     List<String> regioni = const ['lombardia'],
     bool tutteRegioni = false,
+    List<String> province = const [],
     List<String> codiciAteco = const [],
     bool tuttiAteco = false,
     String? fonte = 'incentivi.gov.it',
@@ -30,6 +31,7 @@ void main() {
       stato: stato,
       regioni: regioni,
       tutteRegioni: tutteRegioni,
+      province: province,
       codiciAteco: codiciAteco,
       tuttiAteco: tuttiAteco,
       fonte: fonte,
@@ -116,10 +118,53 @@ void main() {
       expect(matchAtecoBando(b, '631'), isTrue);
     });
 
+    test('codice con punto combacia con le cifre del bando', () {
+      final b = bando(codiciAteco: const ['62.01', '63.11']);
+      expect(matchAtecoBando(b, '62.01'), isTrue);
+      expect(matchAtecoBando(b, '62.02'), isTrue);
+      expect(matchAtecoBando(b, '63'), isTrue);
+      expect(matchAtecoBando(b, '43.21'), isFalse);
+    });
+
     test('codice diverso non combacia', () {
       final b = bando(codiciAteco: const ['62.01']);
       expect(matchAtecoBando(b, '43'), isFalse);
       expect(matchAtecoBando(b, '61.90'), isFalse);
+    });
+  });
+
+  group('matchProvinciaBando', () {
+    test('provincia vuota o non riconosciuta tiene tutti i bandi', () {
+      expect(matchProvinciaBando(bando(province: const ['MI']), ''), isTrue);
+      expect(
+        matchProvinciaBando(bando(province: const ['MI']), 'ZZ'),
+        isTrue,
+      );
+    });
+
+    test('bando con province: confronta sigla e nome', () {
+      final b = bando(province: const ['MI']);
+      expect(matchProvinciaBando(b, 'MI'), isTrue);
+      expect(matchProvinciaBando(b, 'Milano'), isTrue);
+      expect(matchProvinciaBando(b, 'TO'), isFalse);
+    });
+
+    test('bando senza province usa la regione della provincia', () {
+      final lombardo = bando(regioni: const ['Lombardia']);
+      expect(matchProvinciaBando(lombardo, 'MI'), isTrue);
+      expect(matchProvinciaBando(lombardo, 'TO'), isFalse);
+    });
+
+    test('tollera le varianti dei nomi di regione', () {
+      final trentino = bando(regioni: const ['Trentino-Alto Adige']);
+      expect(matchProvinciaBando(trentino, 'TN'), isTrue);
+      final valdostano = bando(regioni: const ['Valle d\'Aosta']);
+      expect(matchProvinciaBando(valdostano, 'AO'), isTrue);
+    });
+
+    test('bando aperto a tutte le regioni resta visibile', () {
+      final nazionale = bando(regioni: const [], tutteRegioni: true);
+      expect(matchProvinciaBando(nazionale, 'MI'), isTrue);
     });
   });
 
@@ -176,6 +221,34 @@ void main() {
       ]);
       expect(filtraBandi(elenco, regione: 'lombardia').map((b) => b.id), [
         'digitale',
+        'nazionale',
+      ]);
+    });
+
+    test('filtra per provincia e tiene i bandi della regione e nazionali', () {
+      final elencoProvince = [
+        bando(id: 'milano', province: const ['MI']),
+        bando(
+          id: 'torino',
+          regioni: const ['piemonte'],
+          province: const ['TO'],
+        ),
+        bando(id: 'lombardia', regioni: const ['lombardia']),
+        bando(
+          id: 'nazionale',
+          regioni: const [],
+          tutteRegioni: true,
+        ),
+        bando(id: 'veneto', regioni: const ['veneto']),
+      ];
+
+      expect(filtraBandi(elencoProvince, provincia: 'MI').map((b) => b.id), [
+        'milano',
+        'lombardia',
+        'nazionale',
+      ]);
+      expect(filtraBandi(elencoProvince, provincia: 'TO').map((b) => b.id), [
+        'torino',
         'nazionale',
       ]);
     });

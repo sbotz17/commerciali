@@ -66,6 +66,7 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Import bandi | `flutter_app/lib/features/bandi/import_bandi_screen.dart`, `flutter_app/lib/data/bandi_import.dart` | Import JSON da file o URL, normalizzazione e statistiche |
 | Import service | `flutter_app/lib/data/services/sp_service.dart` | `importaBandi`, `rinominaAzienda`, `inserisciRuolo`/`aggiornaRuolo`/`eliminaRuolo`, `getUtentePerEmail` |
 | Bandi ATECO | `flutter_app/lib/features/bandi/bandi_screen.dart` | Filtro ATECO per prefisso, menu principale |
+| Province italiane | `flutter_app/lib/data/province_italia.dart` | 107 province con sigla e regione per il filtro territoriale dei bandi |
 | Report amministrazione/bandi | `docs/progetto/test/2026-10-22-amministrazione-bandi.md` | E2E ruoli, utenti, azienda, import e ATECO |
 
 ## Collezioni Firestore

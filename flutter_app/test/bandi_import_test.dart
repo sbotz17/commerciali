@@ -162,6 +162,34 @@ void main() {
       expect(out['tutte_regioni'], isTrue);
     });
 
+    test('province lette da Province (lista)', () {
+      final out = normalizzaBandoIncentivi(
+        {'ID_Incentivo': '1', 'Province': ['MI', 'MB']},
+        adesso: adesso,
+      );
+      expect(out['province'], ['MI', 'MB']);
+    });
+
+    test('province da Provincia singola e da Comuni', () {
+      final singola = normalizzaBandoIncentivi(
+        {'ID_Incentivo': '1', 'Provincia': 'MI'},
+        adesso: adesso,
+      );
+      expect(singola['province'], ['MI']);
+
+      final lista = normalizzaBandoIncentivi(
+        {'ID_Incentivo': '2', 'Provincia': ['MI', 'MB']},
+        adesso: adesso,
+      );
+      expect(lista['province'], ['MI', 'MB']);
+
+      final comuni = normalizzaBandoIncentivi(
+        {'ID_Incentivo': '3', 'Comuni': ['Milano', 'Monza']},
+        adesso: adesso,
+      );
+      expect(comuni['province'], ['Milano', 'Monza']);
+    });
+
     test('id stabile quando manca ID_Incentivo', () {
       final a = normalizzaBandoIncentivi(
         {'Titolo': 'Bando A', 'Link_istituzionale': 'https://a.it'},
