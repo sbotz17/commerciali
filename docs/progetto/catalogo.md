@@ -51,6 +51,14 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Test schermate amministrazione | `flutter_app/test/utenti_screen_test.dart`, `ruoli_screen_test.dart`, `licenze_screen_test.dart`, `superadmin_screen_test.dart`, `bandi_screen_test.dart` | Test di funzioni pure, stati vuoti e layout |
 | E2E permessi | `scripts/e2e-staging.py` | Crea utente/azienda temporanei, verifica CRUD cliente con le Security Rules reali e pulisce |
 | E2E UI dati | `scripts/e2e-ui-dati.py` | Prepara e pulisce utente/azienda/ruoli/licenza per la prova manuale su staging |
+| Panieri — modello | `flutter_app/lib/data/models/prodotto.dart` | Campi `figliIds` (`figli_ids`) e `figliAZero` (`figli_a_zero`) |
+| Panieri — riga preventivo | `flutter_app/lib/data/models/preventivo.dart` | `paniereId`/`paniereNome` nella riga e `copyWith` |
+| Panieri — inserimento | `flutter_app/lib/data/panieri.dart` | `figliDelPaniere`, `figliMancanti`, `inserisciPaniere` (funzioni pure) |
+| Panieri — catalogo | `flutter_app/lib/features/catalogo/catalogo_screen.dart` | Sezione Paniere nel form, badge e colonna “Paniere” |
+| Panieri — preventivo | `flutter_app/lib/features/preventivi/preventivo_edit_screen.dart` | Ricerca prodotto dal catalogo, inserimento padre+figli, etichetta/rientro |
+| Panieri — PDF | `flutter_app/lib/data/services/preventivo_pdf.dart` | Etichetta “Paniere: …” sotto la descrizione |
+| Test panieri | `flutter_app/test/prodotto_panieri_test.dart`, `prodotti_panieri_service_test.dart`, `preventivo_panieri_test.dart`, `panieri_test.dart`, `catalogo_panieri_test.dart`, `catalogo_panieri_badge_test.dart`, `preventivo_panieri_ui_test.dart` | Serializzazione, sanitizzazione, inserimento, UI catalogo/preventivo |
+| Report panieri | `docs/progetto/test/2026-10-22-panieri.md` | E2E con prezzo pieno, figli a zero, reinserimento e verifica Firestore |
 
 ## Collezioni Firestore
 

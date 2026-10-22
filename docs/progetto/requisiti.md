@@ -95,3 +95,71 @@ passaggio alla nuova app non richiede formazione né reinserimento dati.
 6. Dopo il passaggio, la vecchia app resta accessibile in parallelo o va dismessa subito?
 7. I promemoria delle visite restano semplici campi o servono notifiche (non presenti oggi)?
 
+## 2026-10-22 — Panieri di prodotti (Closer Flutter)
+
+_Documento dedicato previsto in `docs/progetto/panieri-prodotti.md`: non creato perché il ruolo analista può
+scrivere solo questo file. Contenuto completo qui sotto._
+
+**Obiettivo**: vendere un gruppo di prodotti come un unico "paniere", inserendo nel preventivo il solo prodotto
+padre e facendo comparire i figli come righe già pronte.
+**Utenti**: admin/titolare che configura i panieri; commerciale che li usa nei preventivi; chi genera il PDF.
+
+**User story**
+- Catalogo: come admin voglio indicare su un padre quali prodotti sono suoi figli e se entrano a prezzo zero.
+- Preventivo: come commerciale voglio scegliere dal catalogo un prodotto e ritrovare i figli già inseriti con la
+  stessa quantità.
+- PDF: come commerciale voglio che le righe figlie siano riconoscibili come parte del paniere.
+
+**Criteri di accettazione**
+1. Il padre salva l'elenco figli in `figli_ids` (id di prodotti della stessa azienda); nessun campo nuovo sui
+   figli, nessun documento duplicato.
+2. `figli_ids` assente o vuoto = prodotto normale, comportamento identico a oggi.
+3. `figli_a_zero` (booleano sul padre): attivo = figli a prezzo 0; spento = prezzo di anagrafica. Il padre usa
+   sempre il proprio prezzo di anagrafica e non lo ricalcola.
+4. Nell'editor preventivi Flutter si può cercare e scegliere un prodotto dal catalogo dell'azienda attiva.
+5. Inserendo un padre con figli, ogni figlio diventa una riga singola con la stessa quantità del padre.
+6. Le righe figlie mostrano il riferimento al padre (etichetta "Paniere: <padre>" o indentazione).
+7. Dopo l'inserimento le quantità sono indipendenti: modificarne una non tocca le altre.
+8. Padre già presente: si incrementano la sua quantità e quella dei figli già presenti; nessun duplicato.
+9. Figlio già presente come riga singola: viene incrementato e marcato, senza duplicati.
+10. Il totale è la somma delle righe, comprese quelle a prezzo 0.
+11. Nel PDF le righe figlie sono riconoscibili; prezzi e totali coincidono con l'app.
+12. Solo figli con lo stesso `azienda_id` del padre.
+13. Nessuna modifica a `firestore.rules`: si usano le regole attuali.
+
+**Casi limite**
+- Figlio eliminato dal catalogo: riga non creata, avviso non bloccante, paniere valido con i figli esistenti.
+- Padre senza figli: prodotto normale.
+- Flag `figli_a_zero`: vale all'inserimento, non ricalcola righe già inserite.
+- Più padri per lo stesso figlio: riga unica incrementata; etichetta del primo paniere (da confermare).
+- Padre con se stesso in `figli_ids`: l'id viene ignorato.
+- Quantità del padre modificata dopo l'inserimento: i figli non vengono ricalcolati.
+- Quantità del padre portata a 0: i figli restano invariati (da confermare).
+
+**Fuori ambito**
+- Prezzo del paniere come somma dei figli, sconti o prezzi derivati.
+- Panieri annidati (figlio che è a sua volta padre) in questa prima versione.
+- Modifica in blocco dei figli, riordino o esclusione di singoli figli già inseriti.
+- Eliminazione a cascata: cancellare padre o figlio non tocca i preventivi esistenti.
+- Nuove collezioni, indici, migrazioni, Security Rules; restyling PDF; vecchia app Alpine.
+
+**Impatto dati esistenti**: i prodotti attuali non hanno i nuovi campi e vengono letti come prodotti normali;
+nessuna migrazione e nessuna scrittura di default; i campi si scrivono solo alla modifica del prodotto.
+
+**Domande aperte per Andrea**
+1. Un figlio può essere padre a sua volta (panieri annidati)?
+2. Nel PDF i figli a prezzo 0 vanno mostrati "0,00 €" o "incluso"?
+3. Etichetta "Paniere: <padre>" o indentazione (o entrambe)?
+4. Se un figlio appartiene a due padri, quale nome si mostra nella riga?
+5. Padre già presente con quantità 5 e reinserito: i figli vanno +1 o +5?
+6. Limite al numero di figli? I figli devono essere attivi per essere scelti?
+
+
+### Decisioni finali panieri (22/10/2026)
+
+1. Niente panieri annidati in questa versione.
+2. Figli a zero mostrati come `0,00 €` con etichetta del paniere.
+3. Etichetta “Paniere: <padre>” più rientro visivo.
+4. Se un figlio è in più panieri, ogni padre inserito crea la propria riga con il proprio nome.
+5. Reinserendo un padre con quantità 5, padre e figli già presenti incrementano di 1.
+6. Nessun limite al numero di figli; nella scelta si vedono solo prodotti attivi.

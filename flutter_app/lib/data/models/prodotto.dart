@@ -12,10 +12,13 @@ class Prodotto {
     this.descrizione,
     this.immagine,
     this.attivo = true,
+    this.figliIds = const [],
+    this.figliAZero = false,
   });
 
   /// Crea un prodotto dal documento Firestore. [id] è l'id del documento.
   factory Prodotto.fromMap(Map<String, dynamic> map, {required String id}) {
+    final rawFigli = map['figli_ids'];
     return Prodotto(
       id: id,
       aziendaId: map['azienda_id'] as String?,
@@ -25,6 +28,10 @@ class Prodotto {
       descrizione: map['descrizione'] as String?,
       immagine: map['immagine'] as String?,
       attivo: (map['attivo'] as bool?) ?? true,
+      figliIds: rawFigli is List
+          ? rawFigli.whereType<String>().where((s) => s.trim().isNotEmpty).toList()
+          : const [],
+      figliAZero: map['figli_a_zero'] == true,
     );
   }
 
@@ -50,6 +57,12 @@ class Prodotto {
   /// `false` nasconde il prodotto dal catalogo.
   final bool attivo;
 
+  /// Id dei prodotti "figli" collegati (campo Firestore `figli_ids`).
+  final List<String> figliIds;
+
+  /// Se `true`, i figli hanno prezzo a zero (campo Firestore `figli_a_zero`).
+  final bool figliAZero;
+
   /// Serializza verso i campi Firestore (snake_case), escluso [id] che è la
   /// chiave documento.
   Map<String, dynamic> toMap() => {
@@ -60,5 +73,7 @@ class Prodotto {
         'descrizione': descrizione,
         'immagine': immagine,
         'attivo': attivo,
+        'figli_ids': figliIds,
+        'figli_a_zero': figliAZero,
       };
 }

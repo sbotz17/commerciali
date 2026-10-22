@@ -40,6 +40,42 @@ Preventivo preventivoEsempio() {
 }
 
 void main() {
+  group('etichettaPanierePdf', () {
+    test('null quando la riga non ha paniere', () {
+      expect(etichettaPanierePdf(const PreventivoRiga(nome: 'Servizio')), isNull);
+      expect(
+        etichettaPanierePdf(
+          const PreventivoRiga(nome: 'Servizio', paniereNome: null),
+        ),
+        isNull,
+      );
+    });
+
+    test('stringa con il nome del paniere', () {
+      expect(
+        etichettaPanierePdf(
+          const PreventivoRiga(nome: 'Servizio', paniereNome: 'Manutenzione'),
+        ),
+        'Paniere: Manutenzione',
+      );
+    });
+
+    test('nome fatto di soli spazi vale come assente', () {
+      expect(
+        etichettaPanierePdf(
+          const PreventivoRiga(nome: 'Servizio', paniereNome: '   '),
+        ),
+        isNull,
+      );
+      expect(
+        etichettaPanierePdf(
+          const PreventivoRiga(nome: 'Servizio', paniereNome: '  Rete  '),
+        ),
+        'Paniere: Rete',
+      );
+    });
+  });
+
   group('generaPdfPreventivo', () {
     test('genera un PDF non vuoto che inizia con %PDF', () async {
       final byte = await generaPdfPreventivo(preventivo: preventivoEsempio());
@@ -60,6 +96,29 @@ void main() {
       );
 
       expect(byte, isNotEmpty);
+      expect(String.fromCharCodes(byte.take(4)), '%PDF');
+    });
+
+    test('genera il PDF con una riga che ha il paniere', () async {
+      final byte = await generaPdfPreventivo(
+        preventivo: const Preventivo(
+          id: 'prev-paniere',
+          numero: 'PRV-0002',
+          righe: [
+            PreventivoRiga(
+              nome: 'Assistenza',
+              codice: 'AS-001',
+              paniereNome: 'Manutenzione',
+              prezzo: 100,
+              qty: 1,
+              ivaPerc: 22,
+            ),
+          ],
+        ),
+      );
+
+      expect(byte, isNotEmpty);
+      expect(byte.length, greaterThan(1000));
       expect(String.fromCharCodes(byte.take(4)), '%PDF');
     });
   });

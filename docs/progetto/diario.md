@@ -315,3 +315,19 @@
 - `flutter analyze` 0; `flutter test` 383 verdi.
 
 2026-10-22 — F24–F28 validati (`APPROVATO`). Analyze 0, 383 test verdi, E2E staging PASS, indice memoria OK; rotte `/bandi`, `/impostazioni/utenti`, `/impostazioni/ruoli`, `/impostazioni/licenze`, `/superadmin` reali (nessun segnaposto); residui F16c/F18b dichiarati fuori perimetro.
+
+## 2026-10-22 — Panieri di prodotti
+
+- Il prodotto padre ora ha `figli_ids` e `figli_a_zero`; i figli restano prodotti normali e
+  possono appartenere a più padri.
+- Nel catalogo il form prodotto ha la sezione “Paniere (sotto-prodotti)” con selezione multipla,
+  ricerca e flag “Vendi i sotto-prodotti a prezzo zero”; lista e tabella mostrano il conteggio figli.
+- Nell'editor preventivi c'è “Dal catalogo”: scelto un prodotto, se è un padre inserisce padre e figli
+  come righe singole, con etichetta “Paniere: <padre>”, quantità del padre e prezzi pieni o zero.
+- Il padre non ricalcola il prezzo; figli già presenti vengono adottati o incrementati senza duplicati;
+  un figlio sotto un altro paniere crea una riga separata.
+- PDF: le righe figlie riportano l'etichetta del paniere.
+- Verifiche: `flutter analyze` 0, **420 test verdi**, E2E staging con PRV-0001 (180,00 €) e PRV-0002
+  (200,00 € con figli a zero e quantità 2). Report: `docs/progetto/test/2026-10-22-panieri.md`.
+- Nessuna modifica a `firestore.rules`, collezioni o indici.
+- Validazione panieri: **APPROVATO** (22/10/2026); P01-P10 coerenti, regole invariate, nessun segnaposto.
