@@ -7,6 +7,7 @@ import '../features/auth/onboarding_screen.dart';
 import '../features/auth/reset_password_screen.dart';
 import '../features/catalogo/catalogo_screen.dart';
 import '../features/clienti/clienti_screen.dart';
+import '../features/preventivi/preventivo_edit_screen.dart';
 import '../features/preventivi/preventivi_screen.dart';
 import '../features/shell/app_shell.dart';
 
@@ -53,8 +54,13 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
           ),
           GoRoute(
             path: '/preventivi/nuovo',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.note_add_outlined),
+            builder: (context, state) => const PreventivoEditScreen(),
+          ),
+          // L'editor apre per ora un preventivo vuoto: il caricamento per id
+          // (con numero e revisione) arriva in F12b-2.
+          GoRoute(
+            path: '/preventivi/:id',
+            builder: (context, state) => const PreventivoEditScreen(),
           ),
           GoRoute(
             path: '/visite',

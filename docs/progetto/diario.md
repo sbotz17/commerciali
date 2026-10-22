@@ -195,3 +195,9 @@
 - `PreventiviScreen`: lista responsive, ricerca, badge stato, stati vuoto/caricamento/errore.
 - Funzioni pure per stato e filtro; 18 test dedicati.
 - `flutter analyze` 0, `flutter test` 189 verdi.
+
+## 2026-10-22 — F12b-1: editor preventivi
+
+- `PreventivoEditScreen`: cliente, stato, note, sconto, righe modificabili, totali e layout responsive.
+- Rotte `/preventivi/nuovo` e `/preventivi/:id` (caricamento in F12b-2).
+- Test delle funzioni pure (numeri, sconto, righe, totali); 197 test verdi.

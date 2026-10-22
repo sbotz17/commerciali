@@ -26,7 +26,8 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F11a | Catalogo | Modelli `Prodotto`/`Categoria` + CRUD `SpService` | CRUD; isolamento azienda; test | sviluppatore-backend | FATTO |
 | F11b | Catalogo | Schermata catalogo e categorie | lista, filtro, form, immagini URL | sviluppatore-frontend | FATTO |
 | F12a | Preventivi | Lista, ricerca, stati | lista responsive; filtri; badge; analyze 0 | sviluppatore-frontend | FATTO |
-| F12b | Preventivi | Editor: cliente, righe, totali, salvataggio | crea/modifica/revisione; totali corretti; analyze 0 | sviluppatore-frontend | IN CORSO |
+| F12b-1 | Preventivi | Editor: cliente, righe, totali | UI completa; totali corretti; analyze 0 | sviluppatore-frontend | FATTO |
+| F12b-2 | Preventivi | Salvataggio, modifica e revisione | crea/modifica/revisione; numero transazionale | sviluppatore-frontend | IN CORSO |
 | F13 | Preventivi | Contatore transazionale e revisioni | serie continua; nessun numero duplicato; `-R1` senza consumare | sviluppatore-backend | FATTO |
 | F14 | Preventivi | PDF con `pdf`/`printing` | stesso contenuto e totali; stampa/condivisione | sviluppatore-frontend | DA FARE |
 | F15 | Visite | Lista, form, riordino, filtri | ordinamento `ordine`/`ora`; stati persistenti | sviluppatore-frontend | DA FARE |
