@@ -30,7 +30,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F12b-2a | Preventivi | Salvataggio nuovo preventivo e modifica (`payloadPreventivoDaEditor`, pulsante Salva, `SpService`) | crea/aggiorna il documento; `sconto` incluso nella patch; errori in italiano; analyze 0 e test verdi | sviluppatore-frontend | FATTO |
 | F12b-2 | Preventivi | Salvataggio, modifica e revisione | crea/modifica/revisione; numero transazionale | sviluppatore-frontend | FATTO |
 | F13 | Preventivi | Contatore transazionale e revisioni | serie continua; nessun numero duplicato; `-R1` senza consumare | sviluppatore-backend | FATTO |
-| F14 | Preventivi | PDF con `pdf`/`printing` | stesso contenuto e totali; stampa/condivisione | sviluppatore-frontend | DA FARE |
+| F14 | Preventivi | PDF con `pdf`/`printing` | stesso contenuto e totali; stampa/condivisione | sviluppatore-frontend | FATTO |
 | F15 | Visite | Lista, form, riordino, filtri | ordinamento `ordine`/`ora`; stati persistenti | sviluppatore-frontend | DA FARE |
 | F16 | Bandi | Lista pubblica, filtri, dettaglio, import | pagina senza login; import scrive log | sviluppatore-frontend | DA FARE |
 | F17 | Impostazioni | Utenti, ruoli, permessi, licenze | CRUD utenti; limiti piano; super admin | sviluppatore-backend | DA FARE |

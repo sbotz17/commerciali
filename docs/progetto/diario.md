@@ -220,3 +220,8 @@
 - `SpService.getPreventivo(id)`; editor carica il documento da `/preventivi/:id`.
 - Pulsante "Crea revisione" per preventivi inviati/accettati/rifiutati; nuova revisione senza consumare il contatore.
 - Gestione stati caricamento/non trovato/errore; `flutter analyze` 0, 206 test verdi.
+
+## 2026-10-22 — F14: PDF preventivo
+
+- `generaPdfPreventivo` con pdf: intestazione, righe, totali, note; pulsante PDF e condivisione.
+- Test PDF (%PDF, byte non vuoti) e formati; `flutter analyze` 0, 212 test verdi.

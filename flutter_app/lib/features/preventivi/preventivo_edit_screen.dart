@@ -16,12 +16,14 @@ import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/avviso_errore.dart';
 import '../../core/ui/stato_centrato.dart';
 import '../../data/models/cliente.dart';
 import '../../data/models/preventivo.dart';
+import '../../data/services/preventivo_pdf.dart';
 import '../../state/azienda_providers.dart';
 import '../catalogo/catalogo_screen.dart' show formattaPrezzo, prezzoDaTesto;
 import 'preventivi_screen.dart'
@@ -370,6 +372,9 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
   /// Errore dell'ultima creazione di revisione.
   Object? _erroreRevisione;
 
+  /// Generazione e condivisione del PDF in corso.
+  bool _generazionePdf = false;
+
   @override
   void initState() {
     super.initState();
@@ -577,6 +582,51 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     }
   }
 
+  /// Nome dell'azienda attiva per l'intestazione del PDF.
+  ///
+  /// Usa l'elenco aziende già caricato; con elenco non disponibile ricade sul
+  /// default del servizio.
+  String _nomeAziendaPerPdf() {
+    final idAttivo = ref.read(aziendaAttivaProvider);
+    final aziende = ref.read(aziendeUtenteProvider).asData?.value ?? const [];
+    for (final azienda in aziende) {
+      if (azienda.id != idAttivo) continue;
+      final nome = azienda.nome.trim();
+      if (nome.isNotEmpty) return nome;
+      break;
+    }
+    return 'Commerciali';
+  }
+
+  /// Genera il PDF del preventivo e apre la condivisione di sistema.
+  ///
+  /// Disponibile solo per un preventivo già salvato (`_preventivo != null`);
+  /// eventuali errori di generazione o condivisione diventano una SnackBar in
+  /// italiano senza interrompere l'editor.
+  Future<void> _esportaPdf() async {
+    final preventivo = _preventivo;
+    if (preventivo == null || _generazionePdf) return;
+
+    setState(() => _generazionePdf = true);
+    try {
+      final byte = await generaPdfPreventivo(
+        preventivo: preventivo,
+        nomeAzienda: _nomeAziendaPerPdf(),
+      );
+      await Printing.sharePdf(
+        bytes: byte,
+        filename: '${nomeFilePdfPreventivo(preventivo)}.pdf',
+      );
+    } catch (errore) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(messaggioErrorePdfPreventivo(errore))),
+      );
+    } finally {
+      if (mounted) setState(() => _generazionePdf = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<String?>(aziendaAttivaProvider, (precedente, attuale) {
@@ -689,6 +739,21 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
               testo: messaggioErroreSalvataggioPreventivo(_erroreRevisione!),
             ),
           ],
+          const SizedBox(height: AppSpazi.s),
+        ],
+        if (_preventivo != null) ...[
+          OutlinedButton.icon(
+            key: const Key('preventivo-pdf'),
+            onPressed: _generazionePdf ? null : _esportaPdf,
+            icon: _generazionePdf
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.picture_as_pdf_outlined),
+            label: Text(_generazionePdf ? 'Preparazione PDF…' : 'PDF'),
+          ),
           const SizedBox(height: AppSpazi.s),
         ],
         FilledButton.icon(
