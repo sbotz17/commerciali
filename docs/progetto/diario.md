@@ -362,3 +362,11 @@
 - La scelta salva `prodottoId` e azzera il paniere per i prodotti normali.
 - Verifiche: `flutter analyze` 0, **511 test verdi**, prova reale su staging con prodotto da 123,00 € e totale riga 123,00 €.
 - Report: `docs/progetto/test/2026-10-23-riga-catalogo.md`.
+
+## 2026-10-23 — Codice prodotto e nuovo cliente dal giro visite
+
+- Aggiunto il **codice prodotto** all'anagrafica (`codice`), al form catalogo, alla tabella e al selettore del preventivo.
+- Il codice viene riportato automaticamente nella riga del preventivo quando si sceglie il prodotto.
+- Nel form **Nuova visita** c'è il pulsante **Nuovo cliente**: apre l'anagrafica, salva il cliente e torna alla visita con il cliente già selezionato.
+- Verifiche: `flutter analyze` 0, **517 test verdi**, prova reale su staging con codice `PRD-777` visibile in catalogo e cliente creato da Visite e selezionato.
+- Report: `docs/progetto/test/2026-10-23-visite-codice-prodotto.md`.

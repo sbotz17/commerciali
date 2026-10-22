@@ -7,6 +7,7 @@ class Prodotto {
     required this.id,
     this.aziendaId,
     this.nome,
+    this.codice,
     this.categoria,
     this.prezzo,
     this.descrizione,
@@ -23,6 +24,7 @@ class Prodotto {
       id: id,
       aziendaId: map['azienda_id'] as String?,
       nome: map['nome'] as String?,
+      codice: map['codice'] as String?,
       categoria: map['categoria'] as String?,
       prezzo: map['prezzo'] as num?,
       descrizione: map['descrizione'] as String?,
@@ -42,6 +44,9 @@ class Prodotto {
   final String? aziendaId;
 
   final String? nome;
+
+  /// Codice prodotto (campo Firestore `codice`).
+  final String? codice;
 
   /// Categoria di appartenenza (riferimento per nome/id).
   final String? categoria;
@@ -68,6 +73,7 @@ class Prodotto {
   Map<String, dynamic> toMap() => {
         'azienda_id': aziendaId,
         'nome': nome,
+        'codice': codice,
         'categoria': categoria,
         'prezzo': prezzo,
         'descrizione': descrizione,

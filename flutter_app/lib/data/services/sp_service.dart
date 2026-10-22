@@ -1112,6 +1112,7 @@ class SpService {
   Map<String, dynamic> _prodottoPayload(Map<String, dynamic> dati, {String? id}) {
     final payload = <String, dynamic>{
       'nome': _stringa(dati['nome']),
+      'codice': _stringa(dati['codice']),
       'categoria': _stringa(dati['categoria']),
       'descrizione': _stringa(dati['descrizione']),
       'attivo': dati['attivo'] ?? true,

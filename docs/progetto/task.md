@@ -89,6 +89,9 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | C01 | Bandi | ATECO con punto | campo mobile con tastiera decimale, formatter `[0-9.]`, match sulle cifre (`62.01`); test | sviluppatore-frontend | FATTO |
 | C02 | Bandi | Filtro provincia | tendina province, match su `province` o fallback regione; nota esplicativa; test | sviluppatore-frontend | FATTO |
 | D01 | Preventivi | Scelta catalogo sulla singola riga | icona "Scegli dal catalogo" su card e tabella; riempie descrizione/prezzo; paniere inserisce i figli; test | sviluppatore-frontend | FATTO |
+| E01 | Catalogo | Codice prodotto nei dati | `Prodotto.codice`, payload, codice riportato nella riga preventivo; test | sviluppatore-backend | FATTO |
+| E02 | Catalogo | Codice prodotto in UI | campo nel form, colonna tabella, sottotitolo e selettore preventivo; test | sviluppatore-frontend | FATTO |
+| F01 | Visite | Nuovo cliente dal giro visite | pulsante nel form visita, ritorno al form con cliente selezionato; test | sviluppatore-frontend | FATTO |
 
 ## Regole di gestione
 

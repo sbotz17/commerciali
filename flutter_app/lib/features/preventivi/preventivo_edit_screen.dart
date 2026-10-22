@@ -111,7 +111,7 @@ PreventivoRiga rigaPreventivoDaCampi({
 PreventivoRiga rigaConProdotto(PreventivoRiga riga, Prodotto prodotto) {
   return rigaPreventivoDaCampi(
     prodottoId: prodotto.id,
-    codice: null,
+    codice: prodotto.codice,
     um: 'pz',
     paniereId: null,
     paniereNome: null,
@@ -1862,13 +1862,17 @@ class _CatalogoProdottiSheetState extends State<_CatalogoProdottiSheet> {
                       itemBuilder: (context, indice) {
                         final prodotto = prodotti[indice];
                         final paniere = etichettaPaniere(prodotto);
+                        final codice = (prodotto.codice ?? '').trim();
+                        final prezzo = formattaPrezzo(prodotto.prezzo);
                         return ListTile(
                           key: Key('catalogo-prodotto-${prodotto.id}'),
                           title: Text(prodotto.nome!.trim()),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(formattaPrezzo(prodotto.prezzo)),
+                              Text(
+                                codice.isEmpty ? prezzo : '$codice · $prezzo',
+                              ),
                               if (paniere.isNotEmpty) Text(paniere),
                             ],
                           ),

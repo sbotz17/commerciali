@@ -46,5 +46,14 @@ void main() {
       expect(compilata.um, 'pz');
       expect(compilata.qty, 1);
     });
+
+    test('riporta il codice del prodotto dal catalogo', () {
+      final riga = rigaPreventivoDaCampi(quantita: '1', prezzo: '12');
+      const prodotto = Prodotto(id: 'p3', nome: 'Servizio', codice: 'PRD-001');
+
+      final compilata = rigaConProdotto(riga, prodotto);
+
+      expect(compilata.codice, 'PRD-001');
+    });
   });
 }

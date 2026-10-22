@@ -9,6 +9,7 @@ void main() {
         id: 'p-1',
         aziendaId: 'az-1',
         nome: 'Paniere',
+        codice: 'PRD-100',
         figliIds: const ['figlio-1', 'figlio-2'],
         figliAZero: true,
       );
@@ -17,11 +18,13 @@ void main() {
 
       expect(map['figli_ids'], ['figlio-1', 'figlio-2']);
       expect(map['figli_a_zero'], isTrue);
+      expect(map['codice'], 'PRD-100');
 
       final ricostruito = Prodotto.fromMap(map, id: 'p-1');
 
       expect(ricostruito.figliIds, ['figlio-1', 'figlio-2']);
       expect(ricostruito.figliAZero, isTrue);
+      expect(ricostruito.codice, 'PRD-100');
     });
 
     test('mappa vecchia senza campi → default', () {

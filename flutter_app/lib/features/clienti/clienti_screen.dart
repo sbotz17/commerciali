@@ -498,10 +498,14 @@ String _dettagli(Cliente cliente) {
 
 /// Form completo di un cliente, aperto a pagina intera (nuovo o modifica).
 class ClienteFormScreen extends ConsumerStatefulWidget {
-  const ClienteFormScreen({super.key, this.cliente});
+  const ClienteFormScreen({super.key, this.cliente, this.onSalvato});
 
   /// Cliente da modificare; `null` per crearne uno nuovo.
   final Cliente? cliente;
+
+  /// Callback invocata dopo il salvataggio riuscito, con l'id del cliente
+  /// (utile a chi apre il form per selezionare subito il nuovo cliente).
+  final ValueChanged<String?>? onSalvato;
 
   @override
   ConsumerState<ClienteFormScreen> createState() => _ClienteFormScreenState();
@@ -609,12 +613,16 @@ class _ClienteFormScreenState extends ConsumerState<ClienteFormScreen> {
     try {
       final servizio = ref.read(spServiceProvider);
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final String? id;
       if (_modifica) {
-        await servizio.aggiornaCliente(widget.cliente!.id, dati);
+        id = widget.cliente!.id;
+        await servizio.aggiornaCliente(id, dati);
       } else {
-        await servizio.inserisciCliente(dati);
+        final nuovo = await servizio.inserisciCliente(dati);
+        id = nuovo['id'] as String?;
       }
       if (!mounted) return;
+      widget.onSalvato?.call(id);
       Navigator.of(context).pop(true);
       return;
     } on DuplicatoClienteException {
