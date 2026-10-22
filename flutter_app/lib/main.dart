@@ -10,5 +10,17 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(const ProviderScope(child: CommercialiApp()));
+  runApp(
+    ProviderScope(
+      child: CommercialiApp(initialLocation: _rottaIniziale()),
+    ),
+  );
+}
+
+/// Legge la rotta dal browser: path (`/intro`) o hash (`#/intro`).
+String? _rottaIniziale() {
+  final base = Uri.base;
+  if (base.fragment.startsWith('/')) return base.fragment;
+  if (base.path.isNotEmpty && base.path != '/') return base.path;
+  return null;
 }

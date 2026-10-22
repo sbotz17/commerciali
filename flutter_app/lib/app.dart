@@ -20,7 +20,7 @@ class CommercialiApp extends StatefulWidget {
 
 class _CommercialiAppState extends State<CommercialiApp> {
   late final GoRouter _router = creaAppRouter(
-    initialLocation: widget.initialLocation ?? '/',
+    initialLocation: widget.initialLocation,
   );
 
   @override

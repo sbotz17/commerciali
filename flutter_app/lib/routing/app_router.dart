@@ -21,7 +21,7 @@ import '../features/visite/visite_screen.dart';
 /// arriveranno con i task successivi. Login, recupero password e onboarding
 /// restano fuori dalla shell, tutte le altre rotte usano la navigazione
 /// responsive.
-GoRouter creaAppRouter({String initialLocation = '/'}) {
+GoRouter creaAppRouter({String? initialLocation}) {
   return GoRouter(
     initialLocation: initialLocation,
     routes: [
