@@ -358,6 +358,19 @@ class SpService {
     return preventivi;
   }
 
+  /// Legge il preventivo `preventivi/{id}`.
+  ///
+  /// Ritorna `null` se l'id è vuoto o il documento non esiste; gli errori di
+  /// lettura (permessi, rete) vengono propagati al chiamante.
+  Future<Preventivo?> getPreventivo(String id) async {
+    final chiave = id.trim();
+    if (chiave.isEmpty) return null;
+    final snap = await _firestore.collection('preventivi').doc(chiave).get();
+    final dati = snap.data();
+    if (!snap.exists || dati == null) return null;
+    return Preventivo.fromMap(dati, id: snap.id);
+  }
+
   /// Numero di preventivi dell'azienda attiva (per i limiti di piano).
   Future<int> contaPreventivi() async {
     final aziendaId = _aziendaAttiva;
@@ -409,9 +422,10 @@ class SpService {
 
   /// Aggiorna un preventivo esistente.
   ///
-  /// Aggiorna i campi modificabili (cliente, righe, note, totali, stato) e
-  /// imposta `updated_at`. Non tocca `azienda_id`, `numero`, `revisione` e
-  /// `utente_id` (il preventivo resta del suo autore e della sua azienda).
+  /// Aggiorna i campi modificabili (cliente, righe, note, sconto generale,
+  /// totali, stato) e imposta `updated_at`. Non tocca `azienda_id`, `numero`,
+  /// `revisione` e `utente_id` (il preventivo resta del suo autore e della sua
+  /// azienda).
   Future<Map<String, dynamic>> aggiornaPreventivo(
     String id,
     Map<String, dynamic> dati,
@@ -420,6 +434,7 @@ class SpService {
       'cliente_id': _stringaNull(dati['clienteId']),
       'cliente_nome': _stringa(dati['clienteNome']),
       'righe': dati['righe'] ?? <dynamic>[],
+      'sconto': _numero(dati['sconto']) ?? 0,
       'note': _stringa(dati['note']),
       'subtotale': _numero(dati['subtotale']) ?? 0,
       'imp_sconto': _numero(dati['impSconto']) ?? 0,

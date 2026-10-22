@@ -201,3 +201,22 @@
 - `PreventivoEditScreen`: cliente, stato, note, sconto, righe modificabili, totali e layout responsive.
 - Rotte `/preventivi/nuovo` e `/preventivi/:id` (caricamento in F12b-2).
 - Test delle funzioni pure (numeri, sconto, righe, totali); 197 test verdi.
+
+## 2026-10-22 — F12b-2a: salvataggio preventivo
+
+- `PreventivoEditScreen`: pulsante `FilledButton.icon` "Salva preventivo" in fondo alla schermata
+  (`Key('salva-preventivo')`), disabilitato con spinner e testo "Salvataggio…" durante `_salvataggio`;
+  errore dell'ultimo tentativo mostrato con `AvvisoErrore` (`Key('preventivo-salvataggio-errore')`) usando
+  `messaggioErroreSalvataggioPreventivo`.
+- `SpService.aggiornaPreventivo`: aggiunto `sconto` alla patch (`_numero(dati['sconto']) ?? 0`), finora assente
+  e quindi non aggiornato in modifica.
+- `test/preventivo_edit_screen_test.dart`: aggiunti test di `payloadPreventivoDaEditor` (chiavi Firestore, dati
+  ripuliti, righe serializzate in camelCase, totali con e senza sconto) e di `datiServizioPreventivo`.
+- `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (204 test).
+- Aggiornati task board (F12b-2a `FATTO`) e catalogo; nessun commit/push.
+
+## 2026-10-22 — F12b-2b: caricamento preventivo e revisione
+
+- `SpService.getPreventivo(id)`; editor carica il documento da `/preventivi/:id`.
+- Pulsante "Crea revisione" per preventivi inviati/accettati/rifiutati; nuova revisione senza consumare il contatore.
+- Gestione stati caricamento/non trovato/errore; `flutter analyze` 0, 206 test verdi.

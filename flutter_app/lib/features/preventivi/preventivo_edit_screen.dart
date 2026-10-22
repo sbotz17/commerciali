@@ -1,9 +1,11 @@
-// Editor del preventivo (F12b-1).
+// Editor del preventivo (F12b-1) con salvataggio su Firestore (F12b-2a),
+// caricamento per id e revisioni (F12b-2b).
 //
 // Contiene i dati generali (cliente, stato), le note, lo sconto generale e le
-// righe modificabili, con il riepilogo dei totali. Il salvataggio, il
-// caricamento del preventivo da Firestore e le revisioni arrivano in F12b-2:
-// qui la schermata lavora solo in memoria.
+// righe modificabili, con il riepilogo dei totali. Il pulsante "Salva
+// preventivo" crea o aggiorna il documento tramite `SpService`; con
+// `preventivoId` il documento viene letto da Firestore all'avvio e, se è
+// revisionabile, si può creare una nuova revisione.
 //
 // I totali usano le funzioni pure del modello (`totaleRiga`, `calcolaTotali`)
 // per restare identici alla vecchia app.
@@ -12,10 +14,12 @@ import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/avviso_errore.dart';
+import '../../core/ui/stato_centrato.dart';
 import '../../data/models/cliente.dart';
 import '../../data/models/preventivo.dart';
 import '../../state/azienda_providers.dart';
@@ -112,6 +116,104 @@ PreventivoTotali totaliEditorPreventivo(
   );
 }
 
+/// Nome del cliente da salvare nel campo denormalizzato `cliente_nome`.
+///
+/// Usa il nome del cliente selezionato se è tra i [clienti] caricati; altrimenti
+/// ricade su [fallback] (es. il `clienteNome` del preventivo in modifica), così
+/// il dato esistente non viene perso quando l'elenco clienti non è disponibile.
+String nomeClientePreventivoDaSelezione(
+  List<Cliente> clienti,
+  String? clienteId, {
+  String? fallback,
+}) {
+  final id = (clienteId ?? '').trim();
+  if (id.isNotEmpty) {
+    for (final cliente in clienti) {
+      if (cliente.id != id) continue;
+      final nome = cliente.nome?.trim() ?? '';
+      if (nome.isNotEmpty) return nome;
+      break;
+    }
+  }
+  return (fallback ?? '').trim();
+}
+
+/// Payload del preventivo con i campi Firestore (snake_case, come la vecchia
+/// app): dati generali, righe e totali calcolati dalle righe stesse.
+///
+/// [sconto] è la percentuale dello sconto generale. I totali usano
+/// `calcolaTotali`, quindi coincidono con quelli mostrati nel riepilogo.
+Map<String, dynamic> payloadPreventivoDaEditor({
+  String? clienteId,
+  String? clienteNome,
+  String stato = 'bozza',
+  String? note,
+  num sconto = 0,
+  List<PreventivoRiga> righe = const [],
+}) {
+  final percentuale = sconto.toDouble();
+  final subtotale = righe.fold<double>(0, (somma, r) => somma + totaleRiga(r));
+  final totali = calcolaTotali(
+    righe,
+    scontoGlobaleEuro: scontoGlobaleEuroDaPercentuale(subtotale, percentuale),
+  );
+  final idCliente = (clienteId ?? '').trim();
+  final statoNormalizzato = stato.trim().toLowerCase();
+
+  return {
+    'cliente_id': idCliente.isEmpty ? null : idCliente,
+    'cliente_nome': (clienteNome ?? '').trim(),
+    'stato': statoNormalizzato.isEmpty ? 'bozza' : statoNormalizzato,
+    'note': (note ?? '').trim(),
+    'sconto': percentuale,
+    'righe': [for (final riga in righe) riga.toMap()],
+    'subtotale': totali.subtotale,
+    'imp_sconto': totali.impSconto,
+    'imponibile': totali.imponibile,
+    'iva': totali.iva,
+    'totale_iva': totali.totaleIva,
+  };
+}
+
+/// Adatta il payload snake_case alle chiavi attese da `SpService`
+/// (`inserisciPreventivo`/`aggiornaPreventivo` leggono camelCase, come la
+/// vecchia app) senza duplicare la costruzione dei dati.
+Map<String, dynamic> datiServizioPreventivo(Map<String, dynamic> payload) {
+  return {
+    'clienteId': payload['cliente_id'],
+    'clienteNome': payload['cliente_nome'],
+    'stato': payload['stato'],
+    'note': payload['note'],
+    'sconto': payload['sconto'],
+    'righe': payload['righe'],
+    'subtotale': payload['subtotale'],
+    'impSconto': payload['imp_sconto'],
+    'imponibile': payload['imponibile'],
+    'iva': payload['iva'],
+    'totaleIva': payload['totale_iva'],
+  };
+}
+
+/// Messaggio in italiano per gli errori di salvataggio del preventivo.
+String messaggioErroreSalvataggioPreventivo(Object errore) {
+  if (errore is FirebaseException) {
+    switch (errore.code) {
+      case 'permission-denied':
+        return 'Non hai i permessi per salvare il preventivo. '
+            'Contatta l\'amministratore.';
+      case 'unavailable':
+      case 'network-request-failed':
+        return 'Connessione assente: il preventivo non è stato salvato. '
+            'Controlla la rete e riprova.';
+      case 'unauthenticated':
+        return 'Sessione scaduta. Accedi di nuovo e riprova.';
+      default:
+        return 'Salvataggio non riuscito. Riprova.';
+    }
+  }
+  return 'Salvataggio non riuscito. Controlla la connessione e riprova.';
+}
+
 /// Nome del cliente per la tendina, con fallback per i documenti senza nome.
 String nomeVisualizzatoClientePreventivo(Cliente cliente) {
   final nome = cliente.nome?.trim() ?? '';
@@ -151,6 +253,41 @@ Map<String, String> opzioniStatoPreventivo(String corrente) {
   return opzioni;
 }
 
+/// Se da [stato] si può creare una revisione.
+///
+/// Replica `puoRevisionare` della vecchia app (`js/app.js`): solo i preventivi
+/// inviati, accettati o rifiutati si revisionano. Bozza e revisionato no.
+bool puoCreareRevisione(String stato) {
+  const revisionabili = {'inviato', 'accettato', 'rifiutato'};
+  return revisionabili.contains(stato.trim().toLowerCase());
+}
+
+/// Messaggio in italiano per un preventivo che non si riesce a caricare.
+///
+/// [errore] `null` significa documento inesistente (`getPreventivo` ha
+/// restituito `null`).
+String messaggioErroreCaricamentoPreventivo(Object? errore) {
+  if (errore == null) {
+    return 'Il preventivo non esiste o non è più disponibile.';
+  }
+  if (errore is FirebaseException) {
+    switch (errore.code) {
+      case 'permission-denied':
+        return 'Non hai i permessi per leggere il preventivo. '
+            'Contatta l\'amministratore.';
+      case 'unavailable':
+      case 'network-request-failed':
+        return 'Connessione assente: il preventivo non è disponibile. '
+            'Controlla la rete e riprova.';
+      case 'unauthenticated':
+        return 'Sessione scaduta. Accedi di nuovo e riprova.';
+      default:
+        return 'Preventivo non disponibile. Riprova.';
+    }
+  }
+  return 'Preventivo non disponibile. Controlla la connessione e riprova.';
+}
+
 /// Messaggio in italiano per gli errori di caricamento dei clienti nell'editor.
 String messaggioErroreClientiPreventivo(Object errore) {
   if (errore is FirebaseException) {
@@ -178,12 +315,19 @@ String messaggioErroreClientiPreventivo(Object errore) {
 /// Editor di un preventivo: dati generali, righe e riepilogo totali.
 ///
 /// Con [iniziale] valorizzato mostra numero e revisione del documento.
-/// Senza [iniziale] prepara un preventivo nuovo (nessuna riga iniziale).
+/// Con [preventivoId] (rotta `/preventivi/:id`) legge il documento da Firestore
+/// all'avvio, con stati di caricamento ed errore. Senza entrambi prepara un
+/// preventivo nuovo (nessuna riga iniziale).
 class PreventivoEditScreen extends ConsumerStatefulWidget {
-  const PreventivoEditScreen({super.key, this.iniziale});
+  const PreventivoEditScreen({super.key, this.iniziale, this.preventivoId});
 
   /// Preventivo da modificare; `null` per crearne uno nuovo.
   final Preventivo? iniziale;
+
+  /// Id del preventivo da caricare da Firestore (rotta `/preventivi/:id`).
+  ///
+  /// Ignorato se [iniziale] è valorizzato.
+  final String? preventivoId;
 
   @override
   ConsumerState<PreventivoEditScreen> createState() =>
@@ -203,18 +347,42 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
   String? _clienteId;
   String _stato = 'bozza';
 
+  /// Documento aperto in modifica (`null` per un preventivo nuovo).
+  Preventivo? _preventivo;
+
+  /// Caricamento del preventivo da `preventivoId` in corso.
+  bool _caricandoPreventivo = false;
+
+  /// Errore di caricamento; `null` con [_nonTrovato] significa documento
+  /// inesistente.
+  Object? _errorePreventivo;
+  bool _nonTrovato = false;
+
+  /// Salvataggio in corso: disabilita il pulsante e mostra il caricamento.
+  bool _salvataggio = false;
+
+  /// Errore dell'ultimo salvataggio, mostrato sotto il pulsante.
+  Object? _erroreSalvataggio;
+
+  /// Creazione di una revisione in corso.
+  bool _revisione = false;
+
+  /// Errore dell'ultima creazione di revisione.
+  Object? _erroreRevisione;
+
   @override
   void initState() {
     super.initState();
-    final preventivo = widget.iniziale;
-    _clienteId = preventivo?.clienteId;
-    _stato = (preventivo?.stato ?? 'bozza').trim().toLowerCase();
-    if (_stato.isEmpty) _stato = 'bozza';
-    _note.text = preventivo?.note ?? '';
-    _scontoGenerale.text =
-        preventivo == null ? '' : testoNumeroPreventivo(preventivo.sconto);
-    for (final riga in preventivo?.righe ?? const <PreventivoRiga>[]) {
-      _righe.add(_RigaPreventivo(riga: riga));
+    final iniziale = widget.iniziale;
+    if (iniziale != null) {
+      _popolaCampi(iniziale);
+    } else {
+      _stato = 'bozza';
+      final id = (widget.preventivoId ?? '').trim();
+      if (id.isNotEmpty) {
+        _caricandoPreventivo = true;
+        _caricaPreventivo();
+      }
     }
     _caricaClienti();
   }
@@ -227,6 +395,64 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       riga.dispose();
     }
     super.dispose();
+  }
+
+  /// Copia i campi del [preventivo] nei controller dell'editor.
+  ///
+  /// Chiamata all'avvio, quando l'elenco righe è ancora vuoto; chi la usa
+  /// dentro `setState` non deve chiamare `setState` a sua volta.
+  void _popolaCampi(Preventivo preventivo) {
+    _preventivo = preventivo;
+    _clienteId = preventivo.clienteId;
+    _stato = preventivo.stato.trim().toLowerCase();
+    if (_stato.isEmpty) _stato = 'bozza';
+    _note.text = preventivo.note ?? '';
+    _scontoGenerale.text = testoNumeroPreventivo(preventivo.sconto);
+    _righe.clear();
+    for (final riga in preventivo.righe) {
+      _righe.add(_RigaPreventivo(riga: riga));
+    }
+  }
+
+  /// Carica da Firestore il preventivo `widget.preventivoId`.
+  ///
+  /// Chi la chiama imposta prima `_caricandoPreventivo` (initState o
+  /// "Riprova"); un id inesistente o un errore (permessi, rete) diventano lo
+  /// stato di errore con "Riprova".
+  Future<void> _caricaPreventivo() async {
+    final id = (widget.preventivoId ?? '').trim();
+    if (id.isEmpty) return;
+
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final preventivo = await servizio.getPreventivo(id);
+      if (!mounted) return;
+      setState(() {
+        if (preventivo == null) {
+          _nonTrovato = true;
+        } else {
+          _popolaCampi(preventivo);
+        }
+        _caricandoPreventivo = false;
+      });
+    } catch (errore) {
+      if (!mounted) return;
+      setState(() {
+        _errorePreventivo = errore;
+        _caricandoPreventivo = false;
+      });
+    }
+  }
+
+  /// Ripete il caricamento del preventivo dopo un errore.
+  void _riprovaCaricamentoPreventivo() {
+    setState(() {
+      _caricandoPreventivo = true;
+      _errorePreventivo = null;
+      _nonTrovato = false;
+    });
+    _caricaPreventivo();
   }
 
   /// Carica i clienti dell'azienda attiva; l'editor resta usabile anche se la
@@ -264,11 +490,122 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => riga.dispose());
   }
 
+  /// Crea o aggiorna il preventivo e torna all'elenco.
+  ///
+  /// Imposta prima l'azienda attiva su `SpService` (come le altre schermate),
+  /// poi chiama `inserisciPreventivo` per i nuovi documenti o
+  /// `aggiornaPreventivo` per quelli esistenti. In caso di errore resta sulla
+  /// schermata e mostra il messaggio in italiano.
+  Future<void> _salva() async {
+    if (_salvataggio) return;
+
+    setState(() {
+      _salvataggio = true;
+      _erroreSalvataggio = null;
+    });
+
+    final iniziale = _preventivo;
+    final righe = [for (final riga in _righe) riga.toRiga()];
+    final payload = payloadPreventivoDaEditor(
+      clienteId: _clienteId,
+      clienteNome: nomeClientePreventivoDaSelezione(
+        _clienti,
+        _clienteId,
+        fallback: iniziale?.clienteNome,
+      ),
+      stato: _stato,
+      note: _note.text,
+      sconto: numeroPreventivoDaTesto(_scontoGenerale.text),
+      righe: righe,
+    );
+
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final dati = datiServizioPreventivo(payload);
+      final risultato = iniziale == null
+          ? await servizio.inserisciPreventivo(dati)
+          : await servizio.aggiornaPreventivo(iniziale.id, dati);
+      if (!mounted) return;
+
+      final numero = (risultato['numero'] as String?)?.trim() ??
+          (iniziale?.numero ?? '').trim();
+      final azione = iniziale == null ? 'creato' : 'salvato';
+      final testo = numero.isEmpty
+          ? 'Preventivo $azione.'
+          : 'Preventivo $numero $azione.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(testo)),
+      );
+      context.go('/preventivi');
+    } catch (errore) {
+      if (!mounted) return;
+      setState(() {
+        _salvataggio = false;
+        _erroreSalvataggio = errore;
+      });
+    }
+  }
+
+  Future<void> _creaRevisione() async {
+    final preventivo = _preventivo;
+    if (preventivo == null || _revisione) return;
+    setState(() {
+      _revisione = true;
+      _erroreRevisione = null;
+    });
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final nuovo = await servizio.creaRevisione(preventivo);
+      if (!mounted) return;
+      final numero = (nuovo['numero'] as String?)?.trim() ?? '';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            numero.isEmpty ? 'Revisione creata.' : 'Creata revisione $numero.',
+          ),
+        ),
+      );
+      context.go('/preventivi');
+    } catch (errore) {
+      if (!mounted) return;
+      setState(() {
+        _revisione = false;
+        _erroreRevisione = errore;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen<String?>(aziendaAttivaProvider, (precedente, attuale) {
       if (precedente != attuale) _caricaClienti();
     });
+
+    if (_caricandoPreventivo) {
+      return const Center(
+        child: CircularProgressIndicator(key: Key('preventivo-caricamento')),
+      );
+    }
+    if (_nonTrovato) {
+      return const StatoCentrato(
+        icona: Icons.search_off,
+        titolo: 'Preventivo non trovato',
+        sottotitolo: 'Il preventivo non esiste o non hai i permessi per vederlo.',
+      );
+    }
+    if (_errorePreventivo != null) {
+      return StatoCentrato(
+        icona: Icons.error_outline,
+        titolo: 'Preventivo non caricato',
+        sottotitolo: messaggioErroreCaricamentoPreventivo(_errorePreventivo),
+        azione: FilledButton(
+          onPressed: _riprovaCaricamentoPreventivo,
+          child: const Text('Riprova'),
+        ),
+      );
+    }
 
     final righe = _righe.map((riga) => riga.toRiga()).toList();
     final totali = totaliEditorPreventivo(
@@ -296,7 +633,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _IntestazioneEditor(preventivo: widget.iniziale),
+                  _IntestazioneEditor(preventivo: _preventivo),
                   const SizedBox(height: AppSpazi.m),
                   _sezioneCliente(),
                   const SizedBox(height: AppSpazi.m),
@@ -305,6 +642,8 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
                   _sezioneNoteSconto(),
                   const SizedBox(height: AppSpazi.m),
                   _RiepilogoTotali(totali: totali),
+                  const SizedBox(height: AppSpazi.m),
+                  _sezioneSalvataggio(),
                   const SizedBox(height: AppSpazi.l),
                 ],
               ),
@@ -317,11 +656,62 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
 
   // ---------- sezioni ----------
 
+  /// Errore dell'ultimo salvataggio (se presente) e pulsante "Salva
+  /// preventivo", disabilitato con spinner mentre il salvataggio è in corso.
+  Widget _sezioneSalvataggio() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_erroreSalvataggio != null) ...[
+          AvvisoErrore(
+            key: const Key('preventivo-salvataggio-errore'),
+            testo: messaggioErroreSalvataggioPreventivo(_erroreSalvataggio!),
+          ),
+          const SizedBox(height: AppSpazi.s),
+        ],
+        if (_preventivo != null && puoCreareRevisione(_preventivo!.stato)) ...[
+          OutlinedButton.icon(
+            key: const Key('crea-revisione'),
+            onPressed: _revisione ? null : _creaRevisione,
+            icon: _revisione
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.copy_all_outlined),
+            label: Text(_revisione ? 'Creazione…' : 'Crea revisione'),
+          ),
+          if (_erroreRevisione != null) ...[
+            const SizedBox(height: AppSpazi.s),
+            AvvisoErrore(
+              key: const Key('preventivo-revisione-errore'),
+              testo: messaggioErroreSalvataggioPreventivo(_erroreRevisione!),
+            ),
+          ],
+          const SizedBox(height: AppSpazi.s),
+        ],
+        FilledButton.icon(
+          key: const Key('salva-preventivo'),
+          onPressed: _salvataggio ? null : _salva,
+          icon: _salvataggio
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save_outlined),
+          label: Text(_salvataggio ? 'Salvataggio…' : 'Salva preventivo'),
+        ),
+      ],
+    );
+  }
+
   Widget _sezioneCliente() {
     final opzioni = opzioniClientiPreventivo(
       _clienti,
       idSelezionato: _clienteId,
-      nomeSelezionato: widget.iniziale?.clienteNome,
+      nomeSelezionato: _preventivo?.clienteNome,
     );
     final abilitata = !_caricandoClienti && opzioni.isNotEmpty;
     final tema = Theme.of(context);

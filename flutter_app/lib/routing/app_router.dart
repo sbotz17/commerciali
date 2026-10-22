@@ -60,7 +60,9 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
           // (con numero e revisione) arriva in F12b-2.
           GoRoute(
             path: '/preventivi/:id',
-            builder: (context, state) => const PreventivoEditScreen(),
+            builder: (context, state) => PreventivoEditScreen(
+              preventivoId: state.pathParameters['id'],
+            ),
           ),
           GoRoute(
             path: '/visite',
