@@ -128,3 +128,21 @@
 - Nessuna modifica a `lib/`; nessun `dart format` su file altrui.
 - `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (92 test).
 - Aggiornati task board (F07b `FATTO`), catalogo (`OnboardingScreen`, `AvvisoErrore`, test onboarding).
+
+## 2026-10-22 — Task F09a: modello Cliente e CRUD (backend)
+
+- `lib/data/models/cliente.dart` (nuovo): modello `Cliente` con `id`, `aziendaId`, `tipoCliente`, `nome`,
+  `referente`, `email`, `telefono`, `piva`, `codiceFiscale`, `indirizzo`, `civico`, `cap`, `citta`, `provincia`,
+  `ateco`, `settore`, `regione`, `note`; `fromMap`/`toMap` con campi Firestore in snake_case (coerente con
+  `Azienda`/`UserProfile`). Nello stesso file le funzioni pure `normalizzaPiva` (maiuscola, senza `IT`, trim)
+  e `clienteDuplicato` (cascata P.IVA → nome esatto → codice fiscale, come la vecchia app) e la classe
+  `DuplicatoClienteException implements Exception`.
+- `lib/data/services/sp_service.dart`: aggiunti `getClienti` (query `clienti` per `azienda_id` attiva + `orderBy nome`),
+  `cercaDuplicatoCliente` (piva/nome/codiceFiscale/escludiId), `inserisciCliente` (normalizza P.IVA, controlla
+  duplicato e lancia `DuplicatoClienteException`, aggiunge `azienda_id`/`created_at`), `aggiornaCliente`
+  (duplicato escludendo l'id, `updated_at`, non tocca `azienda_id`), `eliminaCliente`. Helper `_clientePayload`
+  (stessi campi e default della vecchia app) e `_stringa` (trim con fallback).
+- `test/cliente_test.dart` (nuovo): `fromMap` (campi + default), `toMap`, `normalizzaPiva`, `clienteDuplicato`
+  (P.IVA, nome, codice fiscale, nessun duplicato, P.IVA assente).
+- `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (104 test).
+- Nessuna UI (F09b), nessuna VIES (F09c), nessuna modifica a vecchia app/Firebase/regole, nessun commit/push.

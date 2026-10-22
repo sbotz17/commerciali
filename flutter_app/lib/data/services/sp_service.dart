@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/azienda.dart';
+import '../models/cliente.dart';
 import '../models/user_profile.dart';
 
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
@@ -235,5 +236,133 @@ class SpService {
     );
 
     await batch.commit();
+  }
+
+  // ---------- clienti ----------
+
+  /// Elenco dei clienti dell'azienda attiva, ordinati per [nome].
+  ///
+  /// Ritorna una lista vuota se non è impostata un'azienda attiva.
+  Future<List<Cliente>> getClienti() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('clienti')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .orderBy('nome')
+        .get();
+    return snap.docs
+        .map((d) => Cliente.fromMap(d.data(), id: d.id))
+        .toList();
+  }
+
+  /// Cerca un cliente duplicato nell'azienda attiva.
+  ///
+  /// Il confronto usa [clienteDuplicato] (P.IVA, poi nome, poi codice fiscale).
+  /// [escludiId] permette di ignorare il cliente in fase di aggiornamento.
+  /// Ritorna il duplicato trovato o `null`.
+  Future<Cliente?> cercaDuplicatoCliente({
+    String? piva,
+    String? nome,
+    String? codiceFiscale,
+    String? escludiId,
+  }) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return null;
+    final snap = await _firestore
+        .collection('clienti')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final altri = snap.docs
+        .map((d) => Cliente.fromMap(d.data(), id: d.id))
+        .where((c) => escludiId == null || c.id != escludiId)
+        .toList();
+    return clienteDuplicato(
+      Cliente(id: '', piva: piva, nome: nome, codiceFiscale: codiceFiscale),
+      altri,
+    );
+  }
+
+  /// Crea un cliente normalizzando i dati e rifiutando i duplicati.
+  ///
+  /// Aggiunge `azienda_id` e `created_at`. Lancia [DuplicatoClienteException]
+  /// se esiste già un cliente con la stessa P.IVA, nome o codice fiscale.
+  Future<Map<String, dynamic>> inserisciCliente(
+    Map<String, dynamic> dati,
+  ) async {
+    final payload = _clientePayload(dati);
+    final dup = await cercaDuplicatoCliente(
+      piva: payload['piva'] as String?,
+      nome: payload['nome'] as String?,
+      codiceFiscale: payload['codice_fiscale'] as String?,
+    );
+    if (dup != null) throw DuplicatoClienteException();
+    payload['created_at'] = _now();
+    final ref = await _firestore.collection('clienti').add(payload);
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Aggiorna un cliente esistente.
+  ///
+  /// Normalizza i dati, controlla i duplicati escludendo l'[id] e imposta
+  /// `updated_at`. Non modifica `azienda_id` (il cliente resta nella sua
+  /// azienda). Lancia [DuplicatoClienteException] se esiste un altro cliente
+  /// con la stessa P.IVA, nome o codice fiscale.
+  Future<Map<String, dynamic>> aggiornaCliente(
+    String id,
+    Map<String, dynamic> dati,
+  ) async {
+    final patch = _clientePayload(dati);
+    patch.remove('azienda_id');
+    final dup = await cercaDuplicatoCliente(
+      piva: patch['piva'] as String?,
+      nome: patch['nome'] as String?,
+      codiceFiscale: patch['codice_fiscale'] as String?,
+      escludiId: id,
+    );
+    if (dup != null) throw DuplicatoClienteException();
+    patch['updated_at'] = _now();
+    await _firestore.collection('clienti').doc(id).update(patch);
+    return {'id': id, ...patch};
+  }
+
+  /// Elimina il cliente con l'[id] indicato.
+  Future<void> eliminaCliente(String id) {
+    return _firestore.collection('clienti').doc(id).delete();
+  }
+
+  /// Costruisce il payload Firestore di un cliente, con gli stessi campi e
+  /// valori di default della vecchia app (`SP._clientePayload`).
+  ///
+  /// La P.IVA viene normalizzata con [normalizzaPiva]; i campi testuali
+  /// vengono ripuliti (trim) e valorizzati con `""` se assenti. `azienda_id`
+  /// è incluso solo se è impostata un'azienda attiva.
+  Map<String, dynamic> _clientePayload(Map<String, dynamic> dati) {
+    final payload = <String, dynamic>{
+      'tipo_cliente': _stringa(dati['tipo_cliente'], fallback: 'azienda'),
+      'nome': _stringa(dati['nome']),
+      'referente': _stringa(dati['referente']),
+      'email': _stringa(dati['email']),
+      'telefono': _stringa(dati['telefono']),
+      'piva': normalizzaPiva(dati['piva'] as String?) ?? '',
+      'codice_fiscale': _stringa(dati['codice_fiscale']),
+      'indirizzo': _stringa(dati['indirizzo']),
+      'civico': _stringa(dati['civico']),
+      'cap': _stringa(dati['cap']),
+      'citta': _stringa(dati['citta']),
+      'provincia': _stringa(dati['provincia']),
+      'ateco': _stringa(dati['ateco']),
+      'settore': _stringa(dati['settore'], fallback: 'ristorazione'),
+      'regione': _stringa(dati['regione'], fallback: 'lombardia'),
+      'note': _stringa(dati['note']),
+    };
+    if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
+    return payload;
+  }
+
+  /// Valore testuale ripulito (trim), con [fallback] se vuoto o assente.
+  String _stringa(dynamic valore, {String fallback = ''}) {
+    final s = (valore?.toString() ?? '').trim();
+    return s.isEmpty ? fallback : s;
   }
 }
