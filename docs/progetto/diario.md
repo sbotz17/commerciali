@@ -189,3 +189,9 @@
   compositi, `firestore.indexes.json` vuoto).
 - `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (171 test).
 - Aggiornati task board (F13 `FATTO`), catalogo (oggetti preventivo) e database; nessun commit/push.
+
+## 2026-10-22 — F12a: lista preventivi
+
+- `PreventiviScreen`: lista responsive, ricerca, badge stato, stati vuoto/caricamento/errore.
+- Funzioni pure per stato e filtro; 18 test dedicati.
+- `flutter analyze` 0, `flutter test` 189 verdi.

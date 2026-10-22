@@ -7,6 +7,7 @@ import '../features/auth/onboarding_screen.dart';
 import '../features/auth/reset_password_screen.dart';
 import '../features/catalogo/catalogo_screen.dart';
 import '../features/clienti/clienti_screen.dart';
+import '../features/preventivi/preventivi_screen.dart';
 import '../features/shell/app_shell.dart';
 
 /// Costruisce il router dell'app.
@@ -48,8 +49,7 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
           ),
           GoRoute(
             path: '/preventivi',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.description_outlined),
+            builder: (context, state) => const PreventiviScreen(),
           ),
           GoRoute(
             path: '/preventivi/nuovo',
