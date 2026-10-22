@@ -23,9 +23,12 @@ import '../../core/ui/avviso_errore.dart';
 import '../../core/ui/stato_centrato.dart';
 import '../../data/models/cliente.dart';
 import '../../data/models/preventivo.dart';
+import '../../data/models/prodotto.dart';
+import '../../data/panieri.dart';
 import '../../data/services/preventivo_pdf.dart';
 import '../../state/azienda_providers.dart';
-import '../catalogo/catalogo_screen.dart' show formattaPrezzo, prezzoDaTesto;
+import '../catalogo/catalogo_screen.dart'
+    show etichettaPaniere, formattaPrezzo, prezzoDaTesto;
 import 'preventivi_screen.dart'
     show etichettaStatoPreventivo, numeroVisualizzatoPreventivo;
 
@@ -73,6 +76,8 @@ PreventivoRiga rigaPreventivoDaCampi({
   String? prezzo,
   String? scontoPerc,
   String? ivaPerc,
+  String? paniereId,
+  String? paniereNome,
 }) {
   final prezzoUnitario = numeroPreventivoDaTesto(prezzo);
   final qty = numeroPreventivoDaTesto(quantita);
@@ -93,14 +98,24 @@ PreventivoRiga rigaPreventivoDaCampi({
     scontoPerc: sconto,
     scontoVal: scontoVal,
     ivaPerc: iva,
+    paniereId: paniereId,
+    paniereNome: paniereNome,
   );
 }
 
+/// Etichetta del paniere per una riga figlia dell'editor.
+///
+/// Ritorna `Paniere: <nome>` quando la riga ha un [PreventivoRiga.paniereNome],
+/// altrimenti `null` (riga normale). Gli spazi attorno al nome vengono
+/// ignorati: un nome fatto di soli spazi vale come assente.
+String? etichettaPaniereRiga(PreventivoRiga riga) {
+  final nome = (riga.paniereNome ?? '').trim();
+  if (nome.isEmpty) return null;
+  return 'Paniere: $nome';
+}
+
 /// Sconto globale in euro a partire dalla percentuale e dal subtotale righe.
-double scontoGlobaleEuroDaPercentuale(
-  double subtotale,
-  double percentuale,
-) {
+double scontoGlobaleEuroDaPercentuale(double subtotale, double percentuale) {
   return subtotale * percentuale.clamp(0.0, 100.0) / 100;
 }
 
@@ -346,6 +361,11 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
   bool _caricandoClienti = true;
   Object? _erroreClienti;
 
+  /// Prodotti dell'azienda attiva, usati per inserire righe dal catalogo.
+  List<Prodotto> _prodotti = const [];
+  bool _caricandoProdotti = true;
+  Object? _erroreProdotti;
+
   String? _clienteId;
   String _stato = 'bozza';
 
@@ -390,6 +410,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       }
     }
     _caricaClienti();
+    _caricaProdotti();
   }
 
   @override
@@ -485,6 +506,33 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     }
   }
 
+  /// Carica i prodotti dell'azienda attiva per l'inserimento dal catalogo.
+  ///
+  /// Come per i clienti, un errore (permessi o rete) non blocca l'editor: la
+  /// sezione righe mostra "Catalogo non disponibile" con "Riprova".
+  Future<void> _caricaProdotti() async {
+    setState(() {
+      _caricandoProdotti = true;
+      _erroreProdotti = null;
+    });
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final prodotti = await servizio.getProdotti();
+      if (!mounted) return;
+      setState(() {
+        _prodotti = prodotti;
+        _caricandoProdotti = false;
+      });
+    } catch (errore) {
+      if (!mounted) return;
+      setState(() {
+        _erroreProdotti = errore;
+        _caricandoProdotti = false;
+      });
+    }
+  }
+
   void _aggiungiRiga() {
     setState(() => _righe.add(_RigaPreventivo()));
   }
@@ -493,6 +541,57 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     setState(() => _righe.remove(riga));
     // I controller vengono liberati dopo il rebuild che rimuove i campi.
     WidgetsBinding.instance.addPostFrameCallback((_) => riga.dispose());
+  }
+
+  /// Apre la scelta di un prodotto dal catalogo e lo inserisce nelle righe.
+  Future<void> _apriCatalogoProdotti() async {
+    final scelto = await showModalBottomSheet<Prodotto>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _CatalogoProdottiSheet(prodotti: _prodotti),
+    );
+    if (scelto == null || !mounted) return;
+    _inserisciProdottoNelPreventivo(scelto);
+  }
+
+  /// Inserisce il [padre] e i suoi figli nelle righe dell'editor.
+  ///
+  /// La logica di paniere è nelle funzioni pure di `data/panieri.dart`; qui si
+  /// ricostruiscono i controller delle righe e si avvisa se alcuni figli non
+  /// sono più disponibili.
+  void _inserisciProdottoNelPreventivo(Prodotto padre) {
+    final figli = figliDelPaniere(padre, _prodotti);
+    final mancanti = figliMancanti(padre, _prodotti);
+    final modello = [for (final riga in _righe) riga.toRiga()];
+    final nuove = inserisciPaniere(padre: padre, figli: figli, righe: modello);
+
+    final vecchie = List<_RigaPreventivo>.of(_righe);
+    setState(() {
+      _righe
+        ..clear()
+        ..addAll([for (final riga in nuove) _RigaPreventivo(riga: riga)]);
+    });
+    // I vecchi controller vengono liberati dopo il frame che li ha rimossi.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final riga in vecchie) {
+        riga.dispose();
+      }
+    });
+
+    if (mancanti.isNotEmpty) {
+      final sostantivo = mancanti.length == 1
+          ? 'sotto-prodotto'
+          : 'sotto-prodotti';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${mancanti.length} $sostantivo non sono più disponibili '
+            'e ${mancanti.length == 1 ? 'è stato' : 'sono stati'} saltati.',
+          ),
+        ),
+      );
+    }
   }
 
   /// Crea o aggiorna il preventivo e torna all'elenco.
@@ -533,15 +632,15 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
           : await servizio.aggiornaPreventivo(iniziale.id, dati);
       if (!mounted) return;
 
-      final numero = (risultato['numero'] as String?)?.trim() ??
+      final numero =
+          (risultato['numero'] as String?)?.trim() ??
           (iniziale?.numero ?? '').trim();
       final azione = iniziale == null ? 'creato' : 'salvato';
       final testo = numero.isEmpty
           ? 'Preventivo $azione.'
           : 'Preventivo $numero $azione.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(testo)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(testo)));
       context.go('/preventivi');
     } catch (errore) {
       if (!mounted) return;
@@ -630,7 +729,10 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
   @override
   Widget build(BuildContext context) {
     ref.listen<String?>(aziendaAttivaProvider, (precedente, attuale) {
-      if (precedente != attuale) _caricaClienti();
+      if (precedente != attuale) {
+        _caricaClienti();
+        _caricaProdotti();
+      }
     });
 
     if (_caricandoPreventivo) {
@@ -642,7 +744,8 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       return const StatoCentrato(
         icona: Icons.search_off,
         titolo: 'Preventivo non trovato',
-        sottotitolo: 'Il preventivo non esiste o non hai i permessi per vederlo.',
+        sottotitolo:
+            'Il preventivo non esiste o non hai i permessi per vederlo.',
       );
     }
     if (_errorePreventivo != null) {
@@ -666,8 +769,9 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final largo = constraints.maxWidth >= AppBreakpoints.telefono;
-        final orizzontale =
-            largo ? AppSpazi.paginaDesktop : AppSpazi.paginaTelefono;
+        final orizzontale = largo
+            ? AppSpazi.paginaDesktop
+            : AppSpazi.paginaTelefono;
         final tabella = constraints.maxWidth >= 860;
 
         return SingleChildScrollView(
@@ -865,17 +969,54 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Expanded(child: _TitoloSezione('Righe')),
             const SizedBox(width: AppSpazi.s),
-            FilledButton.tonalIcon(
-              key: const Key('aggiungi-riga'),
-              onPressed: _aggiungiRiga,
-              icon: const Icon(Icons.add),
-              label: const Text('Aggiungi riga'),
+            Flexible(
+              child: Wrap(
+                spacing: AppSpazi.xs,
+                runSpacing: AppSpazi.xxs,
+                alignment: WrapAlignment.end,
+                children: [
+                  OutlinedButton.icon(
+                    key: const Key('aggiungi-dal-catalogo'),
+                    onPressed: _caricandoProdotti
+                        ? null
+                        : _apriCatalogoProdotti,
+                    icon: const Icon(Icons.inventory_2_outlined),
+                    label: const Text('Dal catalogo'),
+                  ),
+                  FilledButton.tonalIcon(
+                    key: const Key('aggiungi-riga'),
+                    onPressed: _aggiungiRiga,
+                    icon: const Icon(Icons.add),
+                    label: const Text('Aggiungi riga'),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
+        if (_erroreProdotti != null) ...[
+          const SizedBox(height: AppSpazi.xs),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Catalogo non disponibile',
+                  key: Key('preventivo-prodotti-errore'),
+                ),
+              ),
+              TextButton.icon(
+                key: const Key('preventivo-prodotti-riprova'),
+                onPressed: _caricaProdotti,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Riprova'),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: AppSpazi.s),
         if (_righe.isEmpty)
           const _RigheVuote()
@@ -928,8 +1069,9 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
               child: TextField(
                 key: const Key('preventivo-sconto'),
                 controller: _scontoGenerale,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                 ],
@@ -1034,10 +1176,7 @@ class _RigheVuote extends StatelessWidget {
             color: tema.colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: AppSpazi.xs),
-          Text(
-            'Nessuna riga',
-            style: tema.textTheme.titleSmall,
-          ),
+          Text('Nessuna riga', style: tema.textTheme.titleSmall),
           const SizedBox(height: AppSpazi.xxs),
           Text(
             'Premi "Aggiungi riga" per inserire il primo articolo.',
@@ -1075,9 +1214,7 @@ class _CampoNumero extends StatelessWidget {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       textAlign: allineatoDestra ? TextAlign.right : TextAlign.start,
-      inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
-      ],
+      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]'))],
       onChanged: (_) => onCambia?.call(),
       decoration: InputDecoration(
         labelText: etichetta,
@@ -1108,14 +1245,43 @@ class _CardRigaEditor extends StatelessWidget {
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
     final totale = totaleRiga(riga.toRiga());
+    final etichettaPaniere = etichettaPaniereRiga(riga.toRiga());
+    final figlia = etichettaPaniere != null;
 
     return Card(
       key: ValueKey('riga-card-${riga.chiave}'),
       child: Padding(
-        padding: const EdgeInsets.all(AppSpazi.s),
+        padding: EdgeInsets.fromLTRB(
+          figlia ? AppSpazi.s * 2 : AppSpazi.s,
+          AppSpazi.s,
+          AppSpazi.s,
+          AppSpazi.s,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (figlia) ...[
+              Row(
+                key: Key('riga-${riga.chiave}-paniere'),
+                children: [
+                  Icon(
+                    Icons.inventory_2_outlined,
+                    size: 16,
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: AppSpazi.xxs),
+                  Expanded(
+                    child: Text(
+                      etichettaPaniere,
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: tema.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpazi.xxs),
+            ],
             Row(
               children: [
                 Expanded(
@@ -1242,26 +1408,45 @@ class _TabellaRigheEditor extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(flex: 3, child: Text('DESCRIZIONE', style: stileIntestazione)),
+                Expanded(
+                  flex: 3,
+                  child: Text('DESCRIZIONE', style: stileIntestazione),
+                ),
                 const SizedBox(width: AppSpazi.xs),
                 Expanded(
                   flex: 1,
-                  child: Text('Q.TÀ', style: stileIntestazione, textAlign: TextAlign.right),
+                  child: Text(
+                    'Q.TÀ',
+                    style: stileIntestazione,
+                    textAlign: TextAlign.right,
+                  ),
                 ),
                 const SizedBox(width: AppSpazi.xs),
                 Expanded(
                   flex: 2,
-                  child: Text('PREZZO', style: stileIntestazione, textAlign: TextAlign.right),
+                  child: Text(
+                    'PREZZO',
+                    style: stileIntestazione,
+                    textAlign: TextAlign.right,
+                  ),
                 ),
                 const SizedBox(width: AppSpazi.xs),
                 Expanded(
                   flex: 1,
-                  child: Text('SC. %', style: stileIntestazione, textAlign: TextAlign.right),
+                  child: Text(
+                    'SC. %',
+                    style: stileIntestazione,
+                    textAlign: TextAlign.right,
+                  ),
                 ),
                 const SizedBox(width: AppSpazi.xs),
                 Expanded(
                   flex: 1,
-                  child: Text('IVA %', style: stileIntestazione, textAlign: TextAlign.right),
+                  child: Text(
+                    'IVA %',
+                    style: stileIntestazione,
+                    textAlign: TextAlign.right,
+                  ),
                 ),
                 const SizedBox(width: AppSpazi.xs),
                 SizedBox(
@@ -1282,23 +1467,7 @@ class _TabellaRigheEditor extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: AppSpazi.xxs),
                 child: Row(
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: TextField(
-                        key: Key('riga-${riga.chiave}-nome'),
-                        controller: riga.nome,
-                        textCapitalization: TextCapitalization.sentences,
-                        onChanged: (_) => onCambia(),
-                        decoration: const InputDecoration(
-                          hintText: 'Descrizione',
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: AppSpazi.s,
-                            vertical: AppSpazi.s,
-                          ),
-                        ),
-                      ),
-                    ),
+                    Expanded(flex: 3, child: _cellaDescrizione(tema, riga)),
                     const SizedBox(width: AppSpazi.xs),
                     Expanded(
                       flex: 1,
@@ -1368,6 +1537,42 @@ class _TabellaRigheEditor extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// Cella Descrizione della tabella: sopra il campo, se la riga è figlia di
+  /// un paniere, l'etichetta `Paniere: <nome>` in stile `labelSmall`.
+  Widget _cellaDescrizione(ThemeData tema, _RigaPreventivo riga) {
+    final etichettaPaniere = etichettaPaniereRiga(riga.toRiga());
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (etichettaPaniere != null) ...[
+          Text(
+            etichettaPaniere,
+            key: Key('riga-${riga.chiave}-paniere'),
+            style: tema.textTheme.labelSmall?.copyWith(
+              color: tema.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpazi.xxs),
+        ],
+        TextField(
+          key: Key('riga-${riga.chiave}-nome'),
+          controller: riga.nome,
+          textCapitalization: TextCapitalization.sentences,
+          onChanged: (_) => onCambia(),
+          decoration: const InputDecoration(
+            hintText: 'Descrizione',
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: AppSpazi.s,
+              vertical: AppSpazi.s,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1465,21 +1670,130 @@ class _RigaTotale extends StatelessWidget {
   }
 }
 
+/// Foglio di scelta di un prodotto del catalogo da inserire nelle righe.
+///
+/// Mostra solo i prodotti attivi con un nome, con ricerca per nome o
+/// categoria. Toccando una voce si chiude restituendo il prodotto scelto.
+class _CatalogoProdottiSheet extends StatefulWidget {
+  const _CatalogoProdottiSheet({required this.prodotti});
+
+  final List<Prodotto> prodotti;
+
+  @override
+  State<_CatalogoProdottiSheet> createState() => _CatalogoProdottiSheetState();
+}
+
+class _CatalogoProdottiSheetState extends State<_CatalogoProdottiSheet> {
+  final _ricerca = TextEditingController();
+
+  @override
+  void dispose() {
+    _ricerca.dispose();
+    super.dispose();
+  }
+
+  /// Prodotti attivi con nome, filtrati per nome o categoria.
+  List<Prodotto> get _filtrati {
+    final testo = _ricerca.text.trim().toLowerCase();
+    return [
+      for (final prodotto in widget.prodotti)
+        if (prodotto.attivo && (prodotto.nome?.trim() ?? '').isNotEmpty)
+          if (testo.isEmpty ||
+              (prodotto.nome ?? '').toLowerCase().contains(testo) ||
+              (prodotto.categoria ?? '').toLowerCase().contains(testo))
+            prodotto,
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final prodotti = _filtrati;
+    final altezza = MediaQuery.sizeOf(context).height * 0.75;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: altezza,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpazi.m,
+                AppSpazi.xs,
+                AppSpazi.m,
+                AppSpazi.s,
+              ),
+              child: TextField(
+                key: const Key('catalogo-preventivo-ricerca'),
+                controller: _ricerca,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: 'Cerca nel catalogo',
+                  prefixIcon: Icon(Icons.search),
+                ),
+              ),
+            ),
+            Expanded(
+              child: prodotti.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppSpazi.l),
+                        child: Text(
+                          'Nessun prodotto nel catalogo',
+                          key: const Key('catalogo-preventivo-vuoto'),
+                          textAlign: TextAlign.center,
+                          style: tema.textTheme.bodyMedium?.copyWith(
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.only(bottom: AppSpazi.m),
+                      itemCount: prodotti.length,
+                      itemBuilder: (context, indice) {
+                        final prodotto = prodotti[indice];
+                        final paniere = etichettaPaniere(prodotto);
+                        return ListTile(
+                          key: Key('catalogo-prodotto-${prodotto.id}'),
+                          title: Text(prodotto.nome!.trim()),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(formattaPrezzo(prodotto.prezzo)),
+                              if (paniere.isNotEmpty) Text(paniere),
+                            ],
+                          ),
+                          onTap: () => Navigator.of(context).pop(prodotto),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Stato modificabile di una riga del preventivo.
 ///
 /// Tiene i controller dei campi e ricostruisce la [PreventivoRiga] solo quando
 /// serve (totali, riga calcolata).
 class _RigaPreventivo {
   _RigaPreventivo({PreventivoRiga? riga})
-      : chiave = _prossimaChiave++,
-        prodottoId = riga?.prodottoId,
-        codice = riga?.codice,
-        um = riga?.um {
+    : chiave = _prossimaChiave++,
+      prodottoId = riga?.prodottoId,
+      codice = riga?.codice,
+      um = riga?.um,
+      paniereId = riga?.paniereId,
+      paniereNome = riga?.paniereNome {
     nome.text = riga?.nome ?? '';
     quantita.text = riga == null ? '1' : testoNumeroPreventivo(riga.qty);
     prezzo.text = riga == null ? '' : testoNumeroPreventivo(riga.prezzo);
-    sconto.text =
-        riga == null ? '' : testoNumeroPreventivo(riga.scontoPerc);
+    sconto.text = riga == null ? '' : testoNumeroPreventivo(riga.scontoPerc);
     iva.text = testoNumeroPreventivo(riga?.ivaPerc ?? 22);
   }
 
@@ -1493,6 +1807,10 @@ class _RigaPreventivo {
   final String? codice;
   final String? um;
 
+  /// Padre del paniere per le righe figlie (`null` per le righe normali).
+  final String? paniereId;
+  final String? paniereNome;
+
   final nome = TextEditingController();
   final quantita = TextEditingController();
   final prezzo = TextEditingController();
@@ -1501,15 +1819,17 @@ class _RigaPreventivo {
 
   /// Riga del modello costruita dai campi correnti.
   PreventivoRiga toRiga() => rigaPreventivoDaCampi(
-        prodottoId: prodottoId,
-        codice: codice,
-        um: um,
-        nome: nome.text,
-        quantita: quantita.text,
-        prezzo: prezzo.text,
-        scontoPerc: sconto.text,
-        ivaPerc: iva.text,
-      );
+    prodottoId: prodottoId,
+    codice: codice,
+    um: um,
+    paniereId: paniereId,
+    paniereNome: paniereNome,
+    nome: nome.text,
+    quantita: quantita.text,
+    prezzo: prezzo.text,
+    scontoPerc: sconto.text,
+    ivaPerc: iva.text,
+  );
 
   void dispose() {
     nome.dispose();

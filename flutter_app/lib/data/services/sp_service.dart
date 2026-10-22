@@ -13,6 +13,25 @@ import '../models/ruolo.dart';
 import '../models/user_profile.dart';
 import '../models/visita.dart';
 
+/// Filtra una lista di id "figli" per il payload Firestore.
+///
+/// Accetta una lista (o `null`), tiene solo le stringhe non vuote dopo trim,
+/// elimina i duplicati e l'eventuale [escludiId], mantenendo l'ordine.
+List<String> sanificaFigliIds(dynamic valore, {String? escludiId}) {
+  if (valore is! List) return const [];
+  final visti = <String>{};
+  final risultato = <String>[];
+  for (final elemento in valore) {
+    if (elemento is! String) continue;
+    final s = elemento.trim();
+    if (s.isEmpty) continue;
+    if (escludiId != null && s == escludiId) continue;
+    if (!visti.add(s)) continue;
+    risultato.add(s);
+  }
+  return risultato;
+}
+
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
 /// vecchia app (sottoinsieme aziende/membri/profilo).
 ///
@@ -846,7 +865,7 @@ class SpService {
     String id,
     Map<String, dynamic> dati,
   ) async {
-    final patch = _prodottoPayload(dati);
+    final patch = _prodottoPayload(dati, id: id);
     patch.remove('azienda_id');
     patch['updated_at'] = _now();
     await _firestore.collection('prodotti').doc(id).update(patch);
@@ -941,9 +960,12 @@ class SpService {
   ///
   /// `nome`/`categoria`/`descrizione` vengono ripuliti (trim); `prezzo` è
   /// numerico (omesso se assente), `immagine` è l'URL o assente se vuota,
-  /// `attivo` vale `true` se non specificato. `azienda_id` è incluso solo se
-  /// è impostata un'azienda attiva.
-  Map<String, dynamic> _prodottoPayload(Map<String, dynamic> dati) {
+  /// `attivo` vale `true` se non specificato. Se presenti, `figliIds` viene
+  /// convertito in `figli_ids` (sanificato, senza [id]) e `figliAZero` in
+  /// `figli_a_zero` (bool); se le chiavi mancano i campi non vengono aggiunti,
+  /// così un aggiornamento parziale non cancella i figli esistenti.
+  /// `azienda_id` è incluso solo se è impostata un'azienda attiva.
+  Map<String, dynamic> _prodottoPayload(Map<String, dynamic> dati, {String? id}) {
     final payload = <String, dynamic>{
       'nome': _stringa(dati['nome']),
       'categoria': _stringa(dati['categoria']),
@@ -954,6 +976,12 @@ class SpService {
     if (prezzo != null) payload['prezzo'] = prezzo;
     final immagine = _stringaNull(dati['immagine']);
     if (immagine != null) payload['immagine'] = immagine;
+    if (dati.containsKey('figliIds')) {
+      payload['figli_ids'] = sanificaFigliIds(dati['figliIds'], escludiId: id);
+    }
+    if (dati.containsKey('figliAZero')) {
+      payload['figli_a_zero'] = dati['figliAZero'] == true;
+    }
     if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
     return payload;
   }

@@ -68,6 +68,16 @@ String messaggioErrorePdfPreventivo(Object errore) {
       'Riprova.';
 }
 
+/// Etichetta del paniere collegato alla riga (`Paniere: <nome>`).
+///
+/// Restituisce `null` se la riga non ha un paniere o se il nome è fatto solo
+/// di spazi, così la tabella non stampa righe vuote.
+String? etichettaPanierePdf(PreventivoRiga riga) {
+  final nome = (riga.paniereNome ?? '').trim();
+  if (nome.isEmpty) return null;
+  return 'Paniere: $nome';
+}
+
 /// Numero mostrato nell'intestazione del PDF.
 String numeroVisualizzatoPdf(Preventivo preventivo) {
   final numero = (preventivo.numero ?? '').trim();
@@ -264,6 +274,7 @@ pw.Widget _tabellaRighe(List<PreventivoRiga> righe) {
 pw.Widget _cellaRiga(PreventivoRiga riga) {
   final nome = (riga.nome ?? '').trim();
   final codice = (riga.codice ?? '').trim();
+  final paniere = etichettaPanierePdf(riga);
 
   return pw.Padding(
     padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
@@ -274,6 +285,17 @@ pw.Widget _cellaRiga(PreventivoRiga riga) {
           nome.isEmpty ? '-' : nome,
           style: const pw.TextStyle(fontSize: 9),
         ),
+        if (paniere != null)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(left: 6),
+            child: pw.Text(
+              paniere,
+              style: const pw.TextStyle(
+                fontSize: 7.5,
+                color: PdfColors.grey600,
+              ),
+            ),
+          ),
         if (codice.isNotEmpty)
           pw.Text(
             codice,

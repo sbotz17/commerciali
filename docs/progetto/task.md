@@ -54,6 +54,22 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F27b | Amministrazione | Schermata Super admin | elenco aziende, ricerca, ingresso; accesso riservato; test | sviluppatore-frontend | FATTO |
 | F28 | Qualità | E2E staging ripetibile | `scripts/e2e-staging.py` (CRUD con regole reali) e `scripts/e2e-ui-dati.py` (dati per la prova UI); prova reale login→cliente→preventivo | tester | FATTO |
 
+
+## Panieri di prodotti (F29)
+
+| ID | Area | Task | Criteri di accettazione | Agente | Stato |
+|---|---|---|---|---|---|
+| P01 | Dati | Modello `Prodotto` con `figli_ids` e `figli_a_zero` | campi con default, `fromMap`/`toMap`, compatibilità documenti vecchi; test | sviluppatore-backend | FATTO |
+| P02 | Dati | Payload prodotti e sanitizzazione figli | `figli_ids` senza self/duplicati/vuoti; aggiornamento parziale non cancella i figli; test | sviluppatore-backend | FATTO |
+| P03 | Dati | Riga preventivo con paniere | `paniereId`/`paniereNome` in `fromMap`/`toMap` e `copyWith`; test | sviluppatore-backend | FATTO |
+| P04 | Dati | Funzione pura `inserisciPaniere` | padre+figli, quantità, zero, adozione, altri panieri, self/mancanti; 8 test | sviluppatore-backend | FATTO |
+| P05 | Catalogo | Form prodotto con sezione Paniere | selezione multipla, flag zero, ricerca figli, salvataggio `figli_ids`; test | sviluppatore-frontend | FATTO |
+| P06 | Catalogo | Badge e colonna Paniere | etichette “Paniere: N sotto-prodotti” e “N figli”; test | sviluppatore-frontend | FATTO |
+| P07 | Preventivo | Scelta prodotto dal catalogo e inserimento paniere | ricerca prodotto, padre+figli, avviso figli mancanti; test | sviluppatore-frontend | FATTO |
+| P08 | Preventivo | Etichetta e rientro righe figlie | “Paniere: <padre>” in card e tabella; test | sviluppatore-frontend | FATTO |
+| P09 | PDF | Etichetta paniere nel PDF | testo sotto la descrizione, prezzi/totali invariati; test | sviluppatore-frontend | FATTO |
+| P10 | Qualità | E2E staging panieri | padre+2 figli, prezzo/zero, quantità, reinserimento, Firestore; report | tester | FATTO |
+
 ## Regole di gestione
 
 - Un task per volta; niente "riscrivi tutta l'app".

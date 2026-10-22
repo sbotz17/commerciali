@@ -29,6 +29,8 @@ class PreventivoRiga {
     this.scontoPerc = 0,
     this.scontoVal = 0,
     this.ivaPerc = 22,
+    this.paniereId,
+    this.paniereNome,
   });
 
   /// Crea una riga dall'oggetto Firestore (chiavi camelCase).
@@ -44,6 +46,8 @@ class PreventivoRiga {
       scontoPerc: (map['scontoPerc'] as num?) ?? 0,
       scontoVal: (map['scontoVal'] as num?) ?? 0,
       ivaPerc: (map['ivaPerc'] as num?) ?? 22,
+      paniereId: map['paniereId'] as String?,
+      paniereNome: map['paniereNome'] as String?,
     );
   }
 
@@ -77,6 +81,48 @@ class PreventivoRiga {
   /// Aliquota IVA della riga (campo `ivaPerc`), default 22.
   final num ivaPerc;
 
+  /// Id del paniere collegato (campo `paniereId`), `null` se la riga non è
+  /// un paniere.
+  final String? paniereId;
+
+  /// Nome del paniere collegato (campo `paniereNome`), `null` se assente.
+  final String? paniereNome;
+
+  /// Restituisce una copia della riga con i campi indicati modificati.
+  ///
+  /// I campi non passati mantengono il valore corrente. Serve per
+  /// l'inserimento dei panieri (es. variare `qty`, `prezzo` o collegare un
+  /// paniere).
+  PreventivoRiga copyWith({
+    String? prodottoId,
+    String? codice,
+    String? nome,
+    num? prezzo,
+    String? immagine,
+    num? qty,
+    String? um,
+    num? scontoPerc,
+    num? scontoVal,
+    num? ivaPerc,
+    String? paniereId,
+    String? paniereNome,
+  }) {
+    return PreventivoRiga(
+      prodottoId: prodottoId ?? this.prodottoId,
+      codice: codice ?? this.codice,
+      nome: nome ?? this.nome,
+      prezzo: prezzo ?? this.prezzo,
+      immagine: immagine ?? this.immagine,
+      qty: qty ?? this.qty,
+      um: um ?? this.um,
+      scontoPerc: scontoPerc ?? this.scontoPerc,
+      scontoVal: scontoVal ?? this.scontoVal,
+      ivaPerc: ivaPerc ?? this.ivaPerc,
+      paniereId: paniereId ?? this.paniereId,
+      paniereNome: paniereNome ?? this.paniereNome,
+    );
+  }
+
   /// Serializza verso l'oggetto Firestore (camelCase, coerente con la
   /// vecchia app).
   Map<String, dynamic> toMap() => {
@@ -90,6 +136,8 @@ class PreventivoRiga {
         'scontoPerc': scontoPerc,
         'scontoVal': scontoVal,
         'ivaPerc': ivaPerc,
+        'paniereId': paniereId,
+        'paniereNome': paniereNome,
       };
 }
 

@@ -92,6 +92,27 @@ String nomeVisualizzatoProdotto(Prodotto prodotto) {
   return nome.isEmpty ? '(senza nome)' : nome;
 }
 
+/// Riepilogo del paniere di un prodotto, per il sottotitolo della card.
+///
+/// Ritorna una stringa vuota se il prodotto non ha sotto-prodotti, altrimenti
+/// `Paniere: N sotto-prodotti`, con l'aggiunta di `· a prezzo zero` quando i
+/// figli sono venduti a prezzo zero.
+String etichettaPaniere(Prodotto prodotto) {
+  final numero = prodotto.figliIds.length;
+  if (numero == 0) return '';
+
+  final sostantivo = numero == 1 ? 'sotto-prodotto' : 'sotto-prodotti';
+  final prezzoZero = prodotto.figliAZero ? ' · a prezzo zero' : '';
+  return 'Paniere: $numero $sostantivo$prezzoZero';
+}
+
+/// Cella della colonna "Paniere" della tabella: `—` se non ci sono figli.
+String etichettaFigli(Prodotto prodotto) {
+  final numero = prodotto.figliIds.length;
+  if (numero == 0) return '—';
+  return '$numero ${numero == 1 ? 'figlio' : 'figli'}';
+}
+
 // ---------------------------------------------------------------------------
 // Schermata
 // ---------------------------------------------------------------------------
@@ -131,12 +152,14 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
   Future<void> _apriProdotto({
     Prodotto? prodotto,
     required List<Categoria> categorie,
+    required List<Prodotto> prodotti,
   }) async {
     final salvato = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => ProdottoFormScreen(
           prodotto: prodotto,
           categorie: categorie,
+          prodotti: prodotti,
         ),
       ),
     );
@@ -308,7 +331,10 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
                 categorie: dati.categorie,
                 filtro: _filtroCategoria,
                 onFiltro: (valore) => setState(() => _filtroCategoria = valore),
-                onNuovo: () => _apriProdotto(categorie: dati.categorie),
+                onNuovo: () => _apriProdotto(
+                  categorie: dati.categorie,
+                  prodotti: dati.prodotti,
+                ),
               ),
             ),
             Expanded(
@@ -337,7 +363,10 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
             'Aggiungi il primo prodotto con il pulsante "Nuovo prodotto".',
         azione: FilledButton.icon(
           key: const Key('catalogo-nuovo-prodotto-vuoto'),
-          onPressed: () => _apriProdotto(categorie: dati.categorie),
+          onPressed: () => _apriProdotto(
+            categorie: dati.categorie,
+            prodotti: dati.prodotti,
+          ),
           icon: const Icon(Icons.add),
           label: const Text('Nuovo prodotto'),
         ),
@@ -356,14 +385,20 @@ class _CatalogoScreenState extends ConsumerState<CatalogoScreen> {
     return largo
         ? _TabellaProdotti(
             prodotti: filtrati,
-            onModifica: (prodotto) =>
-                _apriProdotto(prodotto: prodotto, categorie: dati.categorie),
+            onModifica: (prodotto) => _apriProdotto(
+              prodotto: prodotto,
+              categorie: dati.categorie,
+              prodotti: dati.prodotti,
+            ),
             onElimina: _eliminaProdotto,
           )
         : _ListaProdotti(
             prodotti: filtrati,
-            onModifica: (prodotto) =>
-                _apriProdotto(prodotto: prodotto, categorie: dati.categorie),
+            onModifica: (prodotto) => _apriProdotto(
+              prodotto: prodotto,
+              categorie: dati.categorie,
+              prodotti: dati.prodotti,
+            ),
             onElimina: _eliminaProdotto,
           );
   }
@@ -611,6 +646,7 @@ class _TabellaProdotti extends StatelessWidget {
           columns: const [
             DataColumn(label: Text('Prodotto')),
             DataColumn(label: Text('Categoria')),
+            DataColumn(label: Text('Paniere')),
             DataColumn(label: Text('Descrizione')),
             DataColumn(label: Text('Prezzo'), numeric: true),
             DataColumn(label: Text('')),
@@ -623,6 +659,7 @@ class _TabellaProdotti extends StatelessWidget {
                 cells: [
                   DataCell(Text(nomeVisualizzatoProdotto(prodotto))),
                   DataCell(Text(_testo(prodotto.categoria))),
+                  DataCell(Text(etichettaFigli(prodotto))),
                   DataCell(Text(_testo(prodotto.descrizione))),
                   DataCell(Text(formattaPrezzo(prodotto.prezzo))),
                   DataCell(
@@ -764,6 +801,7 @@ class ProdottoFormScreen extends ConsumerStatefulWidget {
     super.key,
     this.prodotto,
     this.categorie = const [],
+    this.prodotti = const [],
   });
 
   /// Prodotto da modificare; `null` per crearne uno nuovo.
@@ -771,6 +809,9 @@ class ProdottoFormScreen extends ConsumerStatefulWidget {
 
   /// Categorie disponibili nella tendina (nome usato come valore salvato).
   final List<Categoria> categorie;
+
+  /// Tutti i prodotti dell'azienda, per scegliere i sotto-prodotti (figli).
+  final List<Prodotto> prodotti;
 
   @override
   ConsumerState<ProdottoFormScreen> createState() => _ProdottoFormScreenState();
@@ -783,9 +824,16 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
   late final TextEditingController _prezzo;
   late final TextEditingController _descrizione;
   late final TextEditingController _immagine;
+  late final TextEditingController _cercaFiglio;
 
   /// Nomi delle categorie, senza duplicati e nell'ordine del catalogo.
   late final List<String> _nomiCategorie;
+
+  /// Id dei prodotti scelti come sotto-prodotti.
+  final Set<String> _figliIds = {};
+
+  /// Se `true`, i sotto-prodotti vengono venduti a prezzo zero.
+  bool _figliAZero = false;
 
   String? _categoria;
   bool _salvando = false;
@@ -802,6 +850,10 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
     _prezzo = TextEditingController(text: _testoPrezzo(prodotto?.prezzo));
     _descrizione = TextEditingController(text: prodotto?.descrizione ?? '');
     _immagine = TextEditingController(text: prodotto?.immagine ?? '');
+    _cercaFiglio = TextEditingController();
+
+    _figliIds.addAll(prodotto?.figliIds ?? const <String>[]);
+    _figliAZero = prodotto?.figliAZero ?? false;
 
     _nomiCategorie = <String>{
       for (final categoria in widget.categorie)
@@ -823,6 +875,7 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
     _prezzo.dispose();
     _descrizione.dispose();
     _immagine.dispose();
+    _cercaFiglio.dispose();
     super.dispose();
   }
 
@@ -839,6 +892,8 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
       'descrizione': _descrizione.text,
       'immagine': _immagine.text,
       'attivo': widget.prodotto?.attivo ?? true,
+      'figliIds': _figliIds.toList(growable: false),
+      'figliAZero': _figliAZero,
     };
 
     try {
@@ -858,6 +913,153 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
     } finally {
       if (mounted) setState(() => _salvando = false);
     }
+  }
+
+  /// Prodotti proponibili come sotto-prodotti: attivi, diversi da questo e
+  /// filtrati dal testo di ricerca.
+  List<Prodotto> get _prodottiFigliDisponibili {
+    final ricerca = _cercaFiglio.text.trim().toLowerCase();
+    return widget.prodotti.where((prodotto) {
+      if (prodotto.id == widget.prodotto?.id) return false;
+      if (!prodotto.attivo) return false;
+      if (ricerca.isEmpty) return true;
+      return (prodotto.nome ?? '').toLowerCase().contains(ricerca);
+    }).toList();
+  }
+
+  /// Id selezionati che non possono più essere usati come figli.
+  List<String> get _figliNonDisponibili {
+    final utilizzabili = <String>{
+      for (final prodotto in widget.prodotti)
+        if (prodotto.attivo && prodotto.id != widget.prodotto?.id) prodotto.id,
+    };
+    return _figliIds.where((id) => !utilizzabili.contains(id)).toList();
+  }
+
+  Widget _schedaPaniere(ThemeData tema) {
+    final disponibili = _prodottiFigliDisponibili;
+    final nonDisponibili = _figliNonDisponibili;
+
+    return Card(
+      key: const Key('prodotto-paniere'),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpazi.m),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Paniere (sotto-prodotti)', style: tema.textTheme.titleMedium),
+            const SizedBox(height: AppSpazi.xxs),
+            Text(
+              'Scegli i prodotti da vendere insieme a questo. I sotto-prodotti '
+              'entrano nel preventivo quando aggiungi il prodotto.',
+              style: tema.textTheme.bodySmall?.copyWith(
+                color: tema.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: AppSpazi.s),
+            SwitchListTile(
+              key: const Key('prodotto-figli-a-zero'),
+              contentPadding: EdgeInsets.zero,
+              value: _figliAZero,
+              onChanged: _salvando
+                  ? null
+                  : (valore) => setState(() => _figliAZero = valore),
+              title: const Text('Vendi i sotto-prodotti a prezzo zero'),
+            ),
+            const SizedBox(height: AppSpazi.s),
+            TextField(
+              key: const Key('prodotto-cerca-figlio'),
+              controller: _cercaFiglio,
+              enabled: !_salvando,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: 'Cerca sotto-prodotti',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _cercaFiglio.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Azzera ricerca',
+                        onPressed: () => setState(_cercaFiglio.clear),
+                        icon: const Icon(Icons.close),
+                      ),
+              ),
+            ),
+            const SizedBox(height: AppSpazi.s),
+            Text(
+              'Selezionati: ${_figliIds.length}',
+              key: const Key('prodotto-figli-selezionati'),
+              style: tema.textTheme.bodyMedium,
+            ),
+            if (widget.prodotti.where((p) => p.id != widget.prodotto?.id).isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpazi.s),
+                child: Text(
+                  'Crea prima altri prodotti per usarli come sotto-prodotti.',
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else if (disponibili.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpazi.s),
+                child: Text(
+                  'Nessun prodotto trovato.',
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              )
+            else
+              for (final prodotto in disponibili)
+                CheckboxListTile(
+                  key: ValueKey('prodotto-figlio-${prodotto.id}'),
+                  contentPadding: EdgeInsets.zero,
+                  value: _figliIds.contains(prodotto.id),
+                  onChanged: _salvando
+                      ? null
+                      : (selezionato) => setState(() {
+                            if (selezionato == true) {
+                              _figliIds.add(prodotto.id);
+                            } else {
+                              _figliIds.remove(prodotto.id);
+                            }
+                          }),
+                  title: Text(
+                    nomeVisualizzatoProdotto(prodotto),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(_dettagliProdotto(prodotto)),
+                ),
+            if (nonDisponibili.isNotEmpty) ...[
+              const SizedBox(height: AppSpazi.s),
+              Text(
+                'Sotto-prodotti non più disponibili',
+                style: tema.textTheme.bodySmall?.copyWith(
+                  color: tema.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: AppSpazi.xxs),
+              Wrap(
+                spacing: AppSpazi.xs,
+                runSpacing: AppSpazi.xxs,
+                children: [
+                  for (final id in nonDisponibili)
+                    InputChip(
+                      key: ValueKey('rimuovi-figlio-$id'),
+                      label: const Text('Prodotto non disponibile'),
+                      onDeleted: _salvando
+                          ? null
+                          : () => setState(() => _figliIds.remove(id)),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -1005,6 +1207,8 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: AppSpazi.m),
+                    _schedaPaniere(tema),
                     if (_errore != null) ...[
                       const SizedBox(height: AppSpazi.m),
                       AvvisoErrore(
@@ -1305,11 +1509,13 @@ String _testoPrezzo(num? prezzo) {
   return prezzo.toString().replaceAll('.', ',');
 }
 
-/// Categoria e prezzo di un prodotto, per il sottotitolo della card.
+/// Categoria, prezzo e paniere di un prodotto, per il sottotitolo della card.
 String _dettagliProdotto(Prodotto prodotto) {
+  final paniere = etichettaPaniere(prodotto);
   final parti = <String>[
     _testo(prodotto.categoria),
     if (prodotto.prezzo != null) formattaPrezzo(prodotto.prezzo),
+    if (paniere.isNotEmpty) paniere,
   ];
   return parti.join(' · ');
 }
