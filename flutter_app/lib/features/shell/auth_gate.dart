@@ -39,14 +39,15 @@ class AuthGate extends ConsumerWidget {
     final profilo = ref.watch(profileProvider);
     final aziende = ref.watch(aziendeUtenteProvider);
 
-    if (sessione.isLoading || profilo.isLoading || aziende.isLoading) {
-      return const SplashScreen();
-    }
-
-    // Sessione non disponibile (errore dello stream): si riparte dal login.
+    // Se la sessione non è ancora pronta si mostra subito il login: evita di
+    // restare bloccati sullo splash se lo stream di Auth tarda.
     final utente = sessione.asData?.value;
     if (utente == null) {
       return const LoginScreen();
+    }
+
+    if (profilo.isLoading || aziende.isLoading) {
+      return const SplashScreen();
     }
 
     // Errore di lettura di profilo o aziende: non è un utente "senza dati",

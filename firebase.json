@@ -5,28 +5,44 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
-  "hosting": {
-    "public": ".",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**",
-      "worker/**",
-      "docs/**",
-      "scripts/**",
-      "supabase/**",
-      "*.sql",
-      "*.md",
-      "*.bat",
-      "opendata-export.json",
-      "package.json",
-      "package-lock.json"
-    ],
-    "rewrites": [
-      {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ]
-  }
+  "hosting": [
+    {
+      "target": "app",
+      "public": ".",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**",
+        "worker/**",
+        "docs/**",
+        "scripts/**",
+        "supabase/**",
+        "*.sql",
+        "*.md",
+        "*.bat",
+        "opendata-export.json",
+        "package.json",
+        "package-lock.json"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    },
+    {
+      "target": "flutter",
+      "public": "flutter_app/build/web",
+      "ignore": [
+        "**/.*"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
+    }
+  ]
 }
