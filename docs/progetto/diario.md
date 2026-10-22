@@ -225,3 +225,9 @@
 
 - `generaPdfPreventivo` con pdf: intestazione, righe, totali, note; pulsante PDF e condivisione.
 - Test PDF (%PDF, byte non vuoti) e formati; `flutter analyze` 0, 212 test verdi.
+
+## 2026-10-22 — F08/F15a: dashboard e visite dati
+
+- Dashboard con 6 statistiche, valore aperto, ultimi 5, azioni rapide; responsive.
+- Modello `Visita` e CRUD `SpService` per giro visite.
+- Test dashboard (conteggi e widget) e visite (modello); `flutter analyze` 0, 237 test verdi.

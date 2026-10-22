@@ -7,6 +7,7 @@ import '../models/cliente.dart';
 import '../models/preventivo.dart';
 import '../models/prodotto.dart';
 import '../models/user_profile.dart';
+import '../models/visita.dart';
 
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
 /// vecchia app (sottoinsieme aziende/membri/profilo).
@@ -333,6 +334,154 @@ class SpService {
   /// Elimina il cliente con l'[id] indicato.
   Future<void> eliminaCliente(String id) {
     return _firestore.collection('clienti').doc(id).delete();
+  }
+
+  // ---------- visite (giro visite) ----------
+
+  /// Elenco delle visite dell'azienda attiva per la [data] (`YYYY-MM-DD`),
+  /// ordinate lato client per `ordine` e poi per `ora` (come la vecchia app).
+  ///
+  /// Se [utenteId] è indicato, restituisce solo le visite di quell'utente
+  /// (filtro in memoria, come la vecchia app). Ritorna una lista vuota se non
+  /// è impostata un'azienda attiva.
+  Future<List<Visita>> getVisite(String data, {String? utenteId}) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('giro_visite')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final visite = snap.docs
+        .map((d) => Visita.fromMap(d.data(), id: d.id))
+        .where((v) => v.data == data)
+        .where((v) => utenteId == null || v.utenteId == utenteId)
+        .toList();
+    visite.sort((a, b) {
+      final cmpOrdine = a.ordine.compareTo(b.ordine);
+      if (cmpOrdine != 0) return cmpOrdine;
+      return (a.ora ?? '').compareTo(b.ora ?? '');
+    });
+    return visite;
+  }
+
+  /// Crea una visita nell'azienda attiva, con gli stessi campi e default della
+  /// vecchia app (`SP.aggiungiVisita`): aggiunge `azienda_id` e `created_at`.
+  Future<Map<String, dynamic>> aggiungiVisita(Map<String, dynamic> dati) async {
+    final payload = _visitaPayload(dati);
+    payload['created_at'] = _now();
+    final ref = await _firestore.collection('giro_visite').add(payload);
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Aggiorna una visita esistente.
+  ///
+  /// Normalizza i dati, imposta `updated_at` e non modifica `azienda_id`
+  /// (la visita resta nella sua azienda).
+  Future<Map<String, dynamic>> aggiornaVisita(
+    String id,
+    Map<String, dynamic> dati,
+  ) async {
+    final patch = _visitaPayload(dati);
+    patch.remove('azienda_id');
+    patch['updated_at'] = _now();
+    await _firestore.collection('giro_visite').doc(id).update(patch);
+    return {'id': id, ...patch};
+  }
+
+  /// Elimina la visita con l'[id] indicato.
+  Future<void> eliminaVisita(String id) {
+    return _firestore.collection('giro_visite').doc(id).delete();
+  }
+
+  /// Riassegna l'[ordine] a più visite in un'unica batch (come la vecchia
+  /// app). Se la lista è vuota non esegue alcuna scrittura.
+  Future<void> riordinaVisite(List<({String id, int ordine})> ordini) async {
+    if (ordini.isEmpty) return;
+    final batch = _firestore.batch();
+    for (final o in ordini) {
+      batch.update(
+        _firestore.collection('giro_visite').doc(o.id),
+        {'ordine': o.ordine},
+      );
+    }
+    await batch.commit();
+  }
+
+  /// Visite dell'azienda attiva per il [clienteId], ordinate per `data` e `ora`
+  /// discendenti (le più recenti per prime, come la vecchia app).
+  Future<List<Visita>> getVisiteCliente(String clienteId) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('giro_visite')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final visite = snap.docs
+        .map((d) => Visita.fromMap(d.data(), id: d.id))
+        .where((v) => v.clienteId == clienteId)
+        .toList();
+    visite.sort((a, b) {
+      final cmpData = (b.data ?? '').compareTo(a.data ?? '');
+      if (cmpData != 0) return cmpData;
+      return (b.ora ?? '').compareTo(a.ora ?? '');
+    });
+    return visite;
+  }
+
+  /// Visite dell'azienda attiva con `data` compresa tra [dal] e [al]
+  /// (estremi inclusi), ordinate per `data` crescente.
+  ///
+  /// Se [utenteId] è indicato, restituisce solo le visite di quell'utente
+  /// (filtro in memoria, come la vecchia app).
+  Future<List<Visita>> getVisitePeriodo(
+    String dal,
+    String al, {
+    String? utenteId,
+  }) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('giro_visite')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final visite = snap.docs
+        .map((d) => Visita.fromMap(d.data(), id: d.id))
+        .where((v) {
+          final d = v.data ?? '';
+          return d.compareTo(dal) >= 0 && d.compareTo(al) <= 0;
+        })
+        .where((v) => utenteId == null || v.utenteId == utenteId)
+        .toList();
+    visite.sort((a, b) => (a.data ?? '').compareTo(b.data ?? ''));
+    return visite;
+  }
+
+  /// Costruisce il payload Firestore di una visita, con gli stessi campi e
+  /// default della vecchia app (`SP.aggiungiVisita`).
+  ///
+  /// I campi testuali vengono ripuliti (trim); `ordine` è un intero (default
+  /// 0), `stato` default `da_fare`, `promemoria_min` è intero o `null`.
+  /// `azienda_id` è incluso solo se è impostata un'azienda attiva.
+  Map<String, dynamic> _visitaPayload(Map<String, dynamic> dati) {
+    final payload = <String, dynamic>{
+      'utente_id': _stringaNull(dati['utente_id']),
+      'cliente_id': _stringaNull(dati['cliente_id']),
+      'cliente_nome': _stringa(dati['cliente_nome']),
+      'telefono': _stringaNull(dati['telefono']),
+      'indirizzo': _stringaNull(dati['indirizzo']),
+      'data': _stringaNull(dati['data']),
+      'ora': _stringaNull(dati['ora']),
+      'ordine': _intero(dati['ordine']),
+      'stato': _stringa(dati['stato'], fallback: 'da_fare'),
+      'note': _stringaNull(dati['note']),
+      'visita_padre_id': _stringaNull(dati['visita_padre_id']),
+      'promemoria_min': _interoNull(dati['promemoria_min']),
+      'promemoria_at': _stringaNull(dati['promemoria_at']),
+      'promemoria_numero': _stringaNull(dati['promemoria_numero']),
+      'promemoria_inviato_at': _stringaNull(dati['promemoria_inviato_at']),
+    };
+    if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
+    return payload;
   }
 
   // ---------- preventivi ----------
@@ -720,5 +869,13 @@ class SpService {
     if (valore is num) return valore.toInt();
     if (valore == null) return fallback;
     return int.tryParse(valore.toString().trim()) ?? fallback;
+  }
+
+  /// Valore intero, `null` se assente o non interpretabile.
+  int? _interoNull(dynamic valore) {
+    if (valore is int) return valore;
+    if (valore is num) return valore.toInt();
+    if (valore == null) return null;
+    return int.tryParse(valore.toString().trim());
   }
 }

@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:commerciali_app/app.dart';
+import 'package:commerciali_app/features/shell/app_shell.dart';
 import 'package:commerciali_app/core/ui/placeholder_screen.dart';
 
 void main() {
   testWidgets('la shell mostra Dashboard senza Firebase', (tester) async {
-    await tester.pumpWidget(const CommercialiApp());
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: AppShell(
+          percorso: '/',
+          child: PlaceholderScreen(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(
@@ -22,7 +29,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const CommercialiApp());
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: AppShell(
+          percorso: '/',
+          child: PlaceholderScreen(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationBar), findsOneWidget);
@@ -35,7 +49,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const CommercialiApp());
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: AppShell(
+          percorso: '/',
+          child: PlaceholderScreen(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.byType(NavigationRail), findsOneWidget);
@@ -48,7 +69,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const CommercialiApp());
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: AppShell(
+          percorso: '/',
+          child: PlaceholderScreen(),
+        ),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Altro'));

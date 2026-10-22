@@ -7,6 +7,7 @@ import '../features/auth/onboarding_screen.dart';
 import '../features/auth/reset_password_screen.dart';
 import '../features/catalogo/catalogo_screen.dart';
 import '../features/clienti/clienti_screen.dart';
+import '../features/dashboard/dashboard_screen.dart';
 import '../features/preventivi/preventivo_edit_screen.dart';
 import '../features/preventivi/preventivi_screen.dart';
 import '../features/shell/app_shell.dart';
@@ -37,8 +38,7 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
         routes: [
           GoRoute(
             path: '/',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.dashboard_outlined),
+            builder: (context, state) => const DashboardScreen(),
           ),
           GoRoute(
             path: '/clienti',
