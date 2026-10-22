@@ -109,3 +109,10 @@
 - F06c: prova reale su staging con utente temporaneo: login email riuscito e arrivo alla Dashboard; utente e profilo eliminati dopo il test.
 - `flutter analyze` 0, `flutter test` 52 verdi.
 - `node scripts/controlla-indice.mjs` → INDICE OK (19 nodi, 9 file chiave).
+
+## 2026-10-22 — F07a: recupero password Flutter
+
+- `ResetPasswordScreen`: invio link via email e, con `oobCode`, verifica codice + nuova password.
+- `AuthService`: `verifyResetCode` e `confirmPasswordReset`.
+- Router: `/reset-password` passa `oobCode` alla schermata.
+- `flutter analyze` 0, `flutter test` 71 verdi.

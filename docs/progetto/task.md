@@ -16,7 +16,9 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F06a | Auth | Login Google web | pulsante Google, popup, errori in italiano, test | sviluppatore-backend | FATTO |
 | F06b | Auth | Login Google mobile | `google_sign_in` 7 con `serverClientId`; credential Firebase; analyze 0 | sviluppatore-backend | FATTO |
 | F06c | Auth | Prova reale login email su staging | login con utente di test; profilo letto; nessun errore | tester | FATTO |
-| F07 | Auth | Recupero password + onboarding azienda | reset link apre schermata; onboarding crea azienda/membro/seed | sviluppatore-frontend | DA FARE |
+| F07a | Auth | Schermata recupero password (invio link + nuova password) | reset link apre schermata; `oobCode` gestito; analyze 0 | sviluppatore-frontend | FATTO |
+| F07b | Auth | Onboarding azienda | crea profilo, azienda, membro e seed; analyze 0 | sviluppatore-frontend | DA FARE |
+| F07c | Auth | Redirect di autenticazione | non loggato → login; senza azienda → onboarding; altrimenti shell | sviluppatore-frontend | DA FARE |
 | F08 | Dashboard | Conteggi, valore aperto, ultimi 5, azioni rapide | numeri uguali alla vecchia app per lo stesso utente | sviluppatore-frontend | DA FARE |
 | F09 | Clienti | Lista, ricerca, form, duplicati | CRUD completo; isolamento per azienda | sviluppatore-frontend | DA FARE |
 | F10 | Clienti | Verifica P.IVA VIES | Ferrari valida, P.IVA falsa non valida; nessuna modifica al cliente | sviluppatore-backend | DA FARE |

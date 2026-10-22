@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/ui/placeholder_screen.dart';
 import '../features/auth/login_screen.dart';
+import '../features/auth/reset_password_screen.dart';
 import '../features/shell/app_shell.dart';
 
 /// Costruisce il router dell'app.
@@ -15,16 +16,11 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
   return GoRouter(
     initialLocation: initialLocation,
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/reset-password',
-        builder: (context, state) => const _PaginaAutonoma(
-          titolo: 'Recupero password',
-          icona: Icons.lock_reset,
-        ),
+        builder: (context, state) =>
+            ResetPasswordScreen(oobCode: state.uri.queryParameters['oobCode']),
       ),
       GoRoute(
         path: '/onboarding',
@@ -34,58 +30,48 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
         ),
       ),
       ShellRoute(
-        builder: (context, state, child) => AppShell(
-          percorso: state.uri.path,
-          child: child,
-        ),
+        builder: (context, state, child) =>
+            AppShell(percorso: state.uri.path, child: child),
         routes: [
           GoRoute(
             path: '/',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.dashboard_outlined,
-            ),
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.dashboard_outlined),
           ),
           GoRoute(
             path: '/clienti',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.people_outline,
-            ),
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.people_outline),
           ),
           GoRoute(
             path: '/catalogo',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.inventory_2_outlined,
-            ),
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.inventory_2_outlined),
           ),
           GoRoute(
             path: '/preventivi',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.description_outlined,
-            ),
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.description_outlined),
           ),
           GoRoute(
             path: '/preventivi/nuovo',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.note_add_outlined,
-            ),
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.note_add_outlined),
           ),
           GoRoute(
             path: '/visite',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.event_outlined,
-            ),
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.event_outlined),
           ),
           GoRoute(
             path: '/bandi',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.campaign_outlined,
-            ),
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.campaign_outlined),
           ),
           GoRoute(
             path: '/impostazioni',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.settings_outlined,
-            ),
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.settings_outlined),
           ),
           GoRoute(
             path: '/superadmin',
@@ -96,19 +82,14 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
         ],
       ),
     ],
-    errorBuilder: (context, state) => _PaginaAutonoma(
-      titolo: 'Pagina non trovata',
-      icona: Icons.search_off,
-    ),
+    errorBuilder: (context, state) =>
+        _PaginaAutonoma(titolo: 'Pagina non trovata', icona: Icons.search_off),
   );
 }
 
 /// Pagina fuori shell (login, reset, onboarding) con titolo in `AppBar`.
 class _PaginaAutonoma extends StatelessWidget {
-  const _PaginaAutonoma({
-    required this.titolo,
-    required this.icona,
-  });
+  const _PaginaAutonoma({required this.titolo, required this.icona});
 
   final String titolo;
   final IconData icona;

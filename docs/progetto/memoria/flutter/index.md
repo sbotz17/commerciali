@@ -27,7 +27,8 @@ flutter_app/lib/
 - F05 login email/password: fatto.
 - F06a login Google web: fatto.
 - F06a/F06b/F06c login Google e prova reale: fatti.
-- Prossimo: F07 recupero password e onboarding.
+- F07a recupero password: fatto.
+- Prossimo: F07b onboarding azienda.
 
 ## Punti fermi
 

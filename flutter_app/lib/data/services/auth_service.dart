@@ -83,8 +83,7 @@ class AuthService {
     return _googleSignInInit ??= GoogleSignIn.instance.initialize(
       serverClientId: const String.fromEnvironment(
         'GOOGLE_SERVER_CLIENT_ID',
-        defaultValue:
-            '686757330506-97f1qm6egpbbhbpa0mf7nkpqk8i7474t.apps.googleusercontent.com',
+        defaultValue: '686757330506-97f1qm6egpbbhbpa0mf7nkpqk8i7474t.apps.googleusercontent.com',
       ),
     );
   }
@@ -114,6 +113,21 @@ class AuthService {
   /// Invia l'email di recupero password.
   Future<void> sendPasswordReset(String email) {
     return _auth.sendPasswordResetEmail(email: _normalizzaEmail(email));
+  }
+
+  /// Verifica il codice ricevuto via email (`oobCode`) e ritorna l'email
+  /// associata. Lancia una `FirebaseAuthException` se il codice è scaduto o
+  /// non valido.
+  Future<String> verifyResetCode(String code) {
+    return _auth.verifyPasswordResetCode(code);
+  }
+
+  /// Imposta la nuova password usando il codice di recupero.
+  ///
+  /// Lancia una `FirebaseAuthException` se il codice è scaduto/non valido o
+  /// se la password viene rifiutata dalle regole di Firebase.
+  Future<void> confirmPasswordReset(String code, String newPassword) {
+    return _auth.confirmPasswordReset(code: code, newPassword: newPassword);
   }
 
   /// Carica il profilo dalla collezione `utenti` cercando per email.
