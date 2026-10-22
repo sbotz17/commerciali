@@ -5,6 +5,8 @@ import '../core/ui/placeholder_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/onboarding_screen.dart';
 import '../features/auth/reset_password_screen.dart';
+import '../features/catalogo/catalogo_screen.dart';
+import '../features/clienti/clienti_screen.dart';
 import '../features/shell/app_shell.dart';
 
 /// Costruisce il router dell'app.
@@ -38,13 +40,11 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
           ),
           GoRoute(
             path: '/clienti',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.people_outline),
+            builder: (context, state) => const ClientiScreen(),
           ),
           GoRoute(
             path: '/catalogo',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.inventory_2_outlined),
+            builder: (context, state) => const CatalogoScreen(),
           ),
           GoRoute(
             path: '/preventivi',

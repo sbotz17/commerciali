@@ -26,6 +26,10 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Segnaposto | `flutter_app/lib/core/ui/placeholder_screen.dart` | Corpo condiviso per schermate non ancora implementate |
 | Avviso errore | `flutter_app/lib/core/ui/avviso_errore.dart` | `AvvisoErrore(testo: ...)`: messaggio di errore in italiano con colori semantici e `liveRegion`; chiave passata dal chiamante per i test |
 | Onboarding | `flutter_app/lib/features/auth/onboarding_screen.dart` | `OnboardingScreen` (rotta `/onboarding`): primo avvio, crea profilo, azienda, membership admin e seed; validatori puri `validaNomeUtente`, `validaNomeAzienda`, `messaggioErroreOnboarding` |
+| Modello Prodotto | `flutter_app/lib/data/models/prodotto.dart` | `Prodotto` (`id`, `aziendaId`, `nome`, `categoria`, `prezzo` numerico, `descrizione`, `immagine` URL, `attivo`) con `fromMap`/`toMap` snake_case |
+| Modello Categoria | `flutter_app/lib/data/models/categoria.dart` | `Categoria` (`id`, `aziendaId`, `nome`, `icona`, `ordine`) con `fromMap`/`toMap` snake_case |
+| Servizio dati catalogo | `flutter_app/lib/data/services/sp_service.dart` | `getProdotti`/`inserisciProdotto`/`aggiornaProdotto`/`eliminaProdotto` e `getCategorie`/`inserisciCategoria`/`aggiornaCategoria`/`eliminaCategoria` (scope azienda attiva) |
+| Test catalogo | `flutter_app/test/catalogo_test.dart` | Unit test `fromMap`/`toMap`/default di `Prodotto` e `Categoria` |
 | Test login Google | `flutter_app/test/google_auth_test.dart` | Unit test `messaggioErroreGoogle` (`FirebaseAuthException` + `GoogleSignInException`) + widget test pulsante Google |
 | Test onboarding | `flutter_app/test/onboarding_screen_test.dart` | Widget test di `OnboardingScreen` (campi, pulsante, errori su campi vuoti/corti) + unit test dei validatori e di `messaggioErroreOnboarding` |
 

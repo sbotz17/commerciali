@@ -2,7 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/azienda.dart';
+import '../models/categoria.dart';
 import '../models/cliente.dart';
+import '../models/prodotto.dart';
 import '../models/user_profile.dart';
 
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
@@ -331,6 +333,140 @@ class SpService {
     return _firestore.collection('clienti').doc(id).delete();
   }
 
+  // ---------- catalogo: prodotti ----------
+
+  /// Elenco dei prodotti dell'azienda attiva, ordinati per [nome].
+  ///
+  /// Ritorna una lista vuota se non è impostata un'azienda attiva.
+  Future<List<Prodotto>> getProdotti() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('prodotti')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .orderBy('nome')
+        .get();
+    return snap.docs
+        .map((d) => Prodotto.fromMap(d.data(), id: d.id))
+        .toList();
+  }
+
+  /// Crea un prodotto normalizzando i dati e aggiungendo `azienda_id` e
+  /// `created_at`. Il prezzo è salvato come numero, l'immagine come URL o
+  /// `null`.
+  Future<Map<String, dynamic>> inserisciProdotto(
+    Map<String, dynamic> dati,
+  ) async {
+    final payload = _prodottoPayload(dati);
+    payload['created_at'] = _now();
+    final ref = await _firestore.collection('prodotti').add(payload);
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Aggiorna un prodotto esistente.
+  ///
+  /// Normalizza i dati, imposta `updated_at` e non modifica `azienda_id`
+  /// (il prodotto resta nella sua azienda).
+  Future<Map<String, dynamic>> aggiornaProdotto(
+    String id,
+    Map<String, dynamic> dati,
+  ) async {
+    final patch = _prodottoPayload(dati);
+    patch.remove('azienda_id');
+    patch['updated_at'] = _now();
+    await _firestore.collection('prodotti').doc(id).update(patch);
+    return {'id': id, ...patch};
+  }
+
+  /// Elimina il prodotto con l'[id] indicato.
+  Future<void> eliminaProdotto(String id) {
+    return _firestore.collection('prodotti').doc(id).delete();
+  }
+
+  // ---------- catalogo: categorie ----------
+
+  /// Elenco delle categorie dell'azienda attiva, ordinate per [ordine].
+  ///
+  /// Ritorna una lista vuota se non è impostata un'azienda attiva.
+  Future<List<Categoria>> getCategorie() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('categorie')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .orderBy('ordine')
+        .get();
+    return snap.docs
+        .map((d) => Categoria.fromMap(d.data(), id: d.id))
+        .toList();
+  }
+
+  /// Crea una categoria normalizzando i dati e aggiungendo `azienda_id` e
+  /// `created_at`.
+  Future<Map<String, dynamic>> inserisciCategoria(
+    Map<String, dynamic> dati,
+  ) async {
+    final payload = _categoriaPayload(dati);
+    payload['created_at'] = _now();
+    final ref = await _firestore.collection('categorie').add(payload);
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Aggiorna una categoria esistente.
+  ///
+  /// Normalizza i dati, imposta `updated_at` e non modifica `azienda_id`
+  /// (la categoria resta nella sua azienda).
+  Future<Map<String, dynamic>> aggiornaCategoria(
+    String id,
+    Map<String, dynamic> dati,
+  ) async {
+    final patch = _categoriaPayload(dati);
+    patch.remove('azienda_id');
+    patch['updated_at'] = _now();
+    await _firestore.collection('categorie').doc(id).update(patch);
+    return {'id': id, ...patch};
+  }
+
+  /// Elimina la categoria con l'[id] indicato.
+  Future<void> eliminaCategoria(String id) {
+    return _firestore.collection('categorie').doc(id).delete();
+  }
+
+  /// Costruisce il payload Firestore di un prodotto.
+  ///
+  /// `nome`/`categoria`/`descrizione` vengono ripuliti (trim); `prezzo` è
+  /// numerico (omesso se assente), `immagine` è l'URL o assente se vuota,
+  /// `attivo` vale `true` se non specificato. `azienda_id` è incluso solo se
+  /// è impostata un'azienda attiva.
+  Map<String, dynamic> _prodottoPayload(Map<String, dynamic> dati) {
+    final payload = <String, dynamic>{
+      'nome': _stringa(dati['nome']),
+      'categoria': _stringa(dati['categoria']),
+      'descrizione': _stringa(dati['descrizione']),
+      'attivo': dati['attivo'] ?? true,
+    };
+    final prezzo = _numero(dati['prezzo']);
+    if (prezzo != null) payload['prezzo'] = prezzo;
+    final immagine = _stringaNull(dati['immagine']);
+    if (immagine != null) payload['immagine'] = immagine;
+    if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
+    return payload;
+  }
+
+  /// Costruisce il payload Firestore di una categoria.
+  ///
+  /// `nome`/`icona` vengono ripuliti (trim), `ordine` è un intero (default 0).
+  /// `azienda_id` è incluso solo se è impostata un'azienda attiva.
+  Map<String, dynamic> _categoriaPayload(Map<String, dynamic> dati) {
+    final payload = <String, dynamic>{
+      'nome': _stringa(dati['nome']),
+      'icona': _stringa(dati['icona']),
+      'ordine': _intero(dati['ordine']),
+    };
+    if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
+    return payload;
+  }
+
   /// Costruisce il payload Firestore di un cliente, con gli stessi campi e
   /// valori di default della vecchia app (`SP._clientePayload`).
   ///
@@ -364,5 +500,26 @@ class SpService {
   String _stringa(dynamic valore, {String fallback = ''}) {
     final s = (valore?.toString() ?? '').trim();
     return s.isEmpty ? fallback : s;
+  }
+
+  /// Valore testuale ripulito (trim), `null` se vuoto o assente.
+  String? _stringaNull(dynamic valore) {
+    final s = (valore?.toString() ?? '').trim();
+    return s.isEmpty ? null : s;
+  }
+
+  /// Valore numerico, `null` se assente o non interpretabile come numero.
+  num? _numero(dynamic valore) {
+    if (valore is num) return valore;
+    if (valore == null) return null;
+    return num.tryParse(valore.toString().trim());
+  }
+
+  /// Valore intero, con [fallback] se assente o non interpretabile.
+  int _intero(dynamic valore, {int fallback = 0}) {
+    if (valore is int) return valore;
+    if (valore is num) return valore.toInt();
+    if (valore == null) return fallback;
+    return int.tryParse(valore.toString().trim()) ?? fallback;
   }
 }

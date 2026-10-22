@@ -21,10 +21,10 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F07c | Auth | Redirect di autenticazione | non loggato → login; senza azienda → onboarding; altrimenti shell | sviluppatore-frontend | RINVIATO (dopo F08) |
 | F08 | Dashboard | Conteggi, valore aperto, ultimi 5, azioni rapide | numeri uguali alla vecchia app per lo stesso utente | sviluppatore-frontend | DA FARE |
 | F09a | Clienti | Modello `Cliente` + CRUD `SpService` + duplicati | CRUD completo; isolamento per azienda; test | sviluppatore-backend | FATTO |
-| F09b | Clienti | Schermata lista + form cliente | lista, ricerca, creazione/modifica/eliminazione | sviluppatore-frontend | DA FARE |
-| F09c | Clienti | Verifica P.IVA VIES | Ferrari valida, P.IVA falsa non valida | sviluppatore-backend | DA FARE |
-| F10 | Clienti | Verifica P.IVA VIES | Ferrari valida, P.IVA falsa non valida; nessuna modifica al cliente | sviluppatore-backend | DA FARE |
-| F11 | Catalogo | Prodotti e categorie | CRUD, filtro, ordinamento, immagini URL | sviluppatore-frontend | DA FARE |
+| F09b | Clienti | Schermata lista + form cliente | lista, ricerca, creazione/modifica/eliminazione | sviluppatore-frontend | FATTO |
+| F09c | Clienti | Verifica P.IVA VIES | Ferrari valida, P.IVA falsa non valida | sviluppatore-backend | FATTO |
+| F11a | Catalogo | Modelli `Prodotto`/`Categoria` + CRUD `SpService` | CRUD; isolamento azienda; test | sviluppatore-backend | FATTO |
+| F11b | Catalogo | Schermata catalogo e categorie | lista, filtro, form, immagini URL | sviluppatore-frontend | FATTO |
 | F12 | Preventivi | Lista, form, righe, totali, stati | totali uguali alla vecchia app; visibilità per utente | sviluppatore-frontend | DA FARE |
 | F13 | Preventivi | Contatore transazionale e revisioni | serie continua; nessun numero duplicato; `-R1` senza consumare | sviluppatore-backend | DA FARE |
 | F14 | Preventivi | PDF con `pdf`/`printing` | stesso contenuto e totali; stampa/condivisione | sviluppatore-frontend | DA FARE |

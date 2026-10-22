@@ -146,3 +146,34 @@
   (P.IVA, nome, codice fiscale, nessun duplicato, P.IVA assente).
 - `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (104 test).
 - Nessuna UI (F09b), nessuna VIES (F09c), nessuna modifica a vecchia app/Firebase/regole, nessun commit/push.
+
+## 2026-10-22 — Task F11a: modelli Prodotto/Categoria e CRUD catalogo (backend)
+
+- `lib/data/models/prodotto.dart` (nuovo): modello `Prodotto` con `id`, `aziendaId`, `nome`, `categoria`,
+  `prezzo` (`num?`), `descrizione`, `immagine` (URL o null), `attivo` (default `true`); `fromMap`/`toMap`
+  con campi Firestore in snake_case (coerente con `Azienda`/`Cliente`/`UserProfile`).
+- `lib/data/models/categoria.dart` (nuovo): modello `Categoria` con `id`, `aziendaId`, `nome`, `icona`,
+  `ordine` (`int?`, `num` convertito a `int`); `fromMap`/`toMap`.
+- `lib/data/services/sp_service.dart`: aggiunti `getProdotti` (query `prodotti` per `azienda_id` attiva +
+  `orderBy nome`), `inserisciProdotto`, `aggiornaProdotto`, `eliminaProdotto`; `getCategorie` (query
+  `categorie` per `azienda_id` attiva + `orderBy ordine`), `inserisciCategoria`, `aggiornaCategoria`,
+  `eliminaCategoria`. Payload helper `_prodottoPayload` (prezzo numerico, immagine URL o assente, `attivo`
+  default true) e `_categoriaPayload` (`ordine` intero default 0); helper `_stringaNull`, `_numero`, `_intero`.
+  `created_at` in inserimento, `updated_at` in aggiornamento; `azienda_id` mai modificato in aggiornamento.
+- `test/catalogo_test.dart` (nuovo): 8 test di `fromMap`/`toMap`/default dei due modelli.
+- `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (112 test).
+- Nessuna UI (F11b), nessuna modifica a vecchia app/Firebase/regole, nessun commit/push.
+
+## 2026-10-22 — F09b/F11a: clienti e catalogo dati
+
+- `ClientiScreen` + `ClienteFormScreen`: lista responsive, ricerca, CRUD, duplicati.
+- Modelli `Prodotto` e `Categoria` + CRUD in `SpService`.
+- Test clienti (validazioni/form) e catalogo (modelli).
+- `flutter analyze` 0, `flutter test` verdi.
+
+## 2026-10-22 — F09c/F11b: VIES e catalogo
+
+- `ViesService` chiama il Worker VIES; pulsante "Verifica P.IVA" nel form cliente con dialogo e autofill se vuoto.
+- `CatalogoScreen`: tab Prodotti/Categorie, ricerca, filtro, form completo, eliminazione con conferma.
+- Estratti `StatoCentrato` e `MenuAzioni`; rimosse le classi private duplicate.
+- `flutter analyze` 0, test verdi (modelli, validazioni, form).
