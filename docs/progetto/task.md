@@ -40,10 +40,11 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F18 | Super admin | Pannello aziende, licenze, piani | accesso a qualsiasi azienda; nessun dato fuori azienda | sviluppatore-frontend | DA FARE |
 | F19 | Qualità | Parità multi-piattaforma e test | rapporti tester, `flutter test`, `flutter analyze` | tester | DA FARE |
 | F20 | Onboarding | Pagina introduttiva al primo accesso con istruzioni installazione | mostra una volta; “Ho capito” salva il flag; riapertura da Impostazioni; test | sviluppatore-frontend | FATTO |
+| F21 | Onboarding | Intro interattiva: scelta dispositivo e demo animata | selettore funzionante; mockup animati offline; test | sviluppatore-frontend | FATTO |
+| F22 | Prestazioni | Intro subito dopo il login, senza attendere profilo/aziende | `FirstRunGate` avvolge il contenuto appena c'è l'utente; aziende lette in parallelo; profilo per `uid` con fallback email; test | sviluppatore-frontend | FATTO |
 
 ## Regole di gestione
 
 - Un task per volta; niente "riscrivi tutta l'app".
 - Se un agente esaurisce i passi, il task è troppo grande: si spezza e si riparte dal punto raggiunto.
 - Ogni task chiuso aggiorna il nodo di memoria dell'area e questo registro.
-| F21 | Onboarding | Intro interattiva: scelta dispositivo e demo animata | selettore funzionante; mockup animati offline; test | sviluppatore-frontend | FATTO |

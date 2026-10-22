@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/ui/stato_centrato.dart';
+import '../../data/models/azienda.dart';
+import '../../data/models/user_profile.dart';
 import '../../splash_screen.dart';
 import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
@@ -14,11 +16,14 @@ import 'app_shell.dart';
 ///
 /// Decide cosa mostrare in base allo stato di autenticazione, senza redirect:
 ///
-/// - caricamento di sessione, profilo o aziende → [SplashScreen];
 /// - nessun utente → [LoginScreen];
-/// - utente senza profilo o senza aziende → [OnboardingScreen];
-/// - altrimenti → [AppShell] con il contenuto della rotta, avvolta da
-///   [FirstRunGate] per la pagina introduttiva del primo avvio.
+/// - utente autenticato → [FirstRunGate], così la pagina introduttiva compare
+///   subito dopo il login senza attendere profilo e aziende;
+///   il contenuto interno è:
+///   - caricamento di profilo o aziende → [SplashScreen];
+///   - errore di lettura → messaggio con "Riprova";
+///   - utente senza profilo o senza aziende → [OnboardingScreen];
+///   - altrimenti → [AppShell] con il contenuto della rotta.
 ///
 /// Non esegue chiamate a Firebase: legge solo i provider, così i test possono
 /// sostituirli con `overrideWith`.
@@ -48,6 +53,16 @@ class AuthGate extends ConsumerWidget {
       return const LoginScreen();
     }
 
+    // L'intro avvolge il contenuto appena c'è un utente: compare subito dopo
+    // l'autenticazione e il child si aggiorna quando i provider risolvono.
+    return FirstRunGate(child: _contenuto(ref, profilo, aziende));
+  }
+
+  Widget _contenuto(
+    WidgetRef ref,
+    AsyncValue<UserProfile?> profilo,
+    AsyncValue<List<Azienda>> aziende,
+  ) {
     if (profilo.isLoading || aziende.isLoading) {
       return const SplashScreen();
     }
@@ -81,6 +96,6 @@ class AuthGate extends ConsumerWidget {
       return const OnboardingScreen();
     }
 
-    return FirstRunGate(child: AppShell(percorso: percorso, child: child));
+    return AppShell(percorso: percorso, child: child);
   }
 }

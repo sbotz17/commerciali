@@ -261,3 +261,9 @@
 - Selettore Android/iPhone/Desktop con pannello animato e mockup che mostrano dove toccare.
 - Animazioni Flutter native (nessuna GIF esterna, funziona offline).
 - Test aggiornati; `flutter analyze` 0, 289 test verdi.
+
+## 2026-10-22 — F22: intro subito dopo il login
+
+- `AuthGate` avvolge con `FirstRunGate` appena c'è l'utente: l'intro non aspetta profilo e aziende.
+- `getAziendeUtente` legge le aziende in parallelo; `loadProfile` prova prima `utenti/{uid}` e poi l'email.
+- Test specifico con provider in caricamento; `flutter analyze` 0, 290 test verdi.

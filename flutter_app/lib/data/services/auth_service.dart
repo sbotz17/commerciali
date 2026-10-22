@@ -130,12 +130,32 @@ class AuthService {
     return _auth.confirmPasswordReset(code: code, newPassword: newPassword);
   }
 
-  /// Carica il profilo dalla collezione `utenti` cercando per email.
+  /// Carica il profilo dalla collezione `utenti`.
   ///
-  /// Ritorna `null` se l'email è vuota, la query fallisce o non esiste un
-  /// record corrispondente.
-  Future<UserProfile?> loadProfile(String email) async {
+  /// Se [uid] è indicato prova prima la lettura diretta `utenti/{uid}` (una
+  /// sola lettura invece di una query) e, solo se non trova il documento o la
+  /// lettura fallisce, ripiega sulla query per email.
+  ///
+  /// Ritorna `null` se l'email è vuota (e manca [uid]), la query fallisce o
+  /// non esiste un record corrispondente.
+  Future<UserProfile?> loadProfile(String email, {String? uid}) async {
+    final chiave = uid?.trim();
+    final haUid = chiave != null && chiave.isNotEmpty;
     final em = _normalizzaEmail(email);
+    if (!haUid && em.isEmpty) return null;
+
+    if (haUid) {
+      try {
+        final doc = await _firestore.collection('utenti').doc(chiave).get();
+        final dati = doc.data();
+        if (doc.exists && dati != null) {
+          return UserProfile.fromMap(dati, id: doc.id);
+        }
+      } catch (_) {
+        // Lettura diretta non riuscita: si prova la query per email.
+      }
+    }
+
     if (em.isEmpty) return null;
     try {
       final snapshot = await _firestore

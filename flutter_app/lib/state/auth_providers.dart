@@ -31,11 +31,12 @@ final authStateProvider = StreamProvider<User?>((ref) {
 /// Profilo Firestore dell'utente autenticato.
 ///
 /// Osserva [authStateProvider]: senza utente (o senza email) risolve `null`,
-/// altrimenti carica il profilo dalla collezione `utenti`.
+/// altrimenti carica il profilo dalla collezione `utenti`, provando prima la
+/// lettura diretta `utenti/{uid}`.
 final profileProvider = FutureProvider<UserProfile?>((ref) async {
   final user = ref.watch(authStateProvider).asData?.value;
   if (user == null) return null;
   final email = user.email;
   if (email == null || email.isEmpty) return null;
-  return ref.watch(authServiceProvider).loadProfile(email);
+  return ref.watch(authServiceProvider).loadProfile(email, uid: user.uid);
 });

@@ -45,31 +45,29 @@ class SpService {
 
   /// Elenco delle aziende a cui l'utente appartiene.
   ///
-  /// Legge `membri` filtrando per [uid] (`utente_id`), poi per ogni voce legge
-  /// `aziende/{azienda_id}` e fonde il ruolo della membership.
+  /// Legge `membri` filtrando per [uid] (`utente_id`), poi legge i documenti
+  /// `aziende/{azienda_id}` in parallelo e fonde il ruolo della membership.
   Future<List<Azienda>> getAziendeUtente(String uid) async {
     final membri = await _firestore
         .collection('membri')
         .where('utente_id', isEqualTo: uid)
         .get();
 
-    final out = <Azienda>[];
-    for (final m in membri.docs) {
+    final aziende = await Future.wait(membri.docs.map((m) async {
       final aziendaId = m.data()['azienda_id'] as String?;
-      if (aziendaId == null) continue;
+      if (aziendaId == null) return null;
       final az = await _firestore.collection('aziende').doc(aziendaId).get();
-      if (!az.exists) continue;
-      out.add(
-        Azienda.fromMap(
-          {
-            ...az.data()!,
-            'ruolo': m.data()['ruolo'],
-          },
-          id: az.id,
-        ),
+      if (!az.exists) return null;
+      return Azienda.fromMap(
+        {
+          ...az.data()!,
+          'ruolo': m.data()['ruolo'],
+        },
+        id: az.id,
       );
-    }
-    return out;
+    }));
+
+    return aziende.whereType<Azienda>().toList();
   }
 
   // ---------- profilo ----------
