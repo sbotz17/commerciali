@@ -88,6 +88,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | B05 | Qualità | E2E amministrazione e bandi | ruolo, utente, azienda, import URL, filtro ATECO; report | tester | FATTO |
 | C01 | Bandi | ATECO con punto | campo mobile con tastiera decimale, formatter `[0-9.]`, match sulle cifre (`62.01`); test | sviluppatore-frontend | FATTO |
 | C02 | Bandi | Filtro provincia | tendina province, match su `province` o fallback regione; nota esplicativa; test | sviluppatore-frontend | FATTO |
+| D01 | Preventivi | Scelta catalogo sulla singola riga | icona "Scegli dal catalogo" su card e tabella; riempie descrizione/prezzo; paniere inserisce i figli; test | sviluppatore-frontend | FATTO |
 
 ## Regole di gestione
 

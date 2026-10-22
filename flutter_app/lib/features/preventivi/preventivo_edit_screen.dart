@@ -103,6 +103,28 @@ PreventivoRiga rigaPreventivoDaCampi({
   );
 }
 
+/// Riga compilata con un prodotto del catalogo.
+///
+/// Imposta id prodotto, nome e prezzo del [prodotto], unità `pz`, e azzera
+/// codice e paniere. Quantità, sconto e IVA restano quelli della [riga] di
+/// partenza.
+PreventivoRiga rigaConProdotto(PreventivoRiga riga, Prodotto prodotto) {
+  return rigaPreventivoDaCampi(
+    prodottoId: prodotto.id,
+    codice: null,
+    um: 'pz',
+    paniereId: null,
+    paniereNome: null,
+    nome: prodotto.nome ?? '',
+    prezzo: prodotto.prezzo == null
+        ? ''
+        : testoNumeroPreventivo(prodotto.prezzo),
+    quantita: testoNumeroPreventivo(riga.qty),
+    scontoPerc: testoNumeroPreventivo(riga.scontoPerc),
+    ivaPerc: testoNumeroPreventivo(riga.ivaPerc),
+  );
+}
+
 /// Etichetta del paniere per una riga figlia dell'editor.
 ///
 /// Ritorna `Paniere: <nome>` quando la riga ha un [PreventivoRiga.paniereNome],
@@ -553,6 +575,66 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     );
     if (scelto == null || !mounted) return;
     _inserisciProdottoNelPreventivo(scelto);
+  }
+
+  /// Apre il catalogo per compilare la [riga] scelta.
+  ///
+  /// Se il prodotto è un paniere, la riga viene sostituita dal padre e dai
+  /// figli (riusa `inserisciPaniere`); altrimenti la riga viene compilata con
+  /// nome, prezzo e unità del prodotto. In entrambi i casi avvisa se qualche
+  /// sotto-prodotto non è più disponibile.
+  Future<void> _apriCatalogoPerRiga(_RigaPreventivo riga) async {
+    final scelto = await showModalBottomSheet<Prodotto>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _CatalogoProdottiSheet(prodotti: _prodotti),
+    );
+    if (scelto == null || !mounted) return;
+
+    final figli = figliDelPaniere(scelto, _prodotti);
+    final mancanti = figliMancanti(scelto, _prodotti);
+
+    if (figli.isEmpty) {
+      setState(() => riga.applicaProdotto(scelto));
+    } else {
+      final modello = [
+        for (final altra in _righe)
+          if (!identical(altra, riga)) altra.toRiga(),
+      ];
+      final nuove = inserisciPaniere(
+        padre: scelto,
+        figli: figli,
+        righe: modello,
+      );
+
+      final vecchie = List<_RigaPreventivo>.of(_righe);
+      setState(() {
+        _righe
+          ..clear()
+          ..addAll([for (final nuova in nuove) _RigaPreventivo(riga: nuova)]);
+      });
+      // I vecchi controller vengono liberati dopo il frame che li ha rimossi.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        for (final vecchia in vecchie) {
+          vecchia.dispose();
+        }
+      });
+    }
+
+    if (mancanti.isNotEmpty) {
+      final sostantivo = mancanti.length == 1
+          ? 'sotto-prodotto'
+          : 'sotto-prodotti';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${mancanti.length} $sostantivo non sono più disponibili '
+            'e ${mancanti.length == 1 ? 'è stato' : 'sono stati'} saltati.',
+          ),
+        ),
+      );
+    }
   }
 
   /// Inserisce il [padre] e i suoi figli nelle righe dell'editor.
@@ -1025,6 +1107,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
             righe: _righe,
             onCambia: () => setState(() {}),
             onRimuovi: _rimuoviRiga,
+            onCatalogo: _apriCatalogoPerRiga,
           )
         else
           Column(
@@ -1034,6 +1117,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
                   riga: riga,
                   onCambia: () => setState(() {}),
                   onRimuovi: () => _rimuoviRiga(riga),
+                  onCatalogo: _apriCatalogoPerRiga,
                 ),
                 const SizedBox(height: AppSpazi.xs),
               ],
@@ -1235,11 +1319,13 @@ class _CardRigaEditor extends StatelessWidget {
     required this.riga,
     required this.onCambia,
     required this.onRimuovi,
+    required this.onCatalogo,
   });
 
   final _RigaPreventivo riga;
   final VoidCallback onCambia;
   final VoidCallback onRimuovi;
+  final ValueChanged<_RigaPreventivo> onCatalogo;
 
   @override
   Widget build(BuildContext context) {
@@ -1295,6 +1381,12 @@ class _CardRigaEditor extends StatelessWidget {
                       hintText: 'Es. Licenza annuale',
                     ),
                   ),
+                ),
+                IconButton(
+                  key: Key('riga-${riga.chiave}-catalogo'),
+                  tooltip: 'Scegli dal catalogo',
+                  onPressed: () => onCatalogo(riga),
+                  icon: const Icon(Icons.inventory_2_outlined),
                 ),
                 IconButton(
                   key: Key('riga-${riga.chiave}-rimuovi'),
@@ -1387,11 +1479,13 @@ class _TabellaRigheEditor extends StatelessWidget {
     required this.righe,
     required this.onCambia,
     required this.onRimuovi,
+    required this.onCatalogo,
   });
 
   final List<_RigaPreventivo> righe;
   final VoidCallback onCambia;
   final ValueChanged<_RigaPreventivo> onRimuovi;
+  final ValueChanged<_RigaPreventivo> onCatalogo;
 
   @override
   Widget build(BuildContext context) {
@@ -1558,19 +1652,31 @@ class _TabellaRigheEditor extends StatelessWidget {
           ),
           const SizedBox(height: AppSpazi.xxs),
         ],
-        TextField(
-          key: Key('riga-${riga.chiave}-nome'),
-          controller: riga.nome,
-          textCapitalization: TextCapitalization.sentences,
-          onChanged: (_) => onCambia(),
-          decoration: const InputDecoration(
-            hintText: 'Descrizione',
-            isDense: true,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: AppSpazi.s,
-              vertical: AppSpazi.s,
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: Key('riga-${riga.chiave}-nome'),
+                controller: riga.nome,
+                textCapitalization: TextCapitalization.sentences,
+                onChanged: (_) => onCambia(),
+                decoration: const InputDecoration(
+                  hintText: 'Descrizione',
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: AppSpazi.s,
+                    vertical: AppSpazi.s,
+                  ),
+                ),
+              ),
             ),
-          ),
+            IconButton(
+              key: Key('riga-${riga.chiave}-catalogo'),
+              tooltip: 'Scegli dal catalogo',
+              onPressed: () => onCatalogo(riga),
+              icon: const Icon(Icons.inventory_2_outlined),
+            ),
+          ],
         ),
       ],
     );
@@ -1802,14 +1908,14 @@ class _RigaPreventivo {
   /// Identificativo stabile per chiavi widget e test (`riga-0-nome`, …).
   final int chiave;
 
-  /// Campi del prodotto collegato, preservati dal preventivo di partenza.
-  final String? prodottoId;
-  final String? codice;
-  final String? um;
+  /// Campi del prodotto collegato, modificabili quando si sceglie dal catalogo.
+  String? prodottoId;
+  String? codice;
+  String? um;
 
   /// Padre del paniere per le righe figlie (`null` per le righe normali).
-  final String? paniereId;
-  final String? paniereNome;
+  String? paniereId;
+  String? paniereNome;
 
   final nome = TextEditingController();
   final quantita = TextEditingController();
@@ -1830,6 +1936,26 @@ class _RigaPreventivo {
     scontoPerc: sconto.text,
     ivaPerc: iva.text,
   );
+
+  /// Compila la riga con il [prodotto] scelto dal catalogo.
+  ///
+  /// Riusa [rigaConProdotto] per i campi del prodotto; quantità e sconto vuoti
+  /// ricadono su `1` e `0`, l'IVA torna al default 22%.
+  void applicaProdotto(Prodotto prodotto) {
+    final compilata = rigaConProdotto(toRiga(), prodotto);
+    prodottoId = compilata.prodottoId;
+    codice = compilata.codice;
+    um = compilata.um;
+    paniereId = compilata.paniereId;
+    paniereNome = compilata.paniereNome;
+    nome.text = compilata.nome ?? '';
+    prezzo.text = prodotto.prezzo == null
+        ? ''
+        : testoNumeroPreventivo(prodotto.prezzo);
+    if (quantita.text.trim().isEmpty) quantita.text = '1';
+    if (sconto.text.trim().isEmpty) sconto.text = '0';
+    iva.text = '22';
+  }
 
   void dispose() {
     nome.dispose();

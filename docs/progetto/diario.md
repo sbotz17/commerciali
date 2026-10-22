@@ -353,3 +353,12 @@
 - Aggiunto il filtro **Provincia** con tutte le 107 province italiane; se il bando espone `province` il confronto è preciso, altrimenti si usa la regione della provincia (i dati open data spesso non hanno la provincia). Una nota nella UI lo spiega.
 - Modello `Bando` e parser di import aggiornati con il campo opzionale `province`.
 - Verifiche: `flutter analyze` 0, **509 test verdi**, deploy staging.
+
+## 2026-10-23 — Catalogo direttamente nella riga articolo
+
+- Ogni riga del preventivo ha ora l'icona **Scegli dal catalogo** (card mobile e tabella desktop), oltre al pulsante generale "Dal catalogo".
+- Selezionando un prodotto normale, la riga viene compilata con descrizione, prezzo, unità `pz` e IVA 22, mantenendo quantità e sconto.
+- Selezionando un prodotto padre, la riga viene sostituita dal paniere con padre e sotto-prodotti, come il pulsante generale.
+- La scelta salva `prodottoId` e azzera il paniere per i prodotti normali.
+- Verifiche: `flutter analyze` 0, **511 test verdi**, prova reale su staging con prodotto da 123,00 € e totale riga 123,00 €.
+- Report: `docs/progetto/test/2026-10-23-riga-catalogo.md`.
