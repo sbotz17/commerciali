@@ -116,3 +116,15 @@
 - `AuthService`: `verifyResetCode` e `confirmPasswordReset`.
 - Router: `/reset-password` passa `oobCode` alla schermata.
 - `flutter analyze` 0, `flutter test` 71 verdi.
+
+## 2026-10-22 — F07b: test onboarding azienda
+
+- `test/onboarding_screen_test.dart` (nuovo): 3 widget test che montano
+  `CommercialiApp(initialLocation: '/onboarding')` in `ProviderScope` (campi "Il tuo nome" e "Nome azienda",
+  pulsante "Crea azienda e inizia", errori "Inserisci il tuo nome" / "Inserisci il nome dell'azienda" a campi
+  vuoti, errori di lunghezza minima) + 18 unit test puri di `validaNomeUtente`, `validaNomeAzienda` e
+  `messaggioErroreOnboarding` (codici `permission-denied`, `unavailable`, `network-request-failed`,
+  `unauthenticated`, codice sconosciuto e errore non Firebase).
+- Nessuna modifica a `lib/`; nessun `dart format` su file altrui.
+- `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (92 test).
+- Aggiornati task board (F07b `FATTO`), catalogo (`OnboardingScreen`, `AvvisoErrore`, test onboarding).

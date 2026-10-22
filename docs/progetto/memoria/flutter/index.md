@@ -28,7 +28,9 @@ flutter_app/lib/
 - F06a login Google web: fatto.
 - F06a/F06b/F06c login Google e prova reale: fatti.
 - F07a recupero password: fatto.
-- Prossimo: F07b onboarding azienda.
+- F07b onboarding: fatto.
+- F07c redirect: rinviato dopo F08 (vedi registro decisioni).
+- Prossimo: F09 clienti (dati + schermata).
 
 ## Punti fermi
 

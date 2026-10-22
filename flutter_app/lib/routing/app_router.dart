@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/ui/placeholder_screen.dart';
 import '../features/auth/login_screen.dart';
+import '../features/auth/onboarding_screen.dart';
 import '../features/auth/reset_password_screen.dart';
 import '../features/shell/app_shell.dart';
 
@@ -24,10 +25,7 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
       ),
       GoRoute(
         path: '/onboarding',
-        builder: (context, state) => const _PaginaAutonoma(
-          titolo: 'Onboarding',
-          icona: Icons.business_outlined,
-        ),
+        builder: (context, state) => const OnboardingScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) =>

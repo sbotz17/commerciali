@@ -1,5 +1,11 @@
 # Registro decisioni
 
+## 2026-10-22 — Redirect di autenticazione rinviato
+
+Il redirect a livello di router (F07c) rischia di rompere i 92 test esistenti e di duplicare la logica di
+sessione. Si implementa con un `AuthGate` dedicato dopo le prime schermate dati (F08+), prima della parità.
+Nel frattempo la sicurezza dei dati resta garantita dalle regole Firestore.
+
 ## 2026-10-22 — Regola task piccoli e nodo dashboard
 
 Su richiesta di Andrea, `AGENTS.md` introduce l'obbligo di spezzare ogni lavoro in task piccoli (1 file,
