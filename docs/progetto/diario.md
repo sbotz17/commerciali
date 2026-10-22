@@ -177,3 +177,15 @@
 - `CatalogoScreen`: tab Prodotti/Categorie, ricerca, filtro, form completo, eliminazione con conferma.
 - Estratti `StatoCentrato` e `MenuAzioni`; rimosse le classi private duplicate.
 - `flutter analyze` 0, test verdi (modelli, validazioni, form).
+
+## 2026-10-22 — F13: preventivi e indici Firestore (backend)
+
+- `lib/data/services/sp_service.dart`: rimosso l'`orderBy` server-side da `getClienti`, `getProdotti`,
+  `getCategorie` e `getPreventivi` (avrebbero richiesto indici compositi `azienda_id` + campo di ordinamento).
+  Ora le quattro query filtrano solo per `azienda_id` e ordinano in Dart: clienti/prodotti per `nome`,
+  categorie per `ordine`, preventivi per `created_at` decrescente. Il filtro `soloUtenteId` di `getPreventivi`
+  resta applicato in memoria dopo la lettura.
+- `docs/progetto/database.md`: nuova nota «Query aziendali: filtro server + ordinamento client» (niente indici
+  compositi, `firestore.indexes.json` vuoto).
+- `flutter analyze` → `No issues found!`; `flutter test` → `All tests passed!` (171 test).
+- Aggiornati task board (F13 `FATTO`), catalogo (oggetti preventivo) e database; nessun commit/push.

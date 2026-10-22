@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/azienda.dart';
 import '../models/categoria.dart';
 import '../models/cliente.dart';
+import '../models/preventivo.dart';
 import '../models/prodotto.dart';
 import '../models/user_profile.dart';
 
@@ -242,7 +243,7 @@ class SpService {
 
   // ---------- clienti ----------
 
-  /// Elenco dei clienti dell'azienda attiva, ordinati per [nome].
+  /// Elenco dei clienti dell'azienda attiva, ordinati lato client per [nome].
   ///
   /// Ritorna una lista vuota se non è impostata un'azienda attiva.
   Future<List<Cliente>> getClienti() async {
@@ -251,11 +252,12 @@ class SpService {
     final snap = await _firestore
         .collection('clienti')
         .where('azienda_id', isEqualTo: aziendaId)
-        .orderBy('nome')
         .get();
-    return snap.docs
+    final clienti = snap.docs
         .map((d) => Cliente.fromMap(d.data(), id: d.id))
         .toList();
+    clienti.sort((a, b) => (a.nome ?? '').compareTo(b.nome ?? ''));
+    return clienti;
   }
 
   /// Cerca un cliente duplicato nell'azienda attiva.
@@ -333,9 +335,188 @@ class SpService {
     return _firestore.collection('clienti').doc(id).delete();
   }
 
+  // ---------- preventivi ----------
+
+  /// Elenco dei preventivi dell'azienda attiva, ordinati lato client per
+  /// `created_at` discendente (i più recenti per primi).
+  ///
+  /// Se [soloUtenteId] è indicato, restituisce solo i preventivi emessi da
+  /// quell'utente (filtro in memoria, come la vecchia app). Ritorna una lista
+  /// vuota se non è impostata un'azienda attiva.
+  Future<List<Preventivo>> getPreventivi({String? soloUtenteId}) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('preventivi')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final preventivi = snap.docs
+        .map((d) => Preventivo.fromMap(d.data(), id: d.id))
+        .where((p) => soloUtenteId == null || p.utenteId == soloUtenteId)
+        .toList();
+    preventivi.sort((a, b) => (b.createdAt ?? '').compareTo(a.createdAt ?? ''));
+    return preventivi;
+  }
+
+  /// Numero di preventivi dell'azienda attiva (per i limiti di piano).
+  Future<int> contaPreventivi() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return 0;
+    final snap = await _firestore
+        .collection('preventivi')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    return snap.size;
+  }
+
+  /// Prossimo numero preventivo, letto e incrementato in una transazione su
+  /// `contatori/preventivi_{aziendaId}` (campo `valore`), come la vecchia app.
+  ///
+  /// La transazione garantisce una serie continua senza numeri duplicati.
+  Future<String> _nextNumeroPreventivo() async {
+    final key = _aziendaAttiva ?? 'globale';
+    final ref = _firestore.collection('contatori').doc('preventivi_$key');
+    var n = 1;
+    await _firestore.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final valore =
+          snap.exists ? (snap.data()?['valore'] as num? ?? 0).toInt() : 0;
+      n = valore + 1;
+      tx.set(
+        ref,
+        {
+          'azienda_id': _aziendaAttiva,
+          'valore': n,
+          'updated_at': _now(),
+        },
+        SetOptions(merge: true),
+      );
+    });
+    return formatoNumeroPreventivo(n);
+  }
+
+  /// Crea un preventivo: assegna il progressivo `PRV-0001` dal contatore
+  /// aziendale (transazionale), `revisione: 0`, `azienda_id` e `created_at`.
+  Future<Map<String, dynamic>> inserisciPreventivo(
+    Map<String, dynamic> dati,
+  ) async {
+    final numero = await _nextNumeroPreventivo();
+    final payload = _preventivoPayload(dati, numero: numero, revisione: 0);
+    payload['created_at'] = _now();
+    final ref = await _firestore.collection('preventivi').add(payload);
+    return {'id': ref.id, ...payload, 'data': payload['created_at']};
+  }
+
+  /// Aggiorna un preventivo esistente.
+  ///
+  /// Aggiorna i campi modificabili (cliente, righe, note, totali, stato) e
+  /// imposta `updated_at`. Non tocca `azienda_id`, `numero`, `revisione` e
+  /// `utente_id` (il preventivo resta del suo autore e della sua azienda).
+  Future<Map<String, dynamic>> aggiornaPreventivo(
+    String id,
+    Map<String, dynamic> dati,
+  ) async {
+    final patch = <String, dynamic>{
+      'cliente_id': _stringaNull(dati['clienteId']),
+      'cliente_nome': _stringa(dati['clienteNome']),
+      'righe': dati['righe'] ?? <dynamic>[],
+      'note': _stringa(dati['note']),
+      'subtotale': _numero(dati['subtotale']) ?? 0,
+      'imp_sconto': _numero(dati['impSconto']) ?? 0,
+      'imponibile': _numero(dati['imponibile']) ?? 0,
+      'iva': _numero(dati['iva']) ?? 0,
+      'totale_iva': _numero(dati['totaleIva']) ?? 0,
+      'stato': _stringa(dati['stato'], fallback: 'bozza'),
+      'updated_at': _now(),
+    };
+    await _firestore.collection('preventivi').doc(id).update(patch);
+    return {'id': id, ...patch};
+  }
+
+  /// Cambia lo stato di un preventivo (bozza → inviato → accettato/…).
+  Future<void> aggiornaStato(String id, String stato) async {
+    await _firestore.collection('preventivi').doc(id).update({
+      'stato': stato,
+      'updated_at': _now(),
+    });
+  }
+
+  /// Elimina il preventivo con l'[id] indicato.
+  Future<void> eliminaPreventivo(String id) {
+    return _firestore.collection('preventivi').doc(id).delete();
+  }
+
+  /// Crea una revisione: segna il vecchio preventivo `revisionato` e crea una
+  /// copia con numero `{numeroBase}-R{revisione+1}` e stato `inviato`, senza
+  /// consumare il contatore.
+  Future<Map<String, dynamic>> creaRevisione(Preventivo vecchio) async {
+    await _firestore.collection('preventivi').doc(vecchio.id).update({
+      'stato': 'revisionato',
+      'updated_at': _now(),
+    });
+
+    final baseNum = numeroBasePreventivo(vecchio.numero ?? '');
+    final nuovaRev = vecchio.revisione + 1;
+    final nuovoNumero =
+        baseNum.isEmpty ? null : numeroRevisione(baseNum, nuovaRev);
+
+    final payload = <String, dynamic>{
+      'azienda_id': _aziendaAttiva ?? vecchio.aziendaId,
+      'cliente_id': vecchio.clienteId,
+      'cliente_nome': vecchio.clienteNome ?? '',
+      'utente_id': FirebaseAuth.instance.currentUser?.uid ?? vecchio.utenteId,
+      'righe': vecchio.righe.map((r) => r.toMap()).toList(),
+      'sconto': vecchio.sconto,
+      'note': vecchio.note ?? '',
+      'subtotale': vecchio.subtotale,
+      'imp_sconto': vecchio.impSconto,
+      'imponibile': vecchio.imponibile,
+      'iva': vecchio.iva,
+      'totale_iva': vecchio.totaleIva,
+      'stato': 'inviato',
+      'numero': nuovoNumero,
+      'revisione': nuovaRev,
+      'created_at': _now(),
+    };
+    final ref = await _firestore.collection('preventivi').add(payload);
+    return {'id': ref.id, ...payload, 'data': payload['created_at']};
+  }
+
+  /// Costruisce il payload Firestore di un preventivo.
+  ///
+  /// Accetta le stesse chiavi della vecchia app (`clienteId`, `clienteNome`,
+  /// `righe`, `sconto`, `note`, `subtotale`, `impSconto`, `imponibile`, `iva`,
+  /// `totaleIva`, `stato`) e le traduce nei campi snake_case di Firestore.
+  /// [numero] e [revisione] sono inclusi solo se indicati; `azienda_id` è
+  /// incluso solo se è impostata un'azienda attiva.
+  Map<String, dynamic> _preventivoPayload(
+    Map<String, dynamic> dati, {
+    String? numero,
+    int? revisione,
+  }) {
+    final payload = <String, dynamic>{
+      'cliente_id': _stringaNull(dati['clienteId']),
+      'cliente_nome': _stringa(dati['clienteNome']),
+      'utente_id': dati['utenteId'] ?? FirebaseAuth.instance.currentUser?.uid,
+      'righe': dati['righe'] ?? <dynamic>[],
+      'sconto': _numero(dati['sconto']) ?? 0,
+      'note': _stringa(dati['note']),
+      'subtotale': _numero(dati['subtotale']) ?? 0,
+      'imp_sconto': _numero(dati['impSconto']) ?? 0,
+      'imponibile': _numero(dati['imponibile']) ?? 0,
+      'iva': _numero(dati['iva']) ?? 0,
+      'totale_iva': _numero(dati['totaleIva']) ?? 0,
+      'stato': _stringa(dati['stato'], fallback: 'bozza'),
+    };
+    if (numero != null) payload['numero'] = numero;
+    if (revisione != null) payload['revisione'] = revisione;
+    if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
+    return payload;
+  }
+
   // ---------- catalogo: prodotti ----------
 
-  /// Elenco dei prodotti dell'azienda attiva, ordinati per [nome].
+  /// Elenco dei prodotti dell'azienda attiva, ordinati lato client per [nome].
   ///
   /// Ritorna una lista vuota se non è impostata un'azienda attiva.
   Future<List<Prodotto>> getProdotti() async {
@@ -344,11 +525,12 @@ class SpService {
     final snap = await _firestore
         .collection('prodotti')
         .where('azienda_id', isEqualTo: aziendaId)
-        .orderBy('nome')
         .get();
-    return snap.docs
+    final prodotti = snap.docs
         .map((d) => Prodotto.fromMap(d.data(), id: d.id))
         .toList();
+    prodotti.sort((a, b) => (a.nome ?? '').compareTo(b.nome ?? ''));
+    return prodotti;
   }
 
   /// Crea un prodotto normalizzando i dati e aggiungendo `azienda_id` e
@@ -385,7 +567,8 @@ class SpService {
 
   // ---------- catalogo: categorie ----------
 
-  /// Elenco delle categorie dell'azienda attiva, ordinate per [ordine].
+  /// Elenco delle categorie dell'azienda attiva, ordinate lato client per
+  /// [ordine].
   ///
   /// Ritorna una lista vuota se non è impostata un'azienda attiva.
   Future<List<Categoria>> getCategorie() async {
@@ -394,11 +577,12 @@ class SpService {
     final snap = await _firestore
         .collection('categorie')
         .where('azienda_id', isEqualTo: aziendaId)
-        .orderBy('ordine')
         .get();
-    return snap.docs
+    final categorie = snap.docs
         .map((d) => Categoria.fromMap(d.data(), id: d.id))
         .toList();
+    categorie.sort((a, b) => (a.ordine ?? 0).compareTo(b.ordine ?? 0));
+    return categorie;
   }
 
   /// Crea una categoria normalizzando i dati e aggiungendo `azienda_id` e

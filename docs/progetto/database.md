@@ -68,3 +68,12 @@ mantenere il sorting client-side per la parità.
   o rinomina un membro verrebbe bloccato.
 Replicare in Flutter il comportamento attuale e portare entrambi i casi ad Andrea. `eliminaUtente`
 (rimozione del solo documento `membri`) è coerente con le regole: nessuna segnalazione.
+
+### 6. Query aziendali: filtro server + ordinamento client
+
+Le query aziendali (clienti, prodotti, categorie, preventivi) sono filtrate lato server per `azienda_id`
+(`where('azienda_id', isEqualTo: ...)`) e **ordinate lato client in Dart**, senza `orderBy` server-side.
+Così non servono indici compositi (`azienda_id` + campo di ordinamento): un filtro a campo singolo su
+`azienda_id` copre tutti i casi, e l'ordinamento (`clienti`/`prodotti` per `nome`, `categorie` per `ordine`,
+`preventivi` per `created_at` discendente) avviene in memoria. Eventuali filtri aggiuntivi (es. `soloUtenteId`
+dei preventivi) si applicano anch'essi in Dart dopo la lettura. `firestore.indexes.json` resta vuoto.
