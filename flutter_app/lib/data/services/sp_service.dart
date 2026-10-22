@@ -6,8 +6,10 @@ import '../models/bando.dart';
 import '../models/categoria.dart';
 import '../models/cliente.dart';
 import '../models/fonte_bando.dart';
+import '../models/licenza.dart';
 import '../models/preventivo.dart';
 import '../models/prodotto.dart';
+import '../models/ruolo.dart';
 import '../models/user_profile.dart';
 import '../models/visita.dart';
 
@@ -40,6 +42,18 @@ class SpService {
 
   /// Id dell'azienda attiva, `null` se non selezionata.
   String? getAziendaAttiva() => _aziendaAttiva;
+
+  /// Blocca le scritture se l'azienda attiva non è impostata.
+  ///
+  /// Evita di inviare documenti con `azienda_id: null`, che Firestore
+  /// rifiuterebbe con `permission-denied`.
+  void _richiediAzienda() {
+    if (_aziendaAttiva == null) {
+      throw StateError(
+        'Nessuna azienda attiva. Seleziona un\'azienda e riprova.',
+      );
+    }
+  }
 
   // ---------- aziende / membri ----------
 
@@ -242,6 +256,109 @@ class SpService {
     await batch.commit();
   }
 
+  // ---------- utenti / membri ----------
+
+  /// Elenco degli utenti membri dell'azienda attiva, con il relativo [ruolo].
+  ///
+  /// Legge `membri` filtrando per `azienda_id`, poi legge i profili `utenti`
+  /// in parallelo e fonde il ruolo della membership (come `SP.getUtenti`).
+  /// Ritorna una lista vuota se non è impostata un'azienda attiva.
+  Future<List<UserProfile>> getUtenti() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final membri = await _firestore
+        .collection('membri')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+
+    final utenti = await Future.wait(membri.docs.map((m) async {
+      final uid = m.data()['utente_id'] as String?;
+      if (uid == null) return null;
+      final u = await _firestore.collection('utenti').doc(uid).get();
+      if (!u.exists) return null;
+      return UserProfile.fromMap(
+        {...u.data()!, 'ruolo': m.data()['ruolo']},
+        id: u.id,
+      );
+    }));
+
+    return utenti.whereType<UserProfile>().toList();
+  }
+
+  /// Aggiorna il [ruolo] del membro [uid] nell'azienda attiva.
+  ///
+  /// Scrive `membri/{aziendaId}_{uid}` con merge, riproducendo i campi della
+  /// vecchia app (`SP.aggiornaUtente`). Non fa nulla senza azienda attiva.
+  Future<void> aggiornaRuoloUtente(String uid, String ruolo) {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return Future.value();
+    return _firestore
+        .collection('membri')
+        .doc('${aziendaId}_$uid')
+        .set({
+          'azienda_id': aziendaId,
+          'utente_id': uid,
+          'ruolo': ruolo,
+        }, SetOptions(merge: true));
+  }
+
+  /// Elimina la membership `membri/{aziendaId}_{uid}` del membro [uid]
+  /// nell'azienda attiva (come `SP.eliminaUtente`). Non fa nulla senza
+  /// azienda attiva.
+  Future<void> eliminaMembro(String uid) {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return Future.value();
+    return _firestore.collection('membri').doc('${aziendaId}_$uid').delete();
+  }
+
+  // ---------- ruoli ----------
+
+  /// Elenco dei ruoli dell'azienda attiva, ordinati lato client per [nome]
+  /// (come `SP.getRuoli`). Ritorna una lista vuota se non è impostata
+  /// un'azienda attiva.
+  Future<List<Ruolo>> getRuoli() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('ruoli')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final ruoli = snap.docs
+        .map((d) => Ruolo.fromMap(d.data(), id: d.id))
+        .toList();
+    ruoli.sort((a, b) => a.nome.compareTo(b.nome));
+    return ruoli;
+  }
+
+  // ---------- licenza ----------
+
+  /// Legge la licenza dell'azienda attiva da `licenze/{aziendaId}`.
+  ///
+  /// Ritorna `null` se non è impostata un'azienda attiva o il documento non
+  /// esiste.
+  Future<Licenza?> getLicenzaAzienda() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return null;
+    final snap = await _firestore.collection('licenze').doc(aziendaId).get();
+    final dati = snap.data();
+    if (!snap.exists || dati == null) return null;
+    return Licenza.fromMap(dati, id: snap.id);
+  }
+
+  // ---------- super admin ----------
+
+  /// Elenco di tutte le aziende, ordinato lato client per [nome] (per il
+  /// super admin, come `SP.getTutteAziende` senza l'arricchimento
+  /// membri/licenza).
+  Future<List<Azienda>> getTutteAziende() async {
+    final snap = await _firestore.collection('aziende').get();
+    final aziende = snap.docs
+        .map((d) => Azienda.fromMap(d.data(), id: d.id))
+        .toList();
+    aziende.sort((a, b) => a.nome.compareTo(b.nome));
+    return aziende;
+  }
+
   // ---------- clienti ----------
 
   /// Elenco dei clienti dell'azienda attiva, ordinati lato client per [nome].
@@ -295,6 +412,7 @@ class SpService {
   Future<Map<String, dynamic>> inserisciCliente(
     Map<String, dynamic> dati,
   ) async {
+    _richiediAzienda();
     final payload = _clientePayload(dati);
     final dup = await cercaDuplicatoCliente(
       piva: payload['piva'] as String?,
@@ -367,6 +485,7 @@ class SpService {
   /// Crea una visita nell'azienda attiva, con gli stessi campi e default della
   /// vecchia app (`SP.aggiungiVisita`): aggiunge `azienda_id` e `created_at`.
   Future<Map<String, dynamic>> aggiungiVisita(Map<String, dynamic> dati) async {
+    _richiediAzienda();
     final payload = _visitaPayload(dati);
     payload['created_at'] = _now();
     final ref = await _firestore.collection('giro_visite').add(payload);
@@ -538,6 +657,14 @@ class SpService {
   Future<String> _nextNumeroPreventivo() async {
     final key = _aziendaAttiva ?? 'globale';
     final ref = _firestore.collection('contatori').doc('preventivi_$key');
+    // La regola di lettura di `contatori` usa `resource.data.azienda_id`:
+    // su un documento inesistente `resource` è null e la lettura sarebbe
+    // negata anche al primo preventivo. Creiamo (o aggiorniamo) il documento
+    // con l'azienda prima della transazione, così la lettura è consentita.
+    await ref.set(
+      {'azienda_id': _aziendaAttiva, 'updated_at': _now()},
+      SetOptions(merge: true),
+    );
     var n = 1;
     await _firestore.runTransaction((tx) async {
       final snap = await tx.get(ref);
@@ -562,6 +689,7 @@ class SpService {
   Future<Map<String, dynamic>> inserisciPreventivo(
     Map<String, dynamic> dati,
   ) async {
+    _richiediAzienda();
     final numero = await _nextNumeroPreventivo();
     final payload = _preventivoPayload(dati, numero: numero, revisione: 0);
     payload['created_at'] = _now();
@@ -703,6 +831,7 @@ class SpService {
   Future<Map<String, dynamic>> inserisciProdotto(
     Map<String, dynamic> dati,
   ) async {
+    _richiediAzienda();
     final payload = _prodottoPayload(dati);
     payload['created_at'] = _now();
     final ref = await _firestore.collection('prodotti').add(payload);
@@ -754,6 +883,7 @@ class SpService {
   Future<Map<String, dynamic>> inserisciCategoria(
     Map<String, dynamic> dati,
   ) async {
+    _richiediAzienda();
     final payload = _categoriaPayload(dati);
     payload['created_at'] = _now();
     final ref = await _firestore.collection('categorie').add(payload);

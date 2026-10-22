@@ -32,6 +32,8 @@ Verifica:
 - test sufficienti e regressioni;
 - catalogo e documentazione aggiornati.
 
+Verifica la Definition of Done (`docs/progetto/definition-of-done.md`): prova E2E reale, nessun permission-denied, nessuna pagina segnaposto nel perimetro, task coerenti. Se manca un punto, `RESPINTO`.
+
 Rispondi con `APPROVATO` o `RESPINTO` e motiva in italiano. Se respingi, indica esattamente cosa rifare.
 Verifica che i nodi di memoria siano aggiornati (`node scripts/controlla-indice.mjs`).
 Non modificare file.

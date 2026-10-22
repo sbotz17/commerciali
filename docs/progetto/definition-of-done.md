@@ -1,0 +1,35 @@
+# Definition of Done — nessun rilascio senza questi criteri
+
+Un task o un milestone **non è "fatto"** e non si rilascia se manca anche uno solo di questi punti.
+
+## Codice
+
+1. `flutter analyze` → 0 problemi.
+2. `flutter test` → tutti verdi; ogni correzione ha un test che fallisce senza la correzione.
+3. Nessuna modifica a `firestore.rules`, vecchia app o configurazioni di produzione senza approvazione.
+
+## Prova reale su staging (obbligatoria)
+
+Il tester deve eseguire l'app pubblicata su `https://commerciali-flutter.web.app` con un utente di test e:
+
+1. fare login (email/password o Google);
+2. verificare che l'**azienda attiva** sia impostata automaticamente;
+3. creare, modificare ed eliminare un **cliente**;
+4. creare un **preventivo**, verificare il numero `PRV-` e i totali;
+5. verificare che i dati siano persistiti e visibili dopo il reload;
+6. verificare che non compaia **permission-denied**;
+7. verificare che **nessuna pagina del perimetro** mostri "Schermata in preparazione".
+
+Il report deve contenere comandi, passi, esito atteso/ottenuto e almeno una prova (screenshot o log).
+
+## Validazione
+
+Il validatore **respinge** se:
+- manca la prova E2E;
+- una pagina del perimetro è ancora un segnaposto;
+- il task board dichiara `FATTO` con criteri non soddisfatti;
+- il tester ha scritto "SUPERATO con riserva" senza una data certa per la riserva.
+
+## Rilascio
+
+Solo dopo tester + validatore + GO del guardiano. La produzione resta separata e richiede la validazione di Andrea.

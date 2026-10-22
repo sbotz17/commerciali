@@ -37,6 +37,20 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Test catalogo | `flutter_app/test/catalogo_test.dart` | Unit test `fromMap`/`toMap`/default di `Prodotto` e `Categoria` |
 | Test login Google | `flutter_app/test/google_auth_test.dart` | Unit test `messaggioErroreGoogle` (`FirebaseAuthException` + `GoogleSignInException`) + widget test pulsante Google |
 | Test onboarding | `flutter_app/test/onboarding_screen_test.dart` | Widget test di `OnboardingScreen` (campi, pulsante, errori su campi vuoti/corti) + unit test dei validatori e di `messaggioErroreOnboarding` |
+| Modello Ruolo | `flutter_app/lib/data/models/ruolo.dart` | `Ruolo` (`id`, `aziendaId`, `nome`, `chiave`, `descrizione`, `scontoMax`, `permessi`, `sistema`) con `fromMap` snake_case |
+| Modello Licenza | `flutter_app/lib/data/models/licenza.dart` | `Licenza` (`id`, `aziendaId`, `piano`, `stato`, `dataInizio`, `dataFine`, `maxUtenti`, `maxPreventivi`, `note`) con `fromMap` snake_case |
+| Servizio dati amministrazione | `flutter_app/lib/data/services/sp_service.dart` | `getUtenti` (membri + profili con ruolo), `aggiornaRuoloUtente`, `eliminaMembro`, `getRuoli`, `getLicenzaAzienda`, `getTutteAziende` |
+| Test amministrazione | `flutter_app/test/amministrazione_test.dart` | Unit test `fromMap` di `Ruolo` e `Licenza` (permessi e date) |
+| Schermata Bandi | `flutter_app/lib/features/bandi/bandi_screen.dart` | Lista bandi con ricerca, filtri stato/regione, card/table responsive, dettaglio e link ufficiale |
+| Schermata Utenti | `flutter_app/lib/features/impostazioni/utenti_screen.dart` | Membri dell'azienda, cambio ruolo e rimozione con conferma |
+| Schermata Ruoli | `flutter_app/lib/features/impostazioni/ruoli_screen.dart` | Ruoli e permessi in sola lettura, con riepilogo per area |
+| Schermata Licenze | `flutter_app/lib/features/impostazioni/licenze_screen.dart` | Piano, stato effettivo (data fine), date, limiti e note |
+| Schermata Super admin | `flutter_app/lib/features/superadmin/superadmin_screen.dart` | Elenco aziende, ricerca e ingresso; guardia `superAdmin` |
+| Sync azienda attiva | `flutter_app/lib/state/azienda_providers.dart` | `aziendaAttivaSyncProvider`: imposta la prima azienda dopo il login e rispetta la scelta del super admin |
+| Test provider azienda | `flutter_app/test/azienda_providers_test.dart` | Unit test della sincronizzazione e del caso super admin |
+| Test schermate amministrazione | `flutter_app/test/utenti_screen_test.dart`, `ruoli_screen_test.dart`, `licenze_screen_test.dart`, `superadmin_screen_test.dart`, `bandi_screen_test.dart` | Test di funzioni pure, stati vuoti e layout |
+| E2E permessi | `scripts/e2e-staging.py` | Crea utente/azienda temporanei, verifica CRUD cliente con le Security Rules reali e pulisce |
+| E2E UI dati | `scripts/e2e-ui-dati.py` | Prepara e pulisce utente/azienda/ruoli/licenza per la prova manuale su staging |
 
 ## Collezioni Firestore
 

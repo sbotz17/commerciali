@@ -274,3 +274,44 @@
 - Icona fornita da Andrea convertita in 1024×1024, foreground adattivo e launcher icons generati per web/Android/iOS.
 - Icona usata anche nelle schermate di login e intro.
 - `flutter analyze` 0, 290 test verdi, deploy staging completato.
+
+## 2026-10-22 — F26a: modelli Ruolo/Licenza e query amministrazione (backend)
+
+- `lib/data/models/ruolo.dart` (nuovo): `Ruolo` con `id`, `aziendaId`, `nome`, `chiave`, `descrizione`,
+  `scontoMax` (int, default 0), `permessi` (mappa, default vuota), `sistema` (bool, default false); `fromMap`
+  con campi Firestore in snake_case (`sconto_max`), coerente con `Azienda`/`UserProfile`.
+- `lib/data/models/licenza.dart` (nuovo): `Licenza` con `id`, `aziendaId`, `piano` (default `trial`),
+  `stato` (default `attiva`), `dataInizio`/`dataFine` (`YYYY-MM-DD`, null se assenti), `maxUtenti`/
+  `maxPreventivi` (int?, null se assenti), `note`; `fromMap` con `azienda_id` che ricade sull'id documento.
+- `lib/data/services/sp_service.dart`: aggiunti `getUtenti` (membri dell'azienda attiva + profili `utenti`
+  con il `ruolo` della membership, come `SP.getUtenti`), `aggiornaRuoloUtente` (merge su
+  `membri/{aziendaId}_{uid}`), `eliminaMembro` (delete del documento membro), `getRuoli` (ruoli
+  dell'azienda attiva ordinati per `nome`), `getLicenzaAzienda` (legge `licenze/{aziendaId}` → `Licenza?`)
+  e `getTutteAziende` (tutte le `aziende` ordinate per `nome`, per il super admin).
+- `test/amministrazione_test.dart` (nuovo): 11 test di `fromMap` di `Ruolo` e `Licenza` (permessi e date).
+- `flutter test test/amministrazione_test.dart` → `All tests passed!` (11 test); `dart analyze` sui file
+  toccati → `No issues found!`.
+- Nota: `flutter analyze`/`flutter test` globali falliscono per errori preesistenti in
+  `lib/features/bandi/bandi_screen.dart` (file non tracciato, del task F16 frontend in corso), non in
+  questo task. Nessuna UI, nessuna modifica a vecchia app/Firebase/regole, nessun commit/push.
+
+## 2026-10-22 — F24-F28: azienda attiva, niente segnaposto, E2E reale
+
+- **Causa del permission-denied**: dopo il login l'app non impostava l'azienda attiva; le scritture
+  partivano con `azienda_id: null` e Firestore le negava. Aggiunto `aziendaAttivaSyncProvider`, osservato
+  da `AuthGate`, che imposta la prima azienda dell'utente e non sovrascrive la scelta manuale del super admin.
+- Aggiunte guardie in `SpService` per le scritture senza azienda e un errore chiaro.
+- **Secondo bug trovato dall'E2E**: il primo preventivo falliva per `permission-denied` sulla lettura del
+  contatore `contatori/preventivi_{azienda}` (documento inesistente, `resource` null nelle regole). Il
+  contatore ora viene creato/aggiornato con `azienda_id` prima della transazione.
+- Sostituiti tutti i segnaposto del perimetro: Bandi, Utenti, Ruoli, Licenze e Super admin, con test.
+- Aggiunti `scripts/e2e-staging.py` (CRUD cliente con regole reali) e `scripts/e2e-ui-dati.py` (dati per la
+  prova UI, con pulizia completa).
+- **Prova reale su staging** con utente temporaneo: login → intro → dashboard → cliente creato e persistito
+  → preventivo `PRV-0001` creato e persistito → Bandi/Utenti/Ruoli/Licenze raggiungibili → Super admin
+  negato al non super admin. Nessun errore di permessi.
+- Cache del browser: aggiunti header `no-cache` per `index.html`, `flutter_bootstrap.js`, `main.dart.js` e
+  `flutter_service_worker.js`, più versione nei nomi caricati, per evitare che una build vecchia resti in uso.
+- `flutter analyze` 0; `flutter test` 383 verdi.
+
+2026-10-22 — F24–F28 validati (`APPROVATO`). Analyze 0, 383 test verdi, E2E staging PASS, indice memoria OK; rotte `/bandi`, `/impostazioni/utenti`, `/impostazioni/ruoli`, `/impostazioni/licenze`, `/superadmin` reali (nessun segnaposto); residui F16c/F18b dichiarati fuori perimetro.

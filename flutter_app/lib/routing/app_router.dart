@@ -5,22 +5,25 @@ import '../core/ui/placeholder_screen.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/onboarding_screen.dart';
 import '../features/auth/reset_password_screen.dart';
+import '../features/bandi/bandi_screen.dart';
 import '../features/catalogo/catalogo_screen.dart';
 import '../features/clienti/clienti_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/impostazioni/impostazioni_screen.dart';
+import '../features/impostazioni/licenze_screen.dart';
+import '../features/impostazioni/ruoli_screen.dart';
+import '../features/impostazioni/utenti_screen.dart';
 import '../features/intro/intro_screen.dart';
 import '../features/preventivi/preventivo_edit_screen.dart';
 import '../features/preventivi/preventivi_screen.dart';
 import '../features/shell/auth_gate.dart';
+import '../features/superadmin/superadmin_screen.dart';
 import '../features/visite/visite_screen.dart';
 
 /// Costruisce il router dell'app.
 ///
-/// Login è reale (F05); le altre schermate sono ancora segnaposto e i flussi
-/// arriveranno con i task successivi. Login, recupero password e onboarding
-/// restano fuori dalla shell, tutte le altre rotte usano la navigazione
-/// responsive.
+/// Login, recupero password e onboarding restano fuori dalla shell; tutte le
+/// altre rotte usano la navigazione responsive.
 GoRouter creaAppRouter({String? initialLocation}) {
   return GoRouter(
     initialLocation: initialLocation,
@@ -79,8 +82,7 @@ GoRouter creaAppRouter({String? initialLocation}) {
           ),
           GoRoute(
             path: '/bandi',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.campaign_outlined),
+            builder: (context, state) => const BandiScreen(),
           ),
           GoRoute(
             path: '/impostazioni',
@@ -88,25 +90,19 @@ GoRouter creaAppRouter({String? initialLocation}) {
           ),
           GoRoute(
             path: '/impostazioni/utenti',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.people_outline),
+            builder: (context, state) => const UtentiScreen(),
           ),
           GoRoute(
             path: '/impostazioni/ruoli',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.manage_accounts_outlined),
+            builder: (context, state) => const RuoliScreen(),
           ),
           GoRoute(
             path: '/impostazioni/licenze',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.workspace_premium_outlined,
-            ),
+            builder: (context, state) => const LicenzeScreen(),
           ),
           GoRoute(
             path: '/superadmin',
-            builder: (context, state) => const PlaceholderScreen(
-              icona: Icons.admin_panel_settings_outlined,
-            ),
+            builder: (context, state) => const SuperAdminScreen(),
           ),
         ],
       ),

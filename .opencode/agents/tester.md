@@ -22,6 +22,8 @@ mirati:
 - regressioni sulle funzioni esistenti;
 - assenza di dati di test o segreti nel codice.
 
+Esegui la prova E2E su staging descritta in `docs/progetto/definition-of-done.md`: login reale, azienda attiva, CRUD cliente e preventivo, nessun permission-denied, nessun segnaposto nel perimetro. Se manca anche un punto, chiudi `NON SUPERATO`.
+
 Scrivi il report in `docs/progetto/test/AAAA-MM-GG-<funzione>.md` con: cosa hai provato, esito atteso,
 esito ottenuto, problemi. Chiudi con `SUPERATO` o `NON SUPERATO`. Esegui anche `node scripts/controlla-indice.mjs` e segnala i nodi mancanti o obsoleti.
 Non correggere il codice.

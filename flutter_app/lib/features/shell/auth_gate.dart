@@ -43,8 +43,6 @@ class AuthGate extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sessione = ref.watch(authStateProvider);
-    final profilo = ref.watch(profileProvider);
-    final aziende = ref.watch(aziendeUtenteProvider);
 
     // Se la sessione non è ancora pronta si mostra subito il login: evita di
     // restare bloccati sullo splash se lo stream di Auth tarda.
@@ -52,6 +50,14 @@ class AuthGate extends ConsumerWidget {
     if (utente == null) {
       return const LoginScreen();
     }
+
+    // Utente autenticato: sincronizza l'azienda attiva con le sue aziende,
+    // che possono arrivare dopo il login. Senza questo passaggio le scritture
+    // partirebbero con `azienda_id` null (Firestore risponde permission denied).
+    ref.watch(aziendaAttivaSyncProvider);
+
+    final profilo = ref.watch(profileProvider);
+    final aziende = ref.watch(aziendeUtenteProvider);
 
     // L'intro avvolge il contenuto appena c'è un utente: compare subito dopo
     // l'autenticazione e il child si aggiorna quando i provider risolvono.

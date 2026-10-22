@@ -63,6 +63,12 @@ riferisce ad Andrea **a milestone concluse**. Chiede ad Andrea solo quando:
 - servirebbe superare un limite invalicabile;
 - una decisione cambia requisiti, dati o regole.
 
+### Definition of Done (obbligatoria)
+
+Nessun task o milestone è concluso senza `docs/progetto/definition-of-done.md`: analyze 0, test verdi,
+prova E2E reale su staging (login, azienda attiva, CRUD cliente e preventivo, nessun permission-denied)
+e nessuna pagina segnaposto nel perimetro. Tester e validatore devono verificare le prove, non solo il codice.
+
 ### Task piccoli (obbligatorio)
 
 Nessun lavoro si assegna "tutto insieme". Ogni richiesta si spezza in task da **un solo obiettivo

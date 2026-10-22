@@ -34,15 +34,25 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F15a | Visite | Modello `Visita` + query/CRUD `SpService` (`giro_visite`) | CRUD; isolamento azienda; ordinamento `ordine`/`ora`; riordino batch; test | sviluppatore-backend | FATTO |
 | F15b | Visite | Schermata visite e form | lista per data, CRUD, riordino, stati | sviluppatore-frontend | FATTO |
 | F16a | Bandi | Modelli `Bando`/`FonteBando` + `getBandi`/`getFontiBandi` in `SpService` | lettura pubblica `bandi_incentivi`/`bandi_fonti`; escluso `scaduto`; ordinamento `data_chiusura` (null in fondo); `fromMap`/`toMap`; test | sviluppatore-backend | FATTO |
-| F16 | Bandi | Lista pubblica, filtri, dettaglio, import | pagina senza login; import scrive log | sviluppatore-frontend | DA FARE |
+| F16 | Bandi | Lista pubblica, filtri e dettaglio | dati reali da `bandi_incentivi`; ricerca, filtri stato/regione, dettaglio, link ufficiale; test | sviluppatore-frontend | FATTO |
+| F16c | Bandi | Import manuale dei bandi | import con log (non presente nella UI attuale) | sviluppatore-frontend | DA FARE |
 | F17a | Impostazioni | Profilo, azienda, accessi e logout | schermata responsive; test | sviluppatore-frontend | FATTO |
-| F17b | Impostazioni | Utenti, ruoli, licenze, super admin | CRUD e limiti piano | sviluppatore-backend | DA FARE |
-| F18 | Super admin | Pannello aziende, licenze, piani | accesso a qualsiasi azienda; nessun dato fuori azienda | sviluppatore-frontend | DA FARE |
-| F19 | Qualità | Parità multi-piattaforma e test | rapporti tester, `flutter test`, `flutter analyze` | tester | DA FARE |
+| F17b | Impostazioni | Utenti e ruoli | elenco membri, cambio ruolo, rimozione; ruoli in sola lettura; test | sviluppatore-frontend | FATTO |
+| F17c | Impostazioni | Licenze | piano, stato, date e limiti dell'azienda attiva; test | sviluppatore-frontend | FATTO |
+| F18 | Super admin | Pannello aziende | elenco aziende, ricerca e ingresso in un'azienda; accesso negato ai non super admin; test | sviluppatore-frontend | FATTO |
+| F18b | Super admin | Modifica licenze e piani | form di modifica licenza dal pannello | sviluppatore-backend | DA FARE |
+| F19 | Qualità | Parità multi-piattaforma e test | report E2E `docs/progetto/test/2026-10-22-e2e.md`, 383 test verdi, analyze 0 | tester | FATTO |
 | F20 | Onboarding | Pagina introduttiva al primo accesso con istruzioni installazione | mostra una volta; “Ho capito” salva il flag; riapertura da Impostazioni; test | sviluppatore-frontend | FATTO |
 | F21 | Onboarding | Intro interattiva: scelta dispositivo e demo animata | selettore funzionante; mockup animati offline; test | sviluppatore-frontend | FATTO |
 | F22 | Prestazioni | Intro subito dopo il login, senza attendere profilo/aziende | `FirstRunGate` avvolge il contenuto appena c'è l'utente; aziende lette in parallelo; profilo per `uid` con fallback email; test | sviluppatore-frontend | FATTO |
 | F23 | Brand | Rinomina dell'app in Closer e nuova icona | web/Android/iOS, UI, manifest e launcher icons; test | sviluppatore-frontend | FATTO |
+| F24 | Dati | Azienda attiva dopo il login e scritture sicure | sync provider osservato da `AuthGate`; guardia senza azienda; contatore preventivi creato prima della transazione; test | sviluppatore-backend | FATTO |
+| F25 | Bandi | Schermata Bandi | lista responsive, ricerca, filtri, dettaglio, link; test | sviluppatore-frontend | FATTO |
+| F26a | Amministrazione | Modelli `Ruolo`/`Licenza` + query utenti/ruoli/licenze in `SpService` | `fromMap` con permessi e date; `getUtenti`/`aggiornaRuoloUtente`/`eliminaMembro`/`getRuoli`/`getLicenzaAzienda`/`getTutteAziende`; analyze 0; test verdi | sviluppatore-backend | FATTO |
+| F26b | Amministrazione | Schermate Utenti e Ruoli | elenco, cambio ruolo, rimozione, riepilogo permessi; test | sviluppatore-frontend | FATTO |
+| F27a | Amministrazione | Schermata Licenze | piano, stato effettivo, date, limiti, note; test | sviluppatore-frontend | FATTO |
+| F27b | Amministrazione | Schermata Super admin | elenco aziende, ricerca, ingresso; accesso riservato; test | sviluppatore-frontend | FATTO |
+| F28 | Qualità | E2E staging ripetibile | `scripts/e2e-staging.py` (CRUD con regole reali) e `scripts/e2e-ui-dati.py` (dati per la prova UI); prova reale login→cliente→preventivo | tester | FATTO |
 
 ## Regole di gestione
 

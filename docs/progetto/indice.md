@@ -28,6 +28,7 @@ docs/progetto/
 ├── ritorni.md                    ← segnalazioni R-
 ├── motore-modelli.md             ← modelli e costi
 ├── task.md                       ← registro dei task piccoli
+├── definition-of-done.md         ← criteri obbligatori di rilascio
 └── memoria/
     ├── ui/
     │   ├── index.md              ← mappa delle schermate
