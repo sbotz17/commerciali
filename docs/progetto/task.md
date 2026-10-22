@@ -46,3 +46,4 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 - Un task per volta; niente "riscrivi tutta l'app".
 - Se un agente esaurisce i passi, il task è troppo grande: si spezza e si riparte dal punto raggiunto.
 - Ogni task chiuso aggiorna il nodo di memoria dell'area e questo registro.
+| F21 | Onboarding | Intro interattiva: scelta dispositivo e demo animata | selettore funzionante; mockup animati offline; test | sviluppatore-frontend | FATTO |

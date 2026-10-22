@@ -255,3 +255,9 @@
 - `FirstRunGate` con `shared_preferences`: mostra l'intro una sola volta, poi la shell.
 - Voce "Come installare l'app" in Impostazioni; rotta `/intro`.
 - `flutter analyze` 0, 287 test verdi.
+
+## 2026-10-22 — F21: intro interattiva
+
+- Selettore Android/iPhone/Desktop con pannello animato e mockup che mostrano dove toccare.
+- Animazioni Flutter native (nessuna GIF esterna, funziona offline).
+- Test aggiornati; `flutter analyze` 0, 289 test verdi.

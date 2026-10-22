@@ -29,12 +29,16 @@ void main() {
     // Prima lettura delle preferenze ancora in corso.
     expect(find.byType(SplashScreen), findsOneWidget);
 
-    await tester.pumpAndSettle();
+    // L'intro ha una pulsazione in `repeat`: `pumpAndSettle` non si
+    // stabilizzerebbe, bastano due pump per leggere le preferenze e disegnare.
+    await tester.pump();
+    await tester.pump();
     expect(find.byType(IntroScreen), findsOneWidget);
     expect(find.text('contenuto app'), findsNothing);
 
     await tester.tap(find.byKey(const Key('intro-ho-capito')));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump();
 
     expect(find.text('contenuto app'), findsOneWidget);
     expect(find.byType(IntroScreen), findsNothing);

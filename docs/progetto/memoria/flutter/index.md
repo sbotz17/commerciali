@@ -31,6 +31,7 @@ flutter_app/lib/
 - F07b onboarding: fatto.
 - F07c redirect: rinviato dopo F08 (vedi registro decisioni).
 - F20 pagina introduttiva installazione: fatto.
+- F21 intro interattiva con scelta dispositivo e mockup animati: fatto.
 - Prossimo: F16b bandi UI, F17b utenti/ruoli, F18 super admin.
 
 ## Punti fermi
