@@ -9,6 +9,7 @@ import '../features/catalogo/catalogo_screen.dart';
 import '../features/clienti/clienti_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/impostazioni/impostazioni_screen.dart';
+import '../features/intro/intro_screen.dart';
 import '../features/preventivi/preventivo_edit_screen.dart';
 import '../features/preventivi/preventivi_screen.dart';
 import '../features/shell/auth_gate.dart';
@@ -33,6 +34,12 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      // Pagina introduttiva all'installazione, fuori dalla shell: si apre dalle
+      // impostazioni e si chiude tornando indietro.
+      GoRoute(
+        path: '/intro',
+        builder: (context, state) => IntroScreen(onFine: () => context.pop()),
       ),
       ShellRoute(
         builder: (context, state, child) =>

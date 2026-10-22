@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:commerciali_app/core/theme/app_theme.dart';
 import 'package:commerciali_app/core/ui/placeholder_screen.dart';
@@ -9,6 +10,7 @@ import 'package:commerciali_app/data/models/azienda.dart';
 import 'package:commerciali_app/data/models/user_profile.dart';
 import 'package:commerciali_app/features/auth/login_screen.dart';
 import 'package:commerciali_app/features/auth/onboarding_screen.dart';
+import 'package:commerciali_app/features/intro/first_run_gate.dart';
 import 'package:commerciali_app/features/shell/app_shell.dart';
 import 'package:commerciali_app/features/shell/auth_gate.dart';
 import 'package:commerciali_app/state/auth_providers.dart';
@@ -27,6 +29,11 @@ class _UtenteFinto implements User {
 }
 
 void main() {
+  setUp(() {
+    // La pagina introduttiva non deve bloccare i test della shell.
+    SharedPreferences.setMockInitialValues({chiaveIntroVista: true});
+  });
+
   Future<void> mostraGate(
     WidgetTester tester, {
     User? utente,

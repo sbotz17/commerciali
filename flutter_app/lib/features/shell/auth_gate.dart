@@ -7,6 +7,7 @@ import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
 import '../auth/login_screen.dart';
 import '../auth/onboarding_screen.dart';
+import '../intro/first_run_gate.dart';
 import 'app_shell.dart';
 
 /// Cancello di autenticazione che avvolge le rotte della shell.
@@ -16,7 +17,8 @@ import 'app_shell.dart';
 /// - caricamento di sessione, profilo o aziende → [SplashScreen];
 /// - nessun utente → [LoginScreen];
 /// - utente senza profilo o senza aziende → [OnboardingScreen];
-/// - altrimenti → [AppShell] con il contenuto della rotta.
+/// - altrimenti → [AppShell] con il contenuto della rotta, avvolta da
+///   [FirstRunGate] per la pagina introduttiva del primo avvio.
 ///
 /// Non esegue chiamate a Firebase: legge solo i provider, così i test possono
 /// sostituirli con `overrideWith`.
@@ -79,6 +81,6 @@ class AuthGate extends ConsumerWidget {
       return const OnboardingScreen();
     }
 
-    return AppShell(percorso: percorso, child: child);
+    return FirstRunGate(child: AppShell(percorso: percorso, child: child));
   }
 }

@@ -135,6 +135,7 @@ class ImpostazioniScreen extends ConsumerWidget {
           ref.read(aziendaAttivaProvider.notifier).state = id,
       onLogout: () => _esci(context, ref),
       onVoce: (rotta) => context.go(rotta),
+      onApriIntro: () => context.push('/intro'),
     );
   }
 
@@ -164,6 +165,7 @@ class CorpoImpostazioni extends StatelessWidget {
     required this.onCambiaAzienda,
     required this.onLogout,
     required this.onVoce,
+    this.onApriIntro,
   });
 
   final UserProfile? profilo;
@@ -172,6 +174,9 @@ class CorpoImpostazioni extends StatelessWidget {
   final void Function(String) onCambiaAzienda;
   final VoidCallback onLogout;
   final void Function(String rotta) onVoce;
+
+  /// Apre la pagina "Come installare l'app" (`/intro`).
+  final VoidCallback? onApriIntro;
 
   @override
   Widget build(BuildContext context) {
@@ -199,6 +204,22 @@ class CorpoImpostazioni extends StatelessWidget {
                   aziende: aziende,
                   aziendaAttivaId: aziendaAttivaId,
                   onCambiaAzienda: onCambiaAzienda,
+                ),
+                const SizedBox(height: AppSpazi.gapCard),
+                _CardSezione(
+                  chiave: const Key('impostazioni-app'),
+                  titolo: 'Applicazione',
+                  icona: Icons.install_mobile_outlined,
+                  senzaPadding: true,
+                  figli: [
+                    _VoceAccesso(
+                      chiave: const Key('impostazioni-voce-intro'),
+                      icona: Icons.install_mobile_outlined,
+                      titolo: 'Come installare l\'app',
+                      sottotitolo: 'Aggiungi Commerciali al tuo dispositivo',
+                      onTap: onApriIntro ?? () {},
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppSpazi.gapCard),
                 _CardAccessi(

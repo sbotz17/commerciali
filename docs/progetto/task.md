@@ -32,7 +32,6 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F13 | Preventivi | Contatore transazionale e revisioni | serie continua; nessun numero duplicato; `-R1` senza consumare | sviluppatore-backend | FATTO |
 | F14 | Preventivi | PDF con `pdf`/`printing` | stesso contenuto e totali; stampa/condivisione | sviluppatore-frontend | FATTO |
 | F15a | Visite | Modello `Visita` + query/CRUD `SpService` (`giro_visite`) | CRUD; isolamento azienda; ordinamento `ordine`/`ora`; riordino batch; test | sviluppatore-backend | FATTO |
-| F15a | Visite | Modello `Visita` + CRUD `SpService` | CRUD; ordinamento; test | sviluppatore-backend | FATTO |
 | F15b | Visite | Schermata visite e form | lista per data, CRUD, riordino, stati | sviluppatore-frontend | FATTO |
 | F16a | Bandi | Modelli `Bando`/`FonteBando` + `getBandi`/`getFontiBandi` in `SpService` | lettura pubblica `bandi_incentivi`/`bandi_fonti`; escluso `scaduto`; ordinamento `data_chiusura` (null in fondo); `fromMap`/`toMap`; test | sviluppatore-backend | FATTO |
 | F16 | Bandi | Lista pubblica, filtri, dettaglio, import | pagina senza login; import scrive log | sviluppatore-frontend | DA FARE |
@@ -40,6 +39,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F17b | Impostazioni | Utenti, ruoli, licenze, super admin | CRUD e limiti piano | sviluppatore-backend | DA FARE |
 | F18 | Super admin | Pannello aziende, licenze, piani | accesso a qualsiasi azienda; nessun dato fuori azienda | sviluppatore-frontend | DA FARE |
 | F19 | Qualità | Parità multi-piattaforma e test | rapporti tester, `flutter test`, `flutter analyze` | tester | DA FARE |
+| F20 | Onboarding | Pagina introduttiva al primo accesso con istruzioni installazione | mostra una volta; “Ho capito” salva il flag; riapertura da Impostazioni; test | sviluppatore-frontend | FATTO |
 
 ## Regole di gestione
 

@@ -30,7 +30,8 @@ flutter_app/lib/
 - F07a recupero password: fatto.
 - F07b onboarding: fatto.
 - F07c redirect: rinviato dopo F08 (vedi registro decisioni).
-- Prossimo: F09 clienti (dati + schermata).
+- F20 pagina introduttiva installazione: fatto.
+- Prossimo: F16b bandi UI, F17b utenti/ruoli, F18 super admin.
 
 ## Punti fermi
 

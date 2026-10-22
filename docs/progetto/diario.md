@@ -248,3 +248,10 @@
 - Modelli `Bando`/`FonteBando` e `getBandi`/`getFontiBandi`.
 - `ImpostazioniScreen` con profilo, azienda, accessi e logout; AuthGate già attivo.
 - `flutter analyze` 0, 283 test verdi.
+
+## 2026-10-22 — F20: pagina introduttiva installazione
+
+- `IntroScreen` con istruzioni Android/Chrome, iPhone/iPad e desktop.
+- `FirstRunGate` con `shared_preferences`: mostra l'intro una sola volta, poi la shell.
+- Voce "Come installare l'app" in Impostazioni; rotta `/intro`.
+- `flutter analyze` 0, 287 test verdi.
