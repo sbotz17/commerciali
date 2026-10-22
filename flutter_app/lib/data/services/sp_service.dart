@@ -2,8 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/azienda.dart';
+import '../models/bando.dart';
 import '../models/categoria.dart';
 import '../models/cliente.dart';
+import '../models/fonte_bando.dart';
 import '../models/preventivo.dart';
 import '../models/prodotto.dart';
 import '../models/user_profile.dart';
@@ -778,6 +780,33 @@ class SpService {
   /// Elimina la categoria con l'[id] indicato.
   Future<void> eliminaCategoria(String id) {
     return _firestore.collection('categorie').doc(id).delete();
+  }
+
+  // ---------- bandi ----------
+
+  /// Elenco dei bandi pubblici (lettura senza login, come la vecchia app).
+  ///
+  /// Legge `bandi_incentivi`, esclude i bandi con `stato == 'scaduto'` e
+  /// ordina lato client per `data_chiusura` crescente, con i valori assenti
+  /// in fondo (via [ordinaBandiPerScadenza], coerente con `SP.getBandi`).
+  Future<List<Bando>> getBandi() async {
+    final snap = await _firestore.collection('bandi_incentivi').get();
+    final bandi = snap.docs
+        .map((d) => Bando.fromMap(d.data(), id: d.id))
+        .where((b) => b.stato != 'scaduto')
+        .toList();
+    return ordinaBandiPerScadenza(bandi);
+  }
+
+  /// Elenco delle fonti dei bandi (`bandi_fonti`, lettura pubblica), ordinate
+  /// lato client per [nome] (come `SP.getFontiBandi`).
+  Future<List<FonteBando>> getFontiBandi() async {
+    final snap = await _firestore.collection('bandi_fonti').get();
+    final fonti = snap.docs
+        .map((d) => FonteBando.fromMap(d.data(), id: d.id))
+        .toList();
+    fonti.sort((a, b) => (a.nome ?? '').compareTo(b.nome ?? ''));
+    return fonti;
   }
 
   /// Costruisce il payload Firestore di un prodotto.

@@ -242,3 +242,9 @@
 - `AuthGate` nel `ShellRoute`: login se non autenticato, onboarding senza profilo/azienda, altrimenti shell.
 - Invalidazione del profilo dopo l'onboarding per evitare loop.
 - Test con provider sovrascritti; `flutter analyze` 0, 265 test verdi.
+
+## 2026-10-22 — F16a/F17a: bandi dati e impostazioni
+
+- Modelli `Bando`/`FonteBando` e `getBandi`/`getFontiBandi`.
+- `ImpostazioniScreen` con profilo, azienda, accessi e logout; AuthGate già attivo.
+- `flutter analyze` 0, 283 test verdi.

@@ -8,6 +8,7 @@ import '../features/auth/reset_password_screen.dart';
 import '../features/catalogo/catalogo_screen.dart';
 import '../features/clienti/clienti_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
+import '../features/impostazioni/impostazioni_screen.dart';
 import '../features/preventivi/preventivo_edit_screen.dart';
 import '../features/preventivi/preventivi_screen.dart';
 import '../features/shell/auth_gate.dart';
@@ -76,8 +77,23 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
           ),
           GoRoute(
             path: '/impostazioni',
+            builder: (context, state) => const ImpostazioniScreen(),
+          ),
+          GoRoute(
+            path: '/impostazioni/utenti',
             builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.settings_outlined),
+                const PlaceholderScreen(icona: Icons.people_outline),
+          ),
+          GoRoute(
+            path: '/impostazioni/ruoli',
+            builder: (context, state) =>
+                const PlaceholderScreen(icona: Icons.manage_accounts_outlined),
+          ),
+          GoRoute(
+            path: '/impostazioni/licenze',
+            builder: (context, state) => const PlaceholderScreen(
+              icona: Icons.workspace_premium_outlined,
+            ),
           ),
           GoRoute(
             path: '/superadmin',
