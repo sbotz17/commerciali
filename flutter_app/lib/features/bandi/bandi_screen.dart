@@ -118,18 +118,43 @@ List<String> statiDisponibili(List<Bando> bandi) {
   return elenco;
 }
 
-/// Filtra i bandi per testo, stato e regione.
+/// `true` se il bando è compatibile con il codice ATECO inserito.
+///
+/// - [ateco] vuoto → tutti i bandi sono compatibili;
+/// - un bando aperto a tutti (`tuttiAteco`) o senza codici (`codiciAteco`
+///   vuoto) è sempre compatibile;
+/// - altrimenti si confronta il prefisso di 2 caratteri del codice inserito
+///   con l'inizio di almeno un codice del bando (spazi esterni ignorati,
+///   senza distinzione tra maiuscole).
+bool matchAtecoBando(Bando bando, String ateco) {
+  final inserito = ateco.trim().toLowerCase();
+  if (inserito.isEmpty) return true;
+  if (bando.tuttiAteco || bando.codiciAteco.isEmpty) return true;
+
+  final prefisso =
+      inserito.length > 2 ? inserito.substring(0, 2) : inserito;
+  for (final codice in bando.codiciAteco) {
+    final pulito = codice.trim().toLowerCase();
+    if (pulito.isEmpty) continue;
+    if (pulito.startsWith(prefisso)) return true;
+  }
+  return false;
+}
+
+/// Filtra i bandi per testo, stato, regione e codice ATECO.
 ///
 /// - [testo] cerca (senza distinzione tra maiuscole) in titolo e descrizione;
 /// - [stato] è una chiave Firestore (`attivo`, `in_scadenza`, …) o vuota per
 ///   tutti;
 /// - [regione] confronta le regioni del bando; i bandi aperti a tutte le
-///   regioni (`tutteRegioni`) restano visibili con qualsiasi filtro.
+///   regioni (`tutteRegioni`) restano visibili con qualsiasi filtro;
+/// - [ateco] è il codice ATECO dell'azienda: vedi [matchAtecoBando].
 List<Bando> filtraBandi(
   List<Bando> bandi, {
   String testo = '',
   String stato = '',
   String regione = '',
+  String ateco = '',
 }) {
   final cerca = testo.trim().toLowerCase();
   final statoCercato = stato.trim().toLowerCase();
@@ -149,7 +174,9 @@ List<Bando> filtraBandi(
         bando.tutteRegioni ||
         regioni.contains(regioneCercata);
 
-    return okTesto && okStato && okRegione;
+    final okAteco = matchAtecoBando(bando, ateco);
+
+    return okTesto && okStato && okRegione && okAteco;
   }).toList();
 }
 
@@ -232,6 +259,7 @@ class BandiScreen extends ConsumerStatefulWidget {
 
 class _BandiScreenState extends ConsumerState<BandiScreen> {
   final _ricerca = TextEditingController();
+  final _ateco = TextEditingController();
 
   List<Bando> _bandi = const [];
   bool _caricamento = true;
@@ -245,6 +273,7 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
 
   bool get _filtriAttivi =>
       _ricerca.text.trim().isNotEmpty ||
+      _ateco.text.trim().isNotEmpty ||
       _filtroStato.isNotEmpty ||
       _filtroRegione.isNotEmpty;
 
@@ -252,6 +281,7 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
   void initState() {
     super.initState();
     _ricerca.addListener(_aggiornaRicerca);
+    _ateco.addListener(_aggiornaRicerca);
     _caricaBandi();
   }
 
@@ -259,6 +289,8 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
   void dispose() {
     _ricerca.removeListener(_aggiornaRicerca);
     _ricerca.dispose();
+    _ateco.removeListener(_aggiornaRicerca);
+    _ateco.dispose();
     super.dispose();
   }
 
@@ -288,6 +320,7 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
 
   void _azzeraFiltri() {
     _ricerca.clear();
+    _ateco.clear();
     setState(() {
       _filtroStato = '';
       _filtroRegione = '';
@@ -315,6 +348,7 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
           testo: _ricerca.text,
           stato: _filtroStato,
           regione: _filtroRegione,
+          ateco: _ateco.text,
         );
 
         return Column(
@@ -329,6 +363,7 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
               child: _BarraBandi(
                 largo: largo,
                 controller: _ricerca,
+                ateco: _ateco,
                 stati: statiDisponibili(_bandi),
                 regioni: regioniDisponibili(_bandi),
                 filtroStato: _filtroStato,
@@ -364,11 +399,12 @@ class _BandiScreenState extends ConsumerState<BandiScreen> {
   }
 }
 
-/// Barra di ricerca e filtri (stato e regione se presenti nei dati).
+/// Barra di ricerca e filtri (ATECO, stato e regione se presenti nei dati).
 class _BarraBandi extends StatelessWidget {
   const _BarraBandi({
     required this.largo,
     required this.controller,
+    required this.ateco,
     required this.stati,
     required this.regioni,
     required this.filtroStato,
@@ -379,6 +415,7 @@ class _BarraBandi extends StatelessWidget {
 
   final bool largo;
   final TextEditingController controller;
+  final TextEditingController ateco;
   final List<String> stati;
   final List<String> regioni;
   final String filtroStato;
@@ -401,6 +438,33 @@ class _BarraBandi extends StatelessWidget {
                 key: const Key('bandi-azzera-ricerca'),
                 tooltip: 'Azzera ricerca',
                 onPressed: controller.clear,
+                icon: const Icon(Icons.close),
+              ),
+      ),
+    );
+
+    // Codice ATECO dell'azienda: filtrare per prefisso di 2 cifre.
+    final campoAteco = TextField(
+      key: const Key('bandi-filtro-ateco'),
+      controller: ateco,
+      keyboardType: TextInputType.number,
+      maxLength: 6,
+      buildCounter: (
+        context, {
+        required currentLength,
+        required isFocused,
+        required maxLength,
+      }) =>
+          null,
+      decoration: InputDecoration(
+        labelText: 'ATECO',
+        hintText: 'ATECO (es. 62)',
+        suffixIcon: ateco.text.isEmpty
+            ? null
+            : IconButton(
+                key: const Key('bandi-azzera-ateco'),
+                tooltip: 'Azzera ATECO',
+                onPressed: ateco.clear,
                 icon: const Icon(Icons.close),
               ),
       ),
@@ -450,6 +514,8 @@ class _BarraBandi extends StatelessWidget {
         children: [
           campoRicerca,
           const SizedBox(height: AppSpazi.xs),
+          campoAteco,
+          const SizedBox(height: AppSpazi.xs),
           Row(
             children: [
               Expanded(child: tendinaStato),
@@ -466,6 +532,8 @@ class _BarraBandi extends StatelessWidget {
     return Row(
       children: [
         Expanded(child: campoRicerca),
+        const SizedBox(width: AppSpazi.s),
+        SizedBox(width: 160, child: campoAteco),
         const SizedBox(width: AppSpazi.s),
         SizedBox(width: 200, child: tendinaStato),
         if (regioni.isNotEmpty) ...[

@@ -6,6 +6,7 @@ import '../features/auth/login_screen.dart';
 import '../features/auth/onboarding_screen.dart';
 import '../features/auth/reset_password_screen.dart';
 import '../features/bandi/bandi_screen.dart';
+import '../features/bandi/import_bandi_screen.dart';
 import '../features/catalogo/catalogo_screen.dart';
 import '../features/clienti/clienti_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
@@ -83,6 +84,10 @@ GoRouter creaAppRouter({String? initialLocation}) {
           GoRoute(
             path: '/bandi',
             builder: (context, state) => const BandiScreen(),
+          ),
+          GoRoute(
+            path: '/bandi/importa',
+            builder: (context, state) => const ImportBandiScreen(),
           ),
           GoRoute(
             path: '/impostazioni',

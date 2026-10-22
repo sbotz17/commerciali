@@ -8,6 +8,7 @@ import '../../data/models/ruolo.dart';
 import '../../data/models/user_profile.dart';
 import '../../state/azienda_providers.dart';
 import 'impostazioni_screen.dart' show inizialiProfilo, nomeVisualizzatoProfilo;
+import 'nuovo_utente_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Funzioni pure: testi e messaggi verificabili senza Firebase né UI
@@ -109,10 +110,9 @@ String _maiuscola(String valore) {
 // Schermata con provider
 // ---------------------------------------------------------------------------
 
-/// Schermata Utenti: membri dell'azienda attiva, cambio ruolo e rimozione.
-///
-/// La creazione di nuovi account non è prevista qui: le persone entrano
-/// nell'azienda con l'invito gestito dall'amministratore.
+/// Schermata Utenti: membri dell'azienda attiva, creazione, cambio ruolo e
+/// rimozione. La creazione account usa una sessione Firebase secondaria per
+/// non perdere la sessione dell'amministratore.
 class UtentiScreen extends ConsumerStatefulWidget {
   const UtentiScreen({super.key});
 
@@ -161,6 +161,16 @@ class _UtentiScreenState extends ConsumerState<UtentiScreen> {
         _caricamento = false;
       });
     }
+  }
+
+  /// Apre il form di creazione e ricarica l'elenco se l'utente è stato creato.
+  Future<void> _apriNuovoUtente() async {
+    final creato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => NuovoUtenteScreen(ruoli: _ruoli),
+      ),
+    );
+    if (creato == true && mounted) await _carica();
   }
 
   /// Chiede conferma e aggiorna il ruolo del membro.
@@ -302,13 +312,38 @@ class _UtentiScreenState extends ConsumerState<UtentiScreen> {
       );
     }
 
-    return CorpoUtenti(
-      utenti: _utenti,
-      ruoli: _ruoli,
-      inCorso: _inCorso,
-      onCambiaRuolo: _cambiaRuolo,
-      onRimuovi: _rimuovi,
-      largo: largo,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Utenti',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(width: AppSpazi.s),
+            FilledButton.icon(
+              key: const Key('utenti-nuovo'),
+              onPressed: _apriNuovoUtente,
+              icon: const Icon(Icons.person_add_alt_1),
+              label: const Text('Nuovo utente'),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpazi.s),
+        Expanded(
+          child: CorpoUtenti(
+            utenti: _utenti,
+            ruoli: _ruoli,
+            inCorso: _inCorso,
+            onCambiaRuolo: _cambiaRuolo,
+            onRimuovi: _rimuovi,
+            largo: largo,
+          ),
+        ),
+      ],
     );
   }
 }

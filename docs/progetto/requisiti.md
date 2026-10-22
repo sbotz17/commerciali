@@ -163,3 +163,16 @@ nessuna migrazione e nessuna scrittura di default; i campi si scrivono solo alla
 4. Se un figlio è in più panieri, ogni padre inserito crea la propria riga con il proprio nome.
 5. Reinserendo un padre con quantità 5, padre e figli già presenti incrementano di 1.
 6. Nessun limite al numero di figli; nella scelta si vedono solo prodotti attivi.
+
+## 2026-10-22 — Amministrazione, ruoli e bandi
+
+- L'azienda di appoggio VOLTY è stata rinominata **Closer**; non è un'azienda di produzione.
+- Il superadmin può creare aziende con primo amministratore, ruoli seed, categorie e licenza trial.
+- Il superadmin viene aggiunto come membro admin dell'azienda creata per poter gestire ruoli e categorie.
+- La creazione di un utente usa una sessione Firebase secondaria: il profilo viene scritto dal nuovo utente,
+  poi la sessione viene chiusa e l'app secondaria eliminata.
+- I ruoli personalizzati hanno nome, descrizione, sconto massimo e permessi per area; i ruoli di sistema non si eliminano.
+- L'import bandi è riservato al superadmin, accetta JSON open data da file o URL e aggiorna/aggiunge i bandi.
+- L'import da URL può richiedere il file locale se il sito remoto blocca le richieste dal browser (CORS).
+- Bandi è nel menu principale; il filtro ATECO usa il prefisso di 2 cifre e considera i bandi aperti a tutti.
+- Resta fuori perimetro la modifica di licenze e piani (F18b) e l'import CSV.

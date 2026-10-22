@@ -63,6 +63,7 @@ void main() {
       List<Azienda> aziende = const [volty, alfa],
       bool? largo,
       ValueChanged<Azienda>? onEntra,
+      VoidCallback? onNuova,
     }) async {
       tester.view.physicalSize = const Size(900, 1400);
       tester.view.devicePixelRatio = 1;
@@ -78,6 +79,7 @@ void main() {
               largo: largo,
               onEntra: onEntra ?? (_) {},
               onRiprova: () {},
+              onNuova: onNuova,
             ),
           ),
         ),
@@ -140,6 +142,52 @@ void main() {
         find.byKey(const ValueKey('superadmin-entra-a1')),
         findsOneWidget,
       );
+    });
+
+    testWidgets('senza callback "Nuova azienda" non compare', (tester) async {
+      await mostraCorpo(tester, largo: false);
+
+      expect(find.text('Aziende'), findsOneWidget);
+      expect(find.byKey(const Key('superadmin-nuova')), findsNothing);
+      expect(find.byKey(const Key('superadmin-nuova-vuoto')), findsNothing);
+    });
+
+    testWidgets('con callback compare il pulsante "Nuova azienda"', (
+      tester,
+    ) async {
+      var premuto = 0;
+      await mostraCorpo(tester, largo: false, onNuova: () => premuto++);
+
+      expect(find.byKey(const Key('superadmin-nuova')), findsOneWidget);
+      expect(find.text('Aziende'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('superadmin-nuova')));
+      await tester.pumpAndSettle();
+
+      expect(premuto, 1);
+    });
+
+    testWidgets('stato vuoto con callback mostra il pulsante dedicato', (
+      tester,
+    ) async {
+      var premuto = 0;
+      await mostraCorpo(
+        tester,
+        aziende: const [],
+        onNuova: () => premuto++,
+      );
+
+      expect(find.byKey(const Key('superadmin-vuoto')), findsOneWidget);
+      expect(
+        find.byKey(const Key('superadmin-nuova-vuoto')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('superadmin-nuova')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('superadmin-nuova-vuoto')));
+      await tester.pumpAndSettle();
+
+      expect(premuto, 1);
     });
   });
 }

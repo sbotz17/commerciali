@@ -8,6 +8,7 @@ import '../../core/ui/stato_centrato.dart';
 import '../../data/models/azienda.dart';
 import '../../state/azienda_providers.dart';
 import '../../state/auth_providers.dart';
+import '../impostazioni/nuova_azienda_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Funzioni pure (verificabili senza Firebase)
@@ -118,6 +119,15 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
     context.go('/');
   }
 
+  /// Apre la creazione di una nuova azienda; se va a buon fine ricarica.
+  Future<void> _apriNuovaAzienda() async {
+    final creata = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const NuovaAziendaScreen()),
+    );
+    if (!mounted || creata != true) return;
+    await _carica();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(profileProvider, (precedente, attuale) {
@@ -158,6 +168,7 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
             largo: largo,
             onRiprova: _carica,
             onEntra: _entra,
+            onNuova: _apriNuovaAzienda,
           ),
         );
       },
@@ -182,6 +193,7 @@ class CorpoSuperAdmin extends StatefulWidget {
     this.caricamento = false,
     this.errore,
     this.largo,
+    this.onNuova,
   });
 
   final List<Azienda> aziende;
@@ -192,6 +204,9 @@ class CorpoSuperAdmin extends StatefulWidget {
 
   /// Forza il layout largo (tabella); se `null` decide la larghezza.
   final bool? largo;
+
+  /// Se presente, mostra il pulsante "Nuova azienda".
+  final VoidCallback? onNuova;
 
   @override
   State<CorpoSuperAdmin> createState() => _CorpoSuperAdminState();
@@ -231,11 +246,19 @@ class _CorpoSuperAdminState extends State<CorpoSuperAdmin> {
     }
 
     if (widget.aziende.isEmpty) {
-      return const StatoCentrato(
-        key: Key('superadmin-vuoto'),
+      return StatoCentrato(
+        key: const Key('superadmin-vuoto'),
         icona: Icons.business_outlined,
         titolo: 'Nessuna azienda',
         sottotitolo: 'Non ci sono aziende registrate sulla piattaforma.',
+        azione: widget.onNuova == null
+            ? null
+            : FilledButton.icon(
+                key: const Key('superadmin-nuova-vuoto'),
+                onPressed: widget.onNuova,
+                icon: const Icon(Icons.add_business),
+                label: const Text('Nuova azienda'),
+              ),
       );
     }
 
@@ -243,6 +266,24 @@ class _CorpoSuperAdminState extends State<CorpoSuperAdmin> {
 
     return Column(
       children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Aziende',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            if (widget.onNuova != null)
+              FilledButton.icon(
+                key: const Key('superadmin-nuova'),
+                onPressed: widget.onNuova,
+                icon: const Icon(Icons.add_business),
+                label: const Text('Nuova azienda'),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpazi.s),
         TextField(
           key: const Key('superadmin-ricerca'),
           controller: _ricerca,

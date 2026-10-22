@@ -331,3 +331,17 @@
   (200,00 € con figli a zero e quantità 2). Report: `docs/progetto/test/2026-10-22-panieri.md`.
 - Nessuna modifica a `firestore.rules`, collezioni o indici.
 - Validazione panieri: **APPROVATO** (22/10/2026); P01-P10 coerenti, regole invariate, nessun segnaposto.
+
+## 2026-10-22 — Aziende, utenti, ruoli e import bandi
+
+- Rinominata l'azienda di appoggio **VOLTY → Closer**.
+- Superadmin: creazione nuova azienda con primo amministratore, ruoli seed, categorie e licenza trial.
+- Utenti: creazione con ruolo tramite seconda app Firebase; la sessione dell'amministratore resta attiva.
+- Ruoli: creazione e modifica con permessi per area; i ruoli di sistema non sono eliminabili.
+- Bandi: nuova pagina **Importa bandi** (JSON da file o URL, solo superadmin), parser e upsert in batch.
+- Bandi spostati nel menu principale; aggiunto filtro **ATECO** per prefisso.
+- Verifiche: `flutter analyze` 0, **499 test verdi**, E2E con ruolo Tecnico E2E, utente tecnico,
+  azienda E2E, import di un bando ATECO 62 e filtro ATECO. Report:
+  `docs/progetto/test/2026-10-22-amministrazione-bandi.md`.
+- Nessuna modifica a `firestore.rules`, collezioni o indici.
+- Validazione amministrazione/bandi: **APPROVATO** (22/10/2026); prove pulite, PRV di test eliminato, contatore azzerato.

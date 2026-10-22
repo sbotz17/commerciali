@@ -35,7 +35,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F15b | Visite | Schermata visite e form | lista per data, CRUD, riordino, stati | sviluppatore-frontend | FATTO |
 | F16a | Bandi | Modelli `Bando`/`FonteBando` + `getBandi`/`getFontiBandi` in `SpService` | lettura pubblica `bandi_incentivi`/`bandi_fonti`; escluso `scaduto`; ordinamento `data_chiusura` (null in fondo); `fromMap`/`toMap`; test | sviluppatore-backend | FATTO |
 | F16 | Bandi | Lista pubblica, filtri e dettaglio | dati reali da `bandi_incentivi`; ricerca, filtri stato/regione, dettaglio, link ufficiale; test | sviluppatore-frontend | FATTO |
-| F16c | Bandi | Import manuale dei bandi | import con log (non presente nella UI attuale) | sviluppatore-frontend | DA FARE |
+| F16c | Bandi | Import manuale dei bandi | import JSON da file o URL, riservato al superadmin, con statistiche; test | sviluppatore-frontend | FATTO |
 | F17a | Impostazioni | Profilo, azienda, accessi e logout | schermata responsive; test | sviluppatore-frontend | FATTO |
 | F17b | Impostazioni | Utenti e ruoli | elenco membri, cambio ruolo, rimozione; ruoli in sola lettura; test | sviluppatore-frontend | FATTO |
 | F17c | Impostazioni | Licenze | piano, stato, date e limiti dell'azienda attiva; test | sviluppatore-frontend | FATTO |
@@ -69,6 +69,23 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | P08 | Preventivo | Etichetta e rientro righe figlie | “Paniere: <padre>” in card e tabella; test | sviluppatore-frontend | FATTO |
 | P09 | PDF | Etichetta paniere nel PDF | testo sotto la descrizione, prezzi/totali invariati; test | sviluppatore-frontend | FATTO |
 | P10 | Qualità | E2E staging panieri | padre+2 figli, prezzo/zero, quantità, reinserimento, Firestore; report | tester | FATTO |
+
+
+## Amministrazione, ruoli e bandi (F30)
+
+| ID | Area | Task | Criteri di accettazione | Agente | Stato |
+|---|---|---|---|---|---|
+| A01 | Dati | Rinominare l'azienda di appoggio VOLTY in Closer | dato Firestore aggiornato, nessun dato cancellato; test aggiornati | dba | FATTO |
+| A02 | Auth | Creare account e profilo con sessione secondaria | utente creato, profilo scritto prima del logout, app secondaria eliminata sempre; test | sviluppatore-backend | FATTO |
+| A03 | Dati | Servizio ruoli e rinomina azienda | `inserisciRuolo`/`aggiornaRuolo`/`eliminaRuolo`, `rinominaAzienda`, `getUtentePerEmail`; test chiave | sviluppatore-backend | FATTO |
+| A04 | UI | Ruoli modificabili | nuovo/modifica/elimina con permessi per area, ruoli di sistema non eliminabili; test | sviluppatore-frontend | FATTO |
+| A05 | UI | Nuovo utente con ruolo | form nome/email/ruolo/invito o password, profilo+membership, test | sviluppatore-frontend | FATTO |
+| A06 | UI | Nuova azienda con primo admin | azienda+membership superadmin+seed+account admin+membership, test | sviluppatore-frontend | FATTO |
+| B01 | UI | Filtro ATECO nei bandi | prefisso 2 cifre, `tutti_ateco`, test | sviluppatore-frontend | FATTO |
+| B02 | UI | Bandi nel menu principale | Dashboard/Clienti/Preventivi/Bandi/Altro, Visite in Altro; test | sviluppatore-frontend | FATTO |
+| B03 | Dati | Parser import bandi | JSON/Solr, normalizzazione, stato, ATECO, id stabile; test | sviluppatore-backend | FATTO |
+| B04 | UI | Import bandi da file/URL | solo superadmin, file JSON, URL, progresso e statistiche; test | sviluppatore-frontend | FATTO |
+| B05 | Qualità | E2E amministrazione e bandi | ruolo, utente, azienda, import URL, filtro ATECO; report | tester | FATTO |
 
 ## Regole di gestione
 

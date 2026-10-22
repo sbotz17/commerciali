@@ -15,6 +15,8 @@ void main() {
     String? stato = 'attivo',
     List<String> regioni = const ['lombardia'],
     bool tutteRegioni = false,
+    List<String> codiciAteco = const [],
+    bool tuttiAteco = false,
     String? fonte = 'incentivi.gov.it',
     String? linkUfficiale,
     num? agevolazioneMin,
@@ -28,6 +30,8 @@ void main() {
       stato: stato,
       regioni: regioni,
       tutteRegioni: tutteRegioni,
+      codiciAteco: codiciAteco,
+      tuttiAteco: tuttiAteco,
       fonte: fonte,
       linkUfficiale: linkUfficiale,
       agevolazioneMin: agevolazioneMin,
@@ -86,6 +90,36 @@ void main() {
         uriUfficialeBando(bando(linkUfficiale: 'javascript:alert(1)')),
         isNull,
       );
+    });
+  });
+
+  group('matchAtecoBando', () {
+    test('codice ATECO vuoto tiene tutti i bandi', () {
+      expect(matchAtecoBando(bando(codiciAteco: const ['62']), ''), isTrue);
+    });
+
+    test('bando aperto a tutti o senza codici è sempre compatibile', () {
+      final tutti = bando(tuttiAteco: true);
+      final senzaCodici = bando(codiciAteco: const []);
+      expect(matchAtecoBando(tutti, '62.01'), isTrue);
+      expect(matchAtecoBando(senzaCodici, '62.01'), isTrue);
+      expect(
+        matchAtecoBando(bando(codiciAteco: const ['62'], tuttiAteco: true), '43'),
+        isTrue,
+      );
+    });
+
+    test('combacia sul prefisso di 2 caratteri', () {
+      final b = bando(codiciAteco: const [' 62.01 ', '63.11']);
+      expect(matchAtecoBando(b, '62'), isTrue);
+      expect(matchAtecoBando(b, '6201'), isTrue);
+      expect(matchAtecoBando(b, '631'), isTrue);
+    });
+
+    test('codice diverso non combacia', () {
+      final b = bando(codiciAteco: const ['62.01']);
+      expect(matchAtecoBando(b, '43'), isFalse);
+      expect(matchAtecoBando(b, '61.90'), isFalse);
     });
   });
 
@@ -151,6 +185,30 @@ void main() {
         filtraBandi(elenco, testo: 'bonus', stato: 'attivo').map((b) => b.id),
         isEmpty,
       );
+    });
+
+    test('filtra per ATECO e tiene i bandi aperti a tutti', () {
+      final conAteco = [
+        bando(id: 'digitale', codiciAteco: const ['62.01', '62.02']),
+        bando(id: 'commercio', codiciAteco: const ['47.11']),
+        bando(id: 'nazionale', tuttiAteco: true),
+        bando(id: 'senza-codici'),
+      ];
+
+      expect(filtraBandi(conAteco, ateco: '62').map((b) => b.id), [
+        'digitale',
+        'nazionale',
+        'senza-codici',
+      ]);
+      expect(filtraBandi(conAteco, ateco: '47').map((b) => b.id), [
+        'commercio',
+        'nazionale',
+        'senza-codici',
+      ]);
+      expect(filtraBandi(conAteco, ateco: '43').map((b) => b.id), [
+        'nazionale',
+        'senza-codici',
+      ]);
     });
   });
 

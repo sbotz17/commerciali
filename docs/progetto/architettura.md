@@ -157,3 +157,85 @@ Rischi: parità PDF (jsPDF vs `pdf`); differenze SDK Firebase web/mobile (sessio
 duplicazione numeri se la transazione del contatore differisce; doppia manutenzione durante la
 transizione; assenza di suite automatica (costo di test manuale su 3 piattaforme); dipendenza dal
 Worker VIES; gestione immagini prodotto da confermare prima di replicarla.
+
+## 2026-10-22 — Super admin: aziende, utenti, ruoli, import bandi, ATECO
+
+Obiettivo: dare al super admin le funzioni oggi solo nella vecchia app Alpine
+(`creaAziendaCompleta`, licenze, `creaAccountLogin`, import bandi). **Non serve toccare
+`firestore.rules`**: le regole attuali già coprono tutti i flussi (vedi verifiche). Nessuna nuova
+collezione, nessuna migrazione, nessuna funzione cloud.
+
+### Verifiche sulle regole (esito)
+
+1. **Profilo utente** — Confermato. Con `Firebase.initializeApp(name: 'crea-utente-…')` +
+   `FirebaseFirestore.instanceFor(app)` l'utente appena creato è loggato sulla **seconda** app e può
+   scrivere `utenti/{proprioUid}` perché `allow create: if userId == uid()`. Il profilo va scritto
+   **prima** del `signOut()` (e prima di `app.delete()`); la membership è scritta invece dal super
+   admin sulla app primaria (ordine indipendente dal profilo).
+2. **Creazione azienda** — Confermata la sequenza corretta. `aziende` create passa con
+   `created_by == uid()` (super admin). Ma `ruoli` create richiede `isAdminOf` (non `isSuper`) e
+   `categorie` create richiede `memberOf` (non `isSuper`): il super admin **da solo** non può fare il
+   seed. Sequenza: (a) crea azienda → (b) aggiungi membership `membri/{az}_{superUid}` ruolo `admin`
+   (consentita da `canManage`/`isSuper`) → (c) `seedAzienda` (ruoli+categorie+licenza, ora è
+   admin/membro) → (d) crea account admin nuovo → (e) profilo nuovo (app secondaria) → (f) membership
+   admin nuovo.
+3. **Licenza** — OK. `licenze` create: `isSuper()` oppure creatore con `piano == "trial"`. Il super
+   admin può creare qualsiasi piano; l'onboarding self-service solo trial.
+4. **Email invito** — Confermato. `sendPasswordResetEmail(email)` sulla app primaria manda il link di
+   set password a un **altro** utente senza cambiare la sessione corrente. Funziona solo se l'account
+   Auth esiste (creato prima). Da chiamare dopo `app.delete()` della secondaria.
+5. **Import bandi** — Confermato. `bandi_incentivi`, `bandi_fonti`, `bandi_sync_log` hanno write solo
+   `isSuper()`. La pagina di import va riservata al super admin (gate su `superAdmin == true`, come
+   `SuperAdminScreen`); la sola consultazione resta pubblica.
+6. **Ruoli personalizzati** — Confermato. `ruoli` create/update richiedono `isAdminOf`. Il super admin
+   deve avere membership `admin` nell'azienda (vale sia per aziende nuove, step (b), sia per
+   intervenire su aziende esistenti dove non è ancora membro).
+7. **Rischi** — email già usata → `email-already-in-use`: non bloccare, prosegui con membership/profilo
+   e avvisa (come la vecchia app). Sessione secondaria: `await app.delete()` **sempre** in `finally`,
+   mai sulla app default. Password temporanea: generare ≥ 10 char e farla impostare via link. Ordine
+   profilo: scrivere `utenti` mentre il nuovo utente è loggato, prima del logout. Permessi: entrare in
+   un'azienda (`context.go('/')`) non crea membership; per modificare ruoli in aziende esistenti serve
+   prima la membership admin del super admin. ATECO: il filtro agisce su `Bando.codiciAteco` +
+   `tuttiAteco` (il modello esiste già); l'azienda oggi **non** ha un campo `ateco` → il codice si
+   inserisce a mano nel filtro (eventuale campo `aziende.ateco` = punto aperto, non tocca le regole).
+8. **VOLTY → Closer** — non è codice: è il `nome` del documento `aziende` di appoggio, rinominato dal
+   super admin (`rinominaAzienda`, da replicare in `SpService`). Il brand "Closer" è già ovunque nel
+   Flutter; resta solo il dato Firestore e il test `superadmin_screen_test.dart` che usa il literal
+   `'VOLTY'`.
+
+### Task piccoli (1 file principale ciascuno)
+
+1. **`SpService`: seconda app Auth/Firestore** (`sp_service.dart`): metodo `creaUtenteConProfilo(email,
+   nome, {aziendaId, ruolo})` che inizializza app secondaria, crea account, scrive `utenti/{uid}` sulla
+   secondaria, signOut e `delete()` in `finally`. Criterio: nessuna app residua, profilo con email
+   normalizzata. Test: unit con mock Firestore/Auth (niente rete).
+2. **`SpService`: creaAziendaSuper** (`sp_service.dart`): orchestrazione sequenza (b)–(f) di §2, con
+   gestione `email-already-in-use` e invio reset. Criterio: azienda + 2 membership + seed + profilo +
+   email. Test: unit sul flusso con mock.
+3. **`superadmin_screen.dart`: form nuova azienda + admin** (solo UI + callback). Criterio: campi
+   obbligatori nome/email/password, stati caricamento/errore, chiavi di test. Test: widget.
+4. **`superadmin_screen.dart`: form nuovo utente con ruolo** (solo UI + callback). Criterio: scelta
+   ruolo da `ruoli` azienda, conferma. Test: widget.
+5. **`SpService`: ruoli custom** (`sp_service.dart`): `inserisciRuolo`/`aggiornaRuolo` con
+   `azienda_id`, replicando `SP`. Criterio: create/update passano `isAdminOf`. Test: unit.
+6. **`ruoli_screen.dart`: abilita modifica/creazione** (sostituisce `_NotaSolaLettura`). Criterio:
+   solo admin vede i comandi; `sistema` non eliminabile. Test: widget + unit (permessi).
+7. **`bandi_screen.dart`: filtro ATECO** (pure function `filtraBandiAteco` + tendina/campo). Criterio:
+   match su prefisso codice + `tutti_ateco`. Test: unit sulla funzione pura.
+8. **`superadmin_screen.dart`: import bandi** (scegli file JSON o URL → parser → `upsertBandi`).
+   Criterio: solo `superAdmin`; mapping campo snake_case già nel modello `Bando`. Test: unit sul parser.
+9. **`app_shell.dart`: Bandi nel menu principale** (spostare `/bandi` dalle voci secondarie alle
+   principali). Criterio: raggiungibile senza "Altro". Test: widget navigazione.
+10. **Rinomina azienda** (`sp_service.dart` `rinominaAzienda` + azione in `superadmin_screen.dart`):
+    conferma e `update({nome})` su `aziende/{id}` (permesso `canManage`/`isSuper`). Criterio: VOLTY →
+    Closer. Test: unit + aggiornare `superadmin_screen_test.dart`.
+
+### Test minimi
+
+- **Unit**: pure function filtro ATECO, parser import JSON, payload/mapping `Bando`/ruolo,
+  `creaUtenteConProfilo` e `creaAziendaSuper` con mock (verificano ordine chiamate e `delete()` in
+  finally), `rinominaAzienda`.
+- **Widget**: form nuova azienda/utente, ruoli modificabili, import bandi, voce menu Bandi.
+- **E2E staging** (login super admin, azienda attiva): crea azienda → crea utente admin → ricezione
+  email reset → login nuovo utente senza `permission-denied` → crea ruolo custom → importa 1 bando JSON
+  → filtro ATECO restituisce il bando giusto → nessun documento `utenti` orfano.
