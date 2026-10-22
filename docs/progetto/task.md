@@ -33,7 +33,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F14 | Preventivi | PDF con `pdf`/`printing` | stesso contenuto e totali; stampa/condivisione | sviluppatore-frontend | FATTO |
 | F15a | Visite | Modello `Visita` + query/CRUD `SpService` (`giro_visite`) | CRUD; isolamento azienda; ordinamento `ordine`/`ora`; riordino batch; test | sviluppatore-backend | FATTO |
 | F15a | Visite | Modello `Visita` + CRUD `SpService` | CRUD; ordinamento; test | sviluppatore-backend | FATTO |
-| F15b | Visite | Schermata visite e form | lista per data, CRUD, riordino, stati | sviluppatore-frontend | IN CORSO |
+| F15b | Visite | Schermata visite e form | lista per data, CRUD, riordino, stati | sviluppatore-frontend | FATTO |
 | F16 | Bandi | Lista pubblica, filtri, dettaglio, import | pagina senza login; import scrive log | sviluppatore-frontend | DA FARE |
 | F17 | Impostazioni | Utenti, ruoli, permessi, licenze | CRUD utenti; limiti piano; super admin | sviluppatore-backend | DA FARE |
 | F18 | Super admin | Pannello aziende, licenze, piani | accesso a qualsiasi azienda; nessun dato fuori azienda | sviluppatore-frontend | DA FARE |

@@ -11,6 +11,7 @@ import '../features/dashboard/dashboard_screen.dart';
 import '../features/preventivi/preventivo_edit_screen.dart';
 import '../features/preventivi/preventivi_screen.dart';
 import '../features/shell/app_shell.dart';
+import '../features/visite/visite_screen.dart';
 
 /// Costruisce il router dell'app.
 ///
@@ -66,8 +67,7 @@ GoRouter creaAppRouter({String initialLocation = '/'}) {
           ),
           GoRoute(
             path: '/visite',
-            builder: (context, state) =>
-                const PlaceholderScreen(icona: Icons.event_outlined),
+            builder: (context, state) => const VisiteScreen(),
           ),
           GoRoute(
             path: '/bandi',

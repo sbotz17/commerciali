@@ -231,3 +231,8 @@
 - Dashboard con 6 statistiche, valore aperto, ultimi 5, azioni rapide; responsive.
 - Modello `Visita` e CRUD `SpService` per giro visite.
 - Test dashboard (conteggi e widget) e visite (modello); `flutter analyze` 0, 237 test verdi.
+
+## 2026-10-22 — F15b: schermata visite
+
+- `VisiteScreen` + `VisitaFormScreen`: data, lista, CRUD, stati, riordino con frecce, layout responsive.
+- Test funzioni pure e widget; `flutter analyze` 0, 262 test verdi.
