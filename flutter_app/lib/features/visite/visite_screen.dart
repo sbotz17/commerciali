@@ -11,6 +11,7 @@ import '../../data/models/cliente.dart';
 import '../../data/models/visita.dart';
 import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
+import '../clienti/clienti_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Funzioni pure: stati, date, ordinamento e messaggi (verificabili senza
@@ -1004,6 +1005,19 @@ class _VisitaFormScreenState extends ConsumerState<VisitaFormScreen> {
     return opzioni;
   }
 
+  /// Apre il form cliente e, se il salvataggio riesce, lo seleziona qui.
+  Future<void> _apriNuovoCliente() async {
+    String? nuovoId;
+    final salvato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ClienteFormScreen(onSalvato: (id) => nuovoId = id),
+      ),
+    );
+    if (salvato != true) return;
+    await _caricaClienti();
+    if (mounted && nuovoId != null) setState(() => _clienteId = nuovoId);
+  }
+
   Future<void> _salva() async {
     FocusScope.of(context).unfocus();
     setState(() => _errore = null);
@@ -1134,6 +1148,16 @@ class _VisitaFormScreenState extends ConsumerState<VisitaFormScreen> {
                                     : (valore) =>
                                         setState(() => _clienteId = valore),
                               ),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                key: const Key('visita-nuovo-cliente'),
+                                onPressed:
+                                    _salvando ? null : _apriNuovoCliente,
+                                icon: const Icon(Icons.person_add_alt_1),
+                                label: const Text('Nuovo cliente'),
+                              ),
+                            ),
                             if (_erroreClienti != null) ...[
                               const SizedBox(height: AppSpazi.s),
                               AvvisoErrore(

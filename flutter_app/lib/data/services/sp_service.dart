@@ -32,6 +32,35 @@ List<String> sanificaFigliIds(dynamic valore, {String? escludiId}) {
   return risultato;
 }
 
+/// Suddivide [elementi] in blocchi consecutivi di al più [dimensione]
+/// elementi. Utile per limitare la grandezza delle batch Firestore.
+List<List<T>> aBlocchi<T>(List<T> elementi, int dimensione) {
+  if (dimensione <= 0) {
+    throw ArgumentError.value(dimensione, 'dimensione', 'Deve essere > 0');
+  }
+  final blocchi = <List<T>>[];
+  for (var i = 0; i < elementi.length; i += dimensione) {
+    final fine = i + dimensione < elementi.length
+        ? i + dimensione
+        : elementi.length;
+    blocchi.add(elementi.sublist(i, fine));
+  }
+  return blocchi;
+}
+
+/// Deriva la chiave stabile di un ruolo dal [nome] visibile.
+///
+/// Ripulisce (trim), normalizza in minuscolo, sostituisce spazi e caratteri
+/// non alfanumerici con `_`, elimina gli underscore iniziali/finali e quelli
+/// doppi; se il risultato è vuoto usa `ruolo`.
+String chiaveRuoloDaNome(String nome) {
+  var s = nome.trim().toLowerCase();
+  s = s.replaceAll(RegExp('[^a-z0-9]+'), '_');
+  s = s.replaceAll(RegExp('_+'), '_');
+  s = s.replaceAll(RegExp('^_+|_+\$'), '');
+  return s.isEmpty ? 'ruolo' : s;
+}
+
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
 /// vecchia app (sottoinsieme aziende/membri/profilo).
 ///
@@ -103,6 +132,17 @@ class SpService {
     return aziende.whereType<Azienda>().toList();
   }
 
+  /// Rinomina l'azienda con [id] impostando il campo `nome` (trim) e
+  /// `updated_at`. Non fa nulla se il nome, dopo il trim, è vuoto.
+  Future<void> rinominaAzienda(String id, String nome) async {
+    final n = nome.trim();
+    if (n.isEmpty) return;
+    await _firestore.collection('aziende').doc(id).update({
+      'nome': n,
+      'updated_at': _now(),
+    });
+  }
+
   // ---------- profilo ----------
 
   /// Garantisce l'esistenza del profilo `utenti/{uid}` per l'[email].
@@ -143,6 +183,23 @@ class SpService {
         .doc(uid)
         .set(payload, SetOptions(merge: true));
     return UserProfile.fromMap(payload, id: uid);
+  }
+
+  /// Cerca il profilo `utenti` con l'[email] normalizzata (trim + lowercase).
+  ///
+  /// Ritorna il primo risultato o `null` se l'email è vuota o nessun profilo
+  /// corrisponde.
+  Future<UserProfile?> getUtentePerEmail(String email) async {
+    final em = email.trim().toLowerCase();
+    if (em.isEmpty) return null;
+    final q = await _firestore
+        .collection('utenti')
+        .where('email', isEqualTo: em)
+        .limit(1)
+        .get();
+    if (q.docs.isEmpty) return null;
+    final d = q.docs.first;
+    return UserProfile.fromMap(d.data(), id: d.id);
   }
 
   // ---------- creazione azienda / membri / seed ----------
@@ -347,6 +404,59 @@ class SpService {
         .toList();
     ruoli.sort((a, b) => a.nome.compareTo(b.nome));
     return ruoli;
+  }
+
+  /// Crea un ruolo nell'azienda attiva (come `SP.inserisciRuolo`).
+  ///
+  /// Richiede un'azienda attiva; scrive `azienda_id`, `nome` (trim), `chiave`
+  /// (da [chiaveRuoloDaNome]), `descrizione`, `sconto_max`, `permessi` (solo i
+  /// valori non vuoti), `sistema: false` e `created_at`. Ritorna
+  /// `{id, ...payload}`.
+  Future<Map<String, dynamic>> inserisciRuolo({
+    required String nome,
+    String descrizione = '',
+    int scontoMax = 0,
+    Map<String, String> permessi = const {},
+  }) async {
+    _richiediAzienda();
+    final payload = <String, dynamic>{
+      'azienda_id': _aziendaAttiva,
+      'nome': nome.trim(),
+      'chiave': chiaveRuoloDaNome(nome),
+      'descrizione': descrizione.trim(),
+      'sconto_max': scontoMax,
+      'permessi': _permessiRuolo(permessi),
+      'sistema': false,
+      'created_at': _now(),
+    };
+    final ref = await _firestore.collection('ruoli').add(payload);
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Aggiorna il ruolo [id] limitandosi ai campi modificabili.
+  ///
+  /// Scrive solo `nome` (trim), `descrizione`, `sconto_max`, `permessi` (solo i
+  /// valori non vuoti) e `updated_at`; non tocca `azienda_id`, `chiave` o
+  /// `sistema`.
+  Future<void> aggiornaRuolo(
+    String id, {
+    required String nome,
+    String descrizione = '',
+    int scontoMax = 0,
+    Map<String, String> permessi = const {},
+  }) {
+    return _firestore.collection('ruoli').doc(id).update({
+      'nome': nome.trim(),
+      'descrizione': descrizione.trim(),
+      'sconto_max': scontoMax,
+      'permessi': _permessiRuolo(permessi),
+      'updated_at': _now(),
+    });
+  }
+
+  /// Elimina il ruolo con l'[id] indicato.
+  Future<void> eliminaRuolo(String id) {
+    return _firestore.collection('ruoli').doc(id).delete();
   }
 
   // ---------- licenza ----------
@@ -945,6 +1055,40 @@ class SpService {
     return ordinaBandiPerScadenza(bandi);
   }
 
+  /// Importa un elenco di [bandi] già normalizzati in `bandi_incentivi`.
+  ///
+  /// Usa `bando['id']` come id documento quando è una stringa non vuota,
+  /// altrimenti crea un documento con auto id (`add`). Scrive ogni documento
+  /// con `set(..., SetOptions(merge: true))` in batch da massimo 400 elementi,
+  /// committando una batch alla volta e chiamando [onProgresso](importati,
+  /// totale) dopo ciascuna. Non tocca altre collezioni. Restituisce il numero
+  /// di bandi importati (0 se la lista è vuota).
+  Future<int> importaBandi(
+    List<Map<String, dynamic>> bandi, {
+    void Function(int importati, int totale)? onProgresso,
+  }) async {
+    if (bandi.isEmpty) return 0;
+
+    final totale = bandi.length;
+    var importati = 0;
+
+    for (final blocco in aBlocchi(bandi, 400)) {
+      final batch = _firestore.batch();
+      for (final bando in blocco) {
+        final id = bando['id'];
+        final documento = id is String && id.trim().isNotEmpty
+            ? _firestore.collection('bandi_incentivi').doc(id.trim())
+            : _firestore.collection('bandi_incentivi').doc();
+        batch.set(documento, bando, SetOptions(merge: true));
+      }
+      await batch.commit();
+      importati += blocco.length;
+      onProgresso?.call(importati, totale);
+    }
+
+    return importati;
+  }
+
   /// Elenco delle fonti dei bandi (`bandi_fonti`, lettura pubblica), ordinate
   /// lato client per [nome] (come `SP.getFontiBandi`).
   Future<List<FonteBando>> getFontiBandi() async {
@@ -968,6 +1112,7 @@ class SpService {
   Map<String, dynamic> _prodottoPayload(Map<String, dynamic> dati, {String? id}) {
     final payload = <String, dynamic>{
       'nome': _stringa(dati['nome']),
+      'codice': _stringa(dati['codice']),
       'categoria': _stringa(dati['categoria']),
       'descrizione': _stringa(dati['descrizione']),
       'attivo': dati['attivo'] ?? true,
@@ -1062,5 +1207,13 @@ class SpService {
     if (valore is num) return valore.toInt();
     if (valore == null) return null;
     return int.tryParse(valore.toString().trim());
+  }
+
+  /// Mappa dei permessi di un ruolo con i soli valori non vuoti (trim).
+  Map<String, String> _permessiRuolo(Map<String, String> permessi) {
+    return <String, String>{
+      for (final e in permessi.entries)
+        if (e.value.trim().isNotEmpty) e.key: e.value.trim(),
+    };
   }
 }

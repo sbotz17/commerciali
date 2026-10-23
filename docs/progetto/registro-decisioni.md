@@ -42,3 +42,17 @@ Stato: attivo.
 
 `bottiandrea83@gmail.com` è super admin. L'accesso è email/password (la passkey non funziona nel browser
 automatizzato). Google resta attivo per gli altri utenti. Stato: attivo.
+
+## 2026-10-23 — Agenda, notifiche, chat e integrazioni
+
+- Nuova area **Calendario + appuntamenti + task + promemoria**, collegata alle visite.
+- Integrazioni richieste: Google Calendar/Meet, Microsoft 365/Outlook/Teams, SMTP per azienda, WhatsApp server Volty, Cloudflare R2 per le immagini.
+- **Tutte le collezioni e le Security Rules nuove sono approvate** da Andrea (appuntamenti, task, promemoria, notifiche, dispositivi, allegati, impostazioni agenda/notifiche, integrazioni, slot, prenotazioni, chat).
+- Notifiche: **in-app + push web/Android/iOS + WhatsApp operatore**; ogni operatore configura il proprio numero; orari di silenzio dinamici; tutti gli utenti possono inviare comunicazioni.
+- Push iOS richiede **Apple Developer/APNs**: Andrea non ha ancora l'account, quindi iOS resta predisposto ma non attivo finché non viene fornito.
+- WhatsApp: server Volty esistente; API key da spostare in secret lato server, non leggibile dal client.
+- Email: **SMTP dedicato configurabile per ogni azienda**, con credenziali cifrate lato server.
+- Allegati: **Cloudflare R2** (scelta di Andrea), non Firebase Storage.
+- Call: creazione automatica di Google Meet/Teams; licenze e configurazioni Azure/Google da verificare.
+- Chat interna: dirette 1-a-1 + gruppi, testo e immagini, letture, ricerca, soft delete, notifiche in-app/push; WhatsApp non usato per la chat.
+- Stato: requisiti e architettura pronti; implementazione a micro-task, prima DBA poi modelli/UI, integrazioni all'arrivo delle credenziali.

@@ -35,7 +35,7 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | F15b | Visite | Schermata visite e form | lista per data, CRUD, riordino, stati | sviluppatore-frontend | FATTO |
 | F16a | Bandi | Modelli `Bando`/`FonteBando` + `getBandi`/`getFontiBandi` in `SpService` | lettura pubblica `bandi_incentivi`/`bandi_fonti`; escluso `scaduto`; ordinamento `data_chiusura` (null in fondo); `fromMap`/`toMap`; test | sviluppatore-backend | FATTO |
 | F16 | Bandi | Lista pubblica, filtri e dettaglio | dati reali da `bandi_incentivi`; ricerca, filtri stato/regione, dettaglio, link ufficiale; test | sviluppatore-frontend | FATTO |
-| F16c | Bandi | Import manuale dei bandi | import con log (non presente nella UI attuale) | sviluppatore-frontend | DA FARE |
+| F16c | Bandi | Import manuale dei bandi | import JSON da file o URL, riservato al superadmin, con statistiche; test | sviluppatore-frontend | FATTO |
 | F17a | Impostazioni | Profilo, azienda, accessi e logout | schermata responsive; test | sviluppatore-frontend | FATTO |
 | F17b | Impostazioni | Utenti e ruoli | elenco membri, cambio ruolo, rimozione; ruoli in sola lettura; test | sviluppatore-frontend | FATTO |
 | F17c | Impostazioni | Licenze | piano, stato, date e limiti dell'azienda attiva; test | sviluppatore-frontend | FATTO |
@@ -70,8 +70,63 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | P09 | PDF | Etichetta paniere nel PDF | testo sotto la descrizione, prezzi/totali invariati; test | sviluppatore-frontend | FATTO |
 | P10 | Qualità | E2E staging panieri | padre+2 figli, prezzo/zero, quantità, reinserimento, Firestore; report | tester | FATTO |
 
+
+## Amministrazione, ruoli e bandi (F30)
+
+| ID | Area | Task | Criteri di accettazione | Agente | Stato |
+|---|---|---|---|---|---|
+| A01 | Dati | Rinominare l'azienda di appoggio VOLTY in Closer | dato Firestore aggiornato, nessun dato cancellato; test aggiornati | dba | FATTO |
+| A02 | Auth | Creare account e profilo con sessione secondaria | utente creato, profilo scritto prima del logout, app secondaria eliminata sempre; test | sviluppatore-backend | FATTO |
+| A03 | Dati | Servizio ruoli e rinomina azienda | `inserisciRuolo`/`aggiornaRuolo`/`eliminaRuolo`, `rinominaAzienda`, `getUtentePerEmail`; test chiave | sviluppatore-backend | FATTO |
+| A04 | UI | Ruoli modificabili | nuovo/modifica/elimina con permessi per area, ruoli di sistema non eliminabili; test | sviluppatore-frontend | FATTO |
+| A05 | UI | Nuovo utente con ruolo | form nome/email/ruolo/invito o password, profilo+membership, test | sviluppatore-frontend | FATTO |
+| A06 | UI | Nuova azienda con primo admin | azienda+membership superadmin+seed+account admin+membership, test | sviluppatore-frontend | FATTO |
+| B01 | UI | Filtro ATECO nei bandi | prefisso 2 cifre, `tutti_ateco`, test | sviluppatore-frontend | FATTO |
+| B02 | UI | Bandi nel menu principale | Dashboard/Clienti/Preventivi/Bandi/Altro, Visite in Altro; test | sviluppatore-frontend | FATTO |
+| B03 | Dati | Parser import bandi | JSON/Solr, normalizzazione, stato, ATECO, id stabile; test | sviluppatore-backend | FATTO |
+| B04 | UI | Import bandi da file/URL | solo superadmin, file JSON, URL, progresso e statistiche; test | sviluppatore-frontend | FATTO |
+| B05 | Qualità | E2E amministrazione e bandi | ruolo, utente, azienda, import URL, filtro ATECO; report | tester | FATTO |
+| C01 | Bandi | ATECO con punto | campo mobile con tastiera decimale, formatter `[0-9.]`, match sulle cifre (`62.01`); test | sviluppatore-frontend | FATTO |
+| C02 | Bandi | Filtro provincia | tendina province, match su `province` o fallback regione; nota esplicativa; test | sviluppatore-frontend | FATTO |
+| D01 | Preventivi | Scelta catalogo sulla singola riga | icona "Scegli dal catalogo" su card e tabella; riempie descrizione/prezzo; paniere inserisce i figli; test | sviluppatore-frontend | FATTO |
+| E01 | Catalogo | Codice prodotto nei dati | `Prodotto.codice`, payload, codice riportato nella riga preventivo; test | sviluppatore-backend | FATTO |
+| E02 | Catalogo | Codice prodotto in UI | campo nel form, colonna tabella, sottotitolo e selettore preventivo; test | sviluppatore-frontend | FATTO |
+| F01 | Visite | Nuovo cliente dal giro visite | pulsante nel form visita, ritorno al form con cliente selezionato; test | sviluppatore-frontend | FATTO |
+| G01 | Preventivi | Nuovo cliente dal preventivo | pulsante nella card cliente, creazione, ricarica e selezione automatica; test | sviluppatore-frontend | FATTO |
+| G02 | Preventivi | Nuovo prodotto dal catalogo del preventivo | pulsante nel selettore, form prodotto, ritorno e inserimento nella riga; test | sviluppatore-frontend | FATTO |
+
 ## Regole di gestione
 
 - Un task per volta; niente "riscrivi tutta l'app".
 - Se un agente esaurisce i passi, il task è troppo grande: si spezza e si riparte dal punto raggiunto.
 - Ogni task chiuso aggiorna il nodo di memoria dell'area e questo registro.
+
+## Agenda, notifiche e chat (F31)
+
+Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`; nessuno parte senza DBA e regole approvate.
+
+| ID | Area | Task | Criteri di accettazione | Agente | Stato |
+|---|---|---|---|---|---|
+| H01 | DBA | Collezioni agenda/notifiche/chat e regole | schema, indici e regole approvate; nessun dato esistente toccato | dba | DA FARE |
+| H02 | Dati | Modelli `Appuntamento`, `Task`, `Promemoria`, `Notifica` | fromMap/toMap, default, test | sviluppatore-backend | DA FARE |
+| H03 | Dati | `SpService`: CRUD appuntamenti e task | query per azienda, filtro operatore, test | sviluppatore-backend | DA FARE |
+| H04 | UI | Schermata Calendario giorno/settimana | viste, filtri, oggi, senza orario, test | sviluppatore-frontend | DA FARE |
+| H05 | UI | Form appuntamento | titolo/data, cliente, operatore, luogo, Maps, call, promemoria | sviluppatore-frontend | DA FARE |
+| H06 | UI | Pagina Task | lista per scadenza, filtri, completa/riapri, test | sviluppatore-frontend | DA FARE |
+| H07 | UI | Form task | scadenza, operatore, priorità, cliente/appuntamento, note | sviluppatore-frontend | DA FARE |
+| H08 | UI | Dettaglio appuntamento/task con allegati | immagini R2, anteprima, eliminazione | sviluppatore-frontend | DA FARE |
+| H09 | Notifiche | Centro notifiche e badge in-app | elenco, lette/non lette, deep link, test | sviluppatore-frontend | DA FARE |
+| H10 | Notifiche | Preferenze notifiche per utente | canali, tipi, silenzio, numero WhatsApp, test | sviluppatore-frontend | DA FARE |
+| H11 | Push | Dispositivi e token FCM web/Android/iOS | registrazione, logout, token scaduto | sviluppatore-backend | DA FARE |
+| H12 | Worker | Scheduler promemoria e notifiche | cron, idempotenza, retry, fuso, test | sviluppatore-backend | DA FARE |
+| H13 | WhatsApp | Invio operatore via server Volty | endpoint, secret, template, errore/retry | sviluppatore-backend | DA FARE |
+| H14 | Email | SMTP per azienda e invio prova | settings, secret server, template, retry | sviluppatore-backend | DA FARE |
+| H15 | Google | OAuth Google Calendar/Meet | collega/scollega, evento+Meet, sync, conflitti | sviluppatore-backend | DA FARE |
+| H16 | Microsoft | OAuth Microsoft/Teams | collega/scollega, online meeting, sync, conflitti | sviluppatore-backend | DA FARE |
+| H17 | R2 | Upload immagini firmato | limiti, formati, URL firmati, pulizia | sviluppatore-backend | DA FARE |
+| H18 | Prenotazione | Slot e pagina pubblica | token, scadenza, doppia prenotazione, conferma | sviluppatore-backend | DA FARE |
+| H19 | Chat | Modelli e stanze/messaggi | dirette senza duplicati, gruppi, partecipanti | sviluppatore-backend | DA FARE |
+| H20 | Chat | Lista conversazioni e thread | realtime, non letti, letture, immagini, soft delete | sviluppatore-frontend | DA FARE |
+| H21 | Chat | Notifiche chat in-app/push | badge, anteprima generica, silenzio, no duplicati | sviluppatore-backend | DA FARE |
+| H22 | Impostazioni | Sezione Calendario e notifiche | tutte le configurazioni, secret non visibili, test | sviluppatore-frontend | DA FARE |
+| H23 | Qualità | E2E agenda/notifiche/chat | appuntamento, task, promemoria, chat, Maps, push | tester | DA FARE |

@@ -437,6 +437,14 @@ class _CardAccessi extends StatelessWidget {
       ),
       if (superAdmin)
         _VoceAccesso(
+          chiave: const Key('impostazioni-voce-importa-bandi'),
+          icona: Icons.upload_file_outlined,
+          titolo: 'Importa bandi',
+          sottotitolo: 'Aggiorna i bandi da file JSON o URL',
+          onTap: () => onVoce('/bandi/importa'),
+        ),
+      if (superAdmin)
+        _VoceAccesso(
           chiave: const Key('impostazioni-voce-super-admin'),
           icona: Icons.admin_panel_settings_outlined,
           titolo: 'Super Admin',

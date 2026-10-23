@@ -81,3 +81,52 @@ Ogni nuovo widget va registrato in `catalogo.md`.
 Testi e tono in italiano; nomi voci di menu; formati data `dd/MM/yyyy` e valuta `1.234,56 €` (`intl`, locale
 `it_IT`); numerazione `PRV-0001` e revisioni `-R1`; permessi, ruoli e visibilità per `azienda_id`; flussi
 login/onboarding/reset, CRUD e PDF. Nessuna nuova funzione, campo o schermata.
+
+## 2026-10-23 — Calendario, task, notifiche e chat
+
+Linee guida per le nuove schermate, da usare in fase di implementazione.
+
+### Navigazione
+- Menu principale: Dashboard, Clienti, Preventivi, **Calendario**, Altro.
+- Task e Chat raggiungibili da Calendario/Altro; su desktop possono stare nella rail.
+- Badge non letti su Chat e campanella notifiche.
+
+### Calendario
+- Telefono: vista **giorno** a lista cronologica; settimana a colonne compressa.
+- Desktop: griglia settimanale con ore; elementi colorati per tipo.
+- Elementi: orario, titolo, cliente/operatore, stato, icona call/allegati.
+- Tocco su spazio vuoto → nuovo appuntamento con data/ora già compilate.
+- “Senza orario” in fondo, sempre visibile.
+
+### Appuntamento / Task
+- Form a sezioni: Dettagli, Cliente e operatore, Luogo, Promemoria, Allegati.
+- Solo titolo e data obbligatori; il resto facoltativo.
+- Icona auto accanto all'indirizzo; pulsante grande “Apri in Maps”.
+- Call: pulsante “Crea link” con stato chiaro; se non configurato, campo per incollare il link.
+- Allegati: griglia miniature, aggiunta da fotocamera/galleria, anteprima, eliminazione con conferma.
+- Esito di ogni invio (email/WhatsApp/push) sempre visibile con “Riprova”.
+
+### Task
+- Lista per scadenza con sezioni Oggi, Questa settimana, Più avanti.
+- Filtri stato/operatore/cliente; ricerca per titolo.
+- Completamento con un tocco e possibilità di riaprire.
+- Priorità urgente evidenziata, non solo con colore.
+
+### Notifiche
+- Centro notifiche a lista, raggruppato per giorno.
+- Non lette in grassetto, puntino colorato; “Segna tutte come lette”.
+- Tocco → deep link all'elemento.
+- Preferenze per canale e tipo in Impostazioni, con interruttori grandi e testo semplice.
+
+### Chat
+- Lista conversazioni con avatar/nome, ultimo messaggio, ora, badge non letti.
+- Thread con bolle proprie/altrui, stato inviato/letto, immagini con anteprima.
+- Composer fisso in basso, pulsante invio grande, allegato con icona.
+- Creazione gruppo: nome + selezione partecipanti con ricerca.
+- Messaggio eliminato: segnaposto grigio “Messaggio eliminato”.
+
+### Impostazioni
+- Sezione “Calendario e notifiche” con card separate: Agenda, Promemoria cliente, Email SMTP, WhatsApp, Google, Microsoft, Push, Chat, Allegati.
+- Campi segreti mai mostrati in chiaro dopo il salvataggio.
+- Pulsante “Invia prova” per SMTP e WhatsApp.
+- Stato integrazione con pallino verde/rosso e “Ricollega”.

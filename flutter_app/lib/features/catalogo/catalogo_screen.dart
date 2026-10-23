@@ -86,6 +86,12 @@ String messaggioErroreCatalogo(Object errore) {
   return 'Operazione non riuscita. Controlla la connessione e riprova.';
 }
 
+/// Codice del prodotto ripulito dagli spazi, `—` se assente.
+String codiceVisualizzatoProdotto(Prodotto prodotto) {
+  final codice = prodotto.codice?.trim() ?? '';
+  return codice.isEmpty ? '—' : codice;
+}
+
 /// Testo del prodotto, con fallback per i documenti senza nome.
 String nomeVisualizzatoProdotto(Prodotto prodotto) {
   final nome = prodotto.nome?.trim() ?? '';
@@ -645,6 +651,7 @@ class _TabellaProdotti extends StatelessWidget {
           showCheckboxColumn: false,
           columns: const [
             DataColumn(label: Text('Prodotto')),
+            DataColumn(label: Text('Codice')),
             DataColumn(label: Text('Categoria')),
             DataColumn(label: Text('Paniere')),
             DataColumn(label: Text('Descrizione')),
@@ -658,6 +665,7 @@ class _TabellaProdotti extends StatelessWidget {
                 onSelectChanged: (_) => onModifica(prodotto),
                 cells: [
                   DataCell(Text(nomeVisualizzatoProdotto(prodotto))),
+                  DataCell(Text(codiceVisualizzatoProdotto(prodotto))),
                   DataCell(Text(_testo(prodotto.categoria))),
                   DataCell(Text(etichettaFigli(prodotto))),
                   DataCell(Text(_testo(prodotto.descrizione))),
@@ -802,6 +810,7 @@ class ProdottoFormScreen extends ConsumerStatefulWidget {
     this.prodotto,
     this.categorie = const [],
     this.prodotti = const [],
+    this.onSalvato,
   });
 
   /// Prodotto da modificare; `null` per crearne uno nuovo.
@@ -813,6 +822,10 @@ class ProdottoFormScreen extends ConsumerStatefulWidget {
   /// Tutti i prodotti dell'azienda, per scegliere i sotto-prodotti (figli).
   final List<Prodotto> prodotti;
 
+  /// Callback invocata dopo il salvataggio riuscito con il prodotto creato
+  /// (utile a chi apre il form per selezionarlo subito).
+  final ValueChanged<Prodotto?>? onSalvato;
+
   @override
   ConsumerState<ProdottoFormScreen> createState() => _ProdottoFormScreenState();
 }
@@ -821,6 +834,7 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
   final _modulo = GlobalKey<FormState>();
 
   late final TextEditingController _nome;
+  late final TextEditingController _codice;
   late final TextEditingController _prezzo;
   late final TextEditingController _descrizione;
   late final TextEditingController _immagine;
@@ -847,6 +861,7 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
     final prodotto = widget.prodotto;
 
     _nome = TextEditingController(text: prodotto?.nome ?? '');
+    _codice = TextEditingController(text: prodotto?.codice ?? '');
     _prezzo = TextEditingController(text: _testoPrezzo(prodotto?.prezzo));
     _descrizione = TextEditingController(text: prodotto?.descrizione ?? '');
     _immagine = TextEditingController(text: prodotto?.immagine ?? '');
@@ -872,6 +887,7 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
   @override
   void dispose() {
     _nome.dispose();
+    _codice.dispose();
     _prezzo.dispose();
     _descrizione.dispose();
     _immagine.dispose();
@@ -887,6 +903,7 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
     setState(() => _salvando = true);
     final dati = <String, dynamic>{
       'nome': _nome.text,
+      'codice': _codice.text,
       'categoria': _categoria ?? '',
       'prezzo': prezzoDaTesto(_prezzo.text) ?? 0,
       'descrizione': _descrizione.text,
@@ -899,12 +916,35 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
     try {
       final servizio = ref.read(spServiceProvider);
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final String? id;
       if (_modifica) {
+        id = widget.prodotto!.id;
         await servizio.aggiornaProdotto(widget.prodotto!.id, dati);
       } else {
-        await servizio.inserisciProdotto(dati);
+        final nuovo = await servizio.inserisciProdotto(dati);
+        id = nuovo['id'] as String?;
       }
       if (!mounted) return;
+      final salvato = id == null
+          ? null
+          : Prodotto(
+              id: id,
+              aziendaId: ref.read(aziendaAttivaProvider),
+              codice: _codice.text.trim().isEmpty
+                  ? null
+                  : _codice.text.trim(),
+              nome: _nome.text.trim(),
+              categoria: _categoria,
+              prezzo: prezzoDaTesto(_prezzo.text) ?? 0,
+              descrizione: _descrizione.text.trim(),
+              immagine: _immagine.text.trim().isEmpty
+                  ? null
+                  : _immagine.text.trim(),
+              attivo: widget.prodotto?.attivo ?? true,
+              figliIds: _figliIds.toList(growable: false),
+              figliAZero: _figliAZero,
+            );
+      widget.onSalvato?.call(salvato);
       Navigator.of(context).pop(true);
       return;
     } catch (errore) {
@@ -1099,6 +1139,17 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
                                 hintText: 'Es. Licenza software annuale',
                               ),
                               validator: validaNomeProdotto,
+                            ),
+                            const SizedBox(height: AppSpazi.s),
+                            TextFormField(
+                              key: const Key('prodotto-codice'),
+                              controller: _codice,
+                              enabled: !_salvando,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'Codice prodotto',
+                                hintText: 'Es. PRD-001',
+                              ),
                             ),
                             const SizedBox(height: AppSpazi.s),
                             DropdownButtonFormField<String>(
@@ -1509,10 +1560,13 @@ String _testoPrezzo(num? prezzo) {
   return prezzo.toString().replaceAll('.', ',');
 }
 
-/// Categoria, prezzo e paniere di un prodotto, per il sottotitolo della card.
+/// Codice, categoria, prezzo e paniere di un prodotto, per il sottotitolo
+/// della card.
 String _dettagliProdotto(Prodotto prodotto) {
   final paniere = etichettaPaniere(prodotto);
+  final codice = (prodotto.codice ?? '').trim();
   final parti = <String>[
+    if (codice.isNotEmpty) codice,
     _testo(prodotto.categoria),
     if (prodotto.prezzo != null) formattaPrezzo(prodotto.prezzo),
     if (paniere.isNotEmpty) paniere,

@@ -29,6 +29,12 @@ docs/progetto/
 ├── motore-modelli.md             ← modelli e costi
 ├── task.md                       ← registro dei task piccoli
 ├── definition-of-done.md         ← criteri obbligatori di rilascio
+├── manuale/
+│   ├── README.md                 ← indice delle guide utente
+│   ├── calendario-appuntamenti-task.md
+│   ├── chat.md
+│   ├── notifiche.md
+│   └── integrazioni.md
 └── memoria/
     ├── ui/
     │   ├── index.md              ← mappa delle schermate
@@ -72,6 +78,10 @@ docs/progetto/
 | Dati, query, `SP` | `dati/index.md`, `dati/collezioni.md` |
 | Lavorare sull'app Flutter | `flutter/index.md`, `architettura.md` §Flutter |
 | Verifica P.IVA / VIES | `integrazioni/vies.md` |
+| Calendario, appuntamenti, task, promemoria | `manuale/calendario-appuntamenti-task.md`, `requisiti.md` §Calendario, `architettura.md` §Calendario |
+| Notifiche push, in-app, WhatsApp | `manuale/notifiche.md`, `manuale/integrazioni.md`, `architettura.md` §Notifiche |
+| Chat interna | `manuale/chat.md`, `requisiti.md` §Chat, `architettura.md` §Chat |
+| Configurare Google, Microsoft, SMTP, WhatsApp, R2 | `manuale/integrazioni.md` |
 | Rilascio o deploy | `processi/rilascio.md`, `ambienti.md` |
 | Bug o segnalazione | `processi/bug.md` |
 

@@ -331,3 +331,51 @@
   (200,00 € con figli a zero e quantità 2). Report: `docs/progetto/test/2026-10-22-panieri.md`.
 - Nessuna modifica a `firestore.rules`, collezioni o indici.
 - Validazione panieri: **APPROVATO** (22/10/2026); P01-P10 coerenti, regole invariate, nessun segnaposto.
+
+## 2026-10-22 — Aziende, utenti, ruoli e import bandi
+
+- Rinominata l'azienda di appoggio **VOLTY → Closer**.
+- Superadmin: creazione nuova azienda con primo amministratore, ruoli seed, categorie e licenza trial.
+- Utenti: creazione con ruolo tramite seconda app Firebase; la sessione dell'amministratore resta attiva.
+- Ruoli: creazione e modifica con permessi per area; i ruoli di sistema non sono eliminabili.
+- Bandi: nuova pagina **Importa bandi** (JSON da file o URL, solo superadmin), parser e upsert in batch.
+- Bandi spostati nel menu principale; aggiunto filtro **ATECO** per prefisso.
+- Verifiche: `flutter analyze` 0, **499 test verdi**, E2E con ruolo Tecnico E2E, utente tecnico,
+  azienda E2E, import di un bando ATECO 62 e filtro ATECO. Report:
+  `docs/progetto/test/2026-10-22-amministrazione-bandi.md`.
+- Nessuna modifica a `firestore.rules`, collezioni o indici.
+- Validazione amministrazione/bandi: **APPROVATO** (22/10/2026); prove pulite, PRV di test eliminato, contatore azzerato.
+
+## 2026-10-22 — Bandi: ATECO con punto e filtro provincia
+
+- Il campo ATECO accetta ora anche il punto (`62.01`), con tastiera decimale su mobile, formatter `[0-9.]` e massimo 8 caratteri.
+- Il matching ATECO usa solo le cifre e confronta il prefisso di 2 cifre, quindi `62`, `62.0` e `62.01` funzionano.
+- Aggiunto il filtro **Provincia** con tutte le 107 province italiane; se il bando espone `province` il confronto è preciso, altrimenti si usa la regione della provincia (i dati open data spesso non hanno la provincia). Una nota nella UI lo spiega.
+- Modello `Bando` e parser di import aggiornati con il campo opzionale `province`.
+- Verifiche: `flutter analyze` 0, **509 test verdi**, deploy staging.
+
+## 2026-10-23 — Catalogo direttamente nella riga articolo
+
+- Ogni riga del preventivo ha ora l'icona **Scegli dal catalogo** (card mobile e tabella desktop), oltre al pulsante generale "Dal catalogo".
+- Selezionando un prodotto normale, la riga viene compilata con descrizione, prezzo, unità `pz` e IVA 22, mantenendo quantità e sconto.
+- Selezionando un prodotto padre, la riga viene sostituita dal paniere con padre e sotto-prodotti, come il pulsante generale.
+- La scelta salva `prodottoId` e azzera il paniere per i prodotti normali.
+- Verifiche: `flutter analyze` 0, **511 test verdi**, prova reale su staging con prodotto da 123,00 € e totale riga 123,00 €.
+- Report: `docs/progetto/test/2026-10-23-riga-catalogo.md`.
+
+## 2026-10-23 — Codice prodotto e nuovo cliente dal giro visite
+
+- Aggiunto il **codice prodotto** all'anagrafica (`codice`), al form catalogo, alla tabella e al selettore del preventivo.
+- Il codice viene riportato automaticamente nella riga del preventivo quando si sceglie il prodotto.
+- Nel form **Nuova visita** c'è il pulsante **Nuovo cliente**: apre l'anagrafica, salva il cliente e torna alla visita con il cliente già selezionato.
+- Verifiche: `flutter analyze` 0, **517 test verdi**, prova reale su staging con codice `PRD-777` visibile in catalogo e cliente creato da Visite e selezionato.
+- Report: `docs/progetto/test/2026-10-23-visite-codice-prodotto.md`.
+
+## 2026-10-23 — Nuovo cliente e nuovo prodotto dal preventivo
+
+- Nella card Cliente del preventivo c'è **Nuovo cliente**: apre l'anagrafica, salva e seleziona il cliente senza uscire.
+- Nel selettore prodotti c'è **Nuovo prodotto**: apre il form catalogo, salva e inserisce subito il prodotto nella riga.
+- Il nuovo prodotto viene restituito direttamente dal form, senza dipendere da una rilettura del catalogo (più robusto in caso di rete lenta).
+- Verifiche: `flutter analyze` 0, **517 test verdi**, prova reale su staging: cliente creato e selezionato, prodotto creato e inserito in riga.
+- Report: `docs/progetto/test/2026-10-23-preventivo-nuovo-cliente-prodotto.md`.
+- Pubblicato Closer anche su `https://commerciali-app.web.app`.

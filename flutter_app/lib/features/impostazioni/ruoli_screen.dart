@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/ui/stato_centrato.dart';
 import '../../data/models/ruolo.dart';
 import '../../state/azienda_providers.dart';
+import 'ruolo_form_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Funzioni pure: etichette e riepiloghi verificabili senza Firebase né UI
@@ -105,6 +106,12 @@ String riepilogoPermessi(Map<String, dynamic> permessi) {
   return parti.join(' · ');
 }
 
+/// Nome del ruolo, con fallback quando il campo è assente o vuoto.
+String nomeVisualizzatoRuolo(Ruolo ruolo) {
+  final nome = ruolo.nome.trim();
+  return nome.isEmpty ? 'Senza nome' : nome;
+}
+
 /// Descrizione del ruolo, con fallback quando il campo è assente.
 String descrizioneRuolo(Ruolo ruolo) {
   final descrizione = ruolo.descrizione?.trim() ?? '';
@@ -148,8 +155,9 @@ String _maiuscola(String valore) {
 
 /// Schermata Ruoli e permessi dell'azienda attiva.
 ///
-/// Per ora è di sola lettura: mostra nome, descrizione, sconto massimo e
-/// permessi di ogni ruolo. La modifica arriverà con un task successivo.
+/// Mostra nome, descrizione, sconto massimo e permessi di ogni ruolo e
+/// permette di crearne, modificarne o eliminarne uno; i ruoli di sistema
+/// (`sistema`) restano presenti e non si eliminano.
 class RuoliScreen extends ConsumerStatefulWidget {
   const RuoliScreen({super.key});
 
@@ -189,6 +197,70 @@ class _RuoliScreenState extends ConsumerState<RuoliScreen> {
         _errore = errore;
         _caricamento = false;
       });
+    }
+  }
+
+  /// Apre il form del ruolo (nuovo se [ruolo] è `null`) e ricarica se salvato.
+  Future<void> _apriRuolo({Ruolo? ruolo}) async {
+    final salvato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => RuoloFormScreen(ruolo: ruolo)),
+    );
+    if (salvato != true || !mounted) return;
+    await _carica();
+  }
+
+  /// Chiede conferma ed elimina il ruolo; i ruoli di sistema non si eliminano.
+  Future<void> _eliminaRuolo(Ruolo ruolo) async {
+    if (ruolo.sistema) return;
+    if (ref.read(aziendaAttivaProvider) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nessuna azienda attiva. Seleziona un\'azienda e riprova.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        key: const Key('dialog-elimina-ruolo'),
+        title: const Text('Eliminare il ruolo?'),
+        content: Text(
+          'Il ruolo "${nomeVisualizzatoRuolo(ruolo)}" verrà eliminato '
+          'definitivamente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            key: const Key('conferma-elimina-ruolo'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Elimina'),
+          ),
+        ],
+      ),
+    );
+    if (conferma != true || !mounted) return;
+
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      await servizio.eliminaRuolo(ruolo.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ruolo eliminato')),
+      );
+      await _carica();
+    } catch (errore) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(messaggioErroreRuoli(errore))),
+      );
     }
   }
 
@@ -239,7 +311,39 @@ class _RuoliScreenState extends ConsumerState<RuoliScreen> {
       );
     }
 
-    return CorpoRuoli(ruoli: _ruoli, largo: largo);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Ruoli e permessi',
+                key: const Key('ruoli-titolo'),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            const SizedBox(width: AppSpazi.s),
+            FilledButton.icon(
+              key: const Key('ruoli-nuovo'),
+              onPressed: () => _apriRuolo(),
+              icon: const Icon(Icons.add),
+              label: const Text('Nuovo ruolo'),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpazi.s),
+        Expanded(
+          child: CorpoRuoli(
+            ruoli: _ruoli,
+            largo: largo,
+            onModifica: (ruolo) => _apriRuolo(ruolo: ruolo),
+            onElimina: _eliminaRuolo,
+            onNuovo: () => _apriRuolo(),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -249,21 +353,46 @@ class _RuoliScreenState extends ConsumerState<RuoliScreen> {
 
 /// Elenco ruoli senza provider, usato anche dai widget test.
 class CorpoRuoli extends StatelessWidget {
-  const CorpoRuoli({super.key, required this.ruoli, this.largo});
+  const CorpoRuoli({
+    super.key,
+    required this.ruoli,
+    this.largo,
+    this.onModifica,
+    this.onElimina,
+    this.onNuovo,
+  });
 
   final List<Ruolo> ruoli;
 
   /// Forza il layout largo (tabella); se `null` decide la larghezza.
   final bool? largo;
 
+  /// Azioni facoltative: senza callback l'elenco resta di sola consultazione.
+  final ValueChanged<Ruolo>? onModifica;
+  final ValueChanged<Ruolo>? onElimina;
+  final VoidCallback? onNuovo;
+
+  bool get _conAzioni => onModifica != null || onElimina != null;
+
   @override
   Widget build(BuildContext context) {
     if (ruoli.isEmpty) {
-      return const StatoCentrato(
-        key: Key('ruoli-vuoto'),
+      return StatoCentrato(
+        key: const Key('ruoli-vuoto'),
         icona: Icons.manage_accounts_outlined,
         titolo: 'Nessun ruolo',
-        sottotitolo: 'I ruoli di questa azienda non sono ancora configurati.',
+        sottotitolo: onNuovo == null
+            ? 'I ruoli di questa azienda non sono ancora configurati.'
+            : 'I ruoli di questa azienda non sono ancora configurati. '
+                'Creane uno con il pulsante "Nuovo ruolo".',
+        azione: onNuovo == null
+            ? null
+            : FilledButton.icon(
+                key: const Key('ruoli-nuovo-vuoto'),
+                onPressed: onNuovo,
+                icon: const Icon(Icons.add),
+                label: const Text('Nuovo ruolo'),
+              ),
       );
     }
 
@@ -277,7 +406,7 @@ class CorpoRuoli extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _NotaSolaLettura(),
+        _NotaRuoli(),
         const SizedBox(height: AppSpazi.s),
         Expanded(child: body),
       ],
@@ -292,7 +421,11 @@ class CorpoRuoli extends StatelessWidget {
         itemCount: ruoli.length,
         separatorBuilder: (context, indice) =>
             const SizedBox(height: AppSpazi.xs),
-        itemBuilder: (context, indice) => _CardRuolo(ruolo: ruoli[indice]),
+        itemBuilder: (context, indice) => _CardRuolo(
+          ruolo: ruoli[indice],
+          onModifica: onModifica,
+          onElimina: onElimina,
+        ),
       );
     }
 
@@ -305,11 +438,12 @@ class CorpoRuoli extends StatelessWidget {
           child: DataTable(
             key: const Key('tabella-ruoli'),
             showCheckboxColumn: false,
-            columns: const [
-              DataColumn(label: Text('Ruolo')),
-              DataColumn(label: Text('Descrizione')),
-              DataColumn(label: Text('Sconto massimo')),
-              DataColumn(label: Text('Permessi')),
+            columns: [
+              const DataColumn(label: Text('Ruolo')),
+              const DataColumn(label: Text('Descrizione')),
+              const DataColumn(label: Text('Sconto massimo')),
+              const DataColumn(label: Text('Permessi')),
+              if (_conAzioni) const DataColumn(label: Text('Azioni')),
             ],
             rows: [
               for (final ruolo in ruoli)
@@ -320,9 +454,7 @@ class CorpoRuoli extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(ruolo.nome.trim().isEmpty
-                              ? 'Senza nome'
-                              : ruolo.nome.trim()),
+                          Text(nomeVisualizzatoRuolo(ruolo)),
                           if (ruolo.sistema) ...[
                             const SizedBox(width: AppSpazi.xs),
                             _BadgeSistema(),
@@ -348,6 +480,19 @@ class CorpoRuoli extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (_conAzioni)
+                      DataCell(
+                        _MenuRuolo(
+                          key: ValueKey('ruolo-menu-${ruolo.id}'),
+                          sistema: ruolo.sistema,
+                          onModifica: onModifica == null
+                              ? null
+                              : () => onModifica!(ruolo),
+                          onElimina: onElimina == null
+                              ? null
+                              : () => onElimina!(ruolo),
+                        ),
+                      ),
                   ],
                 ),
             ],
@@ -358,8 +503,8 @@ class CorpoRuoli extends StatelessWidget {
   }
 }
 
-/// Nota che chiarisce il momento della funzione (sola lettura).
-class _NotaSolaLettura extends StatelessWidget {
+/// Nota che spiega a cosa serve la schermata.
+class _NotaRuoli extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
@@ -367,15 +512,14 @@ class _NotaSolaLettura extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(
-          Icons.lock_outline,
+          Icons.info_outline,
           size: 16,
           color: tema.colorScheme.onSurfaceVariant,
         ),
         const SizedBox(width: AppSpazi.xs),
         Expanded(
           child: Text(
-            'Per ora i ruoli si possono solo consultare: la modifica '
-            'arriverà in un prossimo aggiornamento.',
+            'Gestisci ruoli e permessi dell\'azienda.',
             key: const Key('ruoli-sola-lettura'),
             style: tema.textTheme.bodySmall?.copyWith(
               color: tema.colorScheme.onSurfaceVariant,
@@ -387,11 +531,53 @@ class _NotaSolaLettura extends StatelessWidget {
   }
 }
 
+/// Menu a tre puntini del ruolo: "Elimina" non è disponibile per i ruoli di
+/// sistema.
+class _MenuRuolo extends StatelessWidget {
+  const _MenuRuolo({
+    super.key,
+    required this.sistema,
+    this.onModifica,
+    this.onElimina,
+  });
+
+  final bool sistema;
+  final VoidCallback? onModifica;
+  final VoidCallback? onElimina;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      tooltip: 'Azioni',
+      onSelected: (azione) {
+        if (azione == 'modifica') onModifica?.call();
+        if (azione == 'elimina') onElimina?.call();
+      },
+      itemBuilder: (context) => [
+        if (onModifica != null)
+          const PopupMenuItem(value: 'modifica', child: Text('Modifica')),
+        if (onElimina != null)
+          PopupMenuItem(
+            value: 'elimina',
+            enabled: !sistema,
+            child: const Text('Elimina'),
+          ),
+      ],
+    );
+  }
+}
+
 /// Card di un ruolo (telefono): nome, descrizione, sconto e permessi.
 class _CardRuolo extends StatelessWidget {
-  const _CardRuolo({required this.ruolo});
+  const _CardRuolo({
+    required this.ruolo,
+    this.onModifica,
+    this.onElimina,
+  });
 
   final Ruolo ruolo;
+  final ValueChanged<Ruolo>? onModifica;
+  final ValueChanged<Ruolo>? onElimina;
 
   @override
   Widget build(BuildContext context) {
@@ -409,13 +595,20 @@ class _CardRuolo extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    ruolo.nome.trim().isEmpty
-                        ? 'Senza nome'
-                        : ruolo.nome.trim(),
+                    nomeVisualizzatoRuolo(ruolo),
                     style: tema.textTheme.titleSmall,
                   ),
                 ),
                 if (ruolo.sistema) _BadgeSistema(),
+                if (onModifica != null || onElimina != null)
+                  _MenuRuolo(
+                    key: ValueKey('ruolo-menu-${ruolo.id}'),
+                    sistema: ruolo.sistema,
+                    onModifica:
+                        onModifica == null ? null : () => onModifica!(ruolo),
+                    onElimina:
+                        onElimina == null ? null : () => onElimina!(ruolo),
+                  ),
               ],
             ),
             const SizedBox(height: AppSpazi.xxs),

@@ -8,7 +8,7 @@ import '../../core/theme/app_theme.dart';
 /// - sotto 600 px: `NavigationBar` con le voci principali e "Altro";
 /// - da 600 px: `NavigationRail` con le stesse voci e pulsante "Altro".
 ///
-/// "Altro" apre il `Drawer` con Catalogo, Bandi e Impostazioni.
+/// "Altro" apre il `Drawer` con Catalogo, Visite e Impostazioni.
 /// Nessuna logica di autenticazione o permessi: arriverà nei task successivi.
 class AppShell extends StatelessWidget {
   const AppShell({
@@ -41,10 +41,10 @@ class AppShell extends StatelessWidget {
       rotta: '/preventivi',
     ),
     _VoceNavigazione(
-      etichetta: 'Visite',
-      icona: Icons.event_outlined,
-      iconaSelezionata: Icons.event,
-      rotta: '/visite',
+      etichetta: 'Bandi',
+      icona: Icons.campaign_outlined,
+      iconaSelezionata: Icons.campaign,
+      rotta: '/bandi',
     ),
     _VoceNavigazione(
       etichetta: 'Altro',
@@ -62,10 +62,10 @@ class AppShell extends StatelessWidget {
       rotta: '/catalogo',
     ),
     _VoceNavigazione(
-      etichetta: 'Bandi',
-      icona: Icons.campaign_outlined,
-      iconaSelezionata: Icons.campaign,
-      rotta: '/bandi',
+      etichetta: 'Visite',
+      icona: Icons.event_outlined,
+      iconaSelezionata: Icons.event,
+      rotta: '/visite',
     ),
     _VoceNavigazione(
       etichetta: 'Impostazioni',
@@ -83,6 +83,7 @@ class AppShell extends StatelessWidget {
     '/preventivi/nuovo': 'Nuovo preventivo',
     '/visite': 'Visite',
     '/bandi': 'Bandi',
+    '/bandi/importa': 'Importa bandi',
     '/impostazioni': 'Impostazioni',
     '/impostazioni/utenti': 'Utenti',
     '/impostazioni/ruoli': 'Ruoli e permessi',
@@ -105,7 +106,7 @@ class AppShell extends StatelessWidget {
     if (percorso == '/') return 0;
     if (percorso.startsWith('/clienti')) return 1;
     if (percorso.startsWith('/preventivi')) return 2;
-    if (percorso.startsWith('/visite')) return 3;
+    if (percorso.startsWith('/bandi')) return 3;
     return 4;
   }
 

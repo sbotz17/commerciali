@@ -59,6 +59,19 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Panieri — PDF | `flutter_app/lib/data/services/preventivo_pdf.dart` | Etichetta “Paniere: …” sotto la descrizione |
 | Test panieri | `flutter_app/test/prodotto_panieri_test.dart`, `prodotti_panieri_service_test.dart`, `preventivo_panieri_test.dart`, `panieri_test.dart`, `catalogo_panieri_test.dart`, `catalogo_panieri_badge_test.dart`, `preventivo_panieri_ui_test.dart` | Serializzazione, sanitizzazione, inserimento, UI catalogo/preventivo |
 | Report panieri | `docs/progetto/test/2026-10-22-panieri.md` | E2E con prezzo pieno, figli a zero, reinserimento e verifica Firestore |
+| Account secondario | `flutter_app/lib/data/services/auth_service.dart` | `creaAccountConProfilo`, `inviaEmailAccesso`, `EmailGiaRegistrataException`; crea utente senza perdere la sessione |
+| Ruoli modificabili | `flutter_app/lib/features/impostazioni/ruoli_screen.dart`, `ruolo_form_screen.dart` | Creazione/modifica/eliminazione ruoli e permessi per area |
+| Nuovo utente | `flutter_app/lib/features/impostazioni/nuovo_utente_screen.dart` | Nome, email, ruolo, invito o password temporanea |
+| Nuova azienda | `flutter_app/lib/features/impostazioni/nuova_azienda_screen.dart` | Azienda + primo amministratore + seed + licenza |
+| Import bandi | `flutter_app/lib/features/bandi/import_bandi_screen.dart`, `flutter_app/lib/data/bandi_import.dart` | Import JSON da file o URL, normalizzazione e statistiche |
+| Import service | `flutter_app/lib/data/services/sp_service.dart` | `importaBandi`, `rinominaAzienda`, `inserisciRuolo`/`aggiornaRuolo`/`eliminaRuolo`, `getUtentePerEmail` |
+| Bandi ATECO | `flutter_app/lib/features/bandi/bandi_screen.dart` | Filtro ATECO per prefisso, menu principale |
+| Province italiane | `flutter_app/lib/data/province_italia.dart` | 107 province con sigla e regione per il filtro territoriale dei bandi |
+| Codice prodotto | `flutter_app/lib/data/models/prodotto.dart` | Campo `codice` usato in catalogo e righe preventivo |
+| Nuovo cliente da preventivo | `flutter_app/lib/features/preventivi/preventivo_edit_screen.dart` | Pulsante nella card cliente e selezione automatica dopo la creazione |
+| Nuovo prodotto da preventivo | `flutter_app/lib/features/preventivi/preventivo_edit_screen.dart` | Pulsante nel selettore catalogo e inserimento immediato nella riga |
+| Nuovo cliente da visite | `flutter_app/lib/features/visite/visite_screen.dart`, `flutter_app/lib/features/clienti/clienti_screen.dart` | Callback `onSalvato` del form cliente e ritorno alla visita con cliente selezionato |
+| Report amministrazione/bandi | `docs/progetto/test/2026-10-22-amministrazione-bandi.md` | E2E ruoli, utenti, azienda, import e ATECO |
 
 ## Collezioni Firestore
 

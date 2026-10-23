@@ -23,6 +23,7 @@ class Bando {
     this.tuttiAteco = false,
     this.regioni = const [],
     this.tutteRegioni = false,
+    this.province = const [],
     this.formaAgevolazione = const [],
     this.dimensioni = const [],
     this.settoreAttivita = const [],
@@ -50,6 +51,7 @@ class Bando {
       tuttiAteco: map['tutti_ateco'] == true,
       regioni: _listaStringhe(map['regioni']),
       tutteRegioni: map['tutte_regioni'] == true,
+      province: _listaStringhe(map['province']),
       formaAgevolazione: _listaStringhe(map['forma_agevolazione']),
       dimensioni: _listaStringhe(map['dimensioni']),
       settoreAttivita: _listaStringhe(map['settore_attivita']),
@@ -94,6 +96,9 @@ class Bando {
 
   /// `true` se il bando non filtra per regione (campo `tutte_regioni`).
   final bool tutteRegioni;
+
+  /// Province ammesse (campo `province`), vuoto se assente o non filtrato.
+  final List<String> province;
 
   /// Forme di agevolazione (campo `forma_agevolazione`).
   final List<String> formaAgevolazione;
@@ -143,6 +148,7 @@ class Bando {
         'tutti_ateco': tuttiAteco,
         'regioni': regioni,
         'tutte_regioni': tutteRegioni,
+        'province': province,
         'forma_agevolazione': formaAgevolazione,
         'dimensioni': dimensioni,
         'settore_attivita': settoreAttivita,
