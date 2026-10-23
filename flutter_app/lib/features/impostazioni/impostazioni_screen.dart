@@ -415,6 +415,13 @@ class _CardAccessi extends StatelessWidget {
   Widget build(BuildContext context) {
     final voci = <Widget>[
       _VoceAccesso(
+        chiave: const Key('impostazioni-voce-notifiche'),
+        icona: Icons.notifications_outlined,
+        titolo: 'Notifiche',
+        sottotitolo: 'Canali, orari di silenzio e anteprima',
+        onTap: () => onVoce('/impostazioni/notifiche'),
+      ),
+      _VoceAccesso(
         chiave: const Key('impostazioni-voce-utenti'),
         icona: Icons.people_outline,
         titolo: 'Utenti',

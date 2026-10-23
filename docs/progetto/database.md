@@ -80,7 +80,7 @@ dei preventivi) si applicano anch'essi in Dart dopo la lettura. `firestore.index
 
 ## 2026-10-23 — Nuove collezioni pianificate: agenda, notifiche, chat
 
-**Stato: pianificate, non ancora create.** La creazione effettiva e le Security Rules richiedono il task DBA e il deploy approvato.
+**Stato: regole definite (task H01), non ancora deployate.** Le Security Rules per le nuove collezioni sono pronte in `firestore.rules`; il deploy resta soggetto ad approvazione. Le collezioni nascono al primo write (nessuna "creazione" esplicita).
 
 Tutte le collezioni hanno `azienda_id` e sono isolate per azienda.
 
@@ -98,28 +98,23 @@ Tutte le collezioni hanno `azienda_id` e sono isolate per azienda.
 | `slot/{token}` | Disponibilità condivise | operatore_id, data, ora, durata, stato, scade_at |
 | `prenotazioni` | Prenotazioni ricevute | slot_id, nome, email, telefono, stato, appuntamento_id |
 | `cache_eventi_esterni` | Eventi Google/Outlook importati | utente_id, provider, evento_id, inizio/fine, titolo, luogo, etag |
-| `chat_stanze` | Conversazioni dirette e gruppi | tipo, nome, partecipanti_uids, creatore_uid, ultimo_messaggio, ultimo_messaggio_at |
+| `chat_stanze` | Conversazioni dirette e gruppi | azienda_id, tipo, nome, partecipanti_uids, creatore_uid, ultimo_messaggio, ultimo_messaggio_at |
 | `chat_stanze/{id}/messaggi` | Messaggi della conversazione | mittente_uid, testo, tipo, image_key, created_at, eliminato, idempotenza_key |
 
-### Indici previsti
+### Indici
 
-- `appuntamenti`: (`azienda_id`,`data`,`ora`), (`azienda_id`,`operatore_id`,`data`), (`azienda_id`,`stato`,`data`)
-- `task`: (`azienda_id`,`scadenza`), (`azienda_id`,`operatore_id`,`stato`)
-- `promemoria`: (`azienda_id`,`quando_at`,`stato`), (`azienda_id`,`elemento_id`)
-- `notifiche`: (`utente_uid`,`letta_at`), (`utente_uid`,`programmata_at`)
-- `dispositivi`: (`utente_uid`,`attivo`)
-- `slot`: (`azienda_id`,`operatore_id`,`data`,`ora`)
-- `prenotazioni`: (`azienda_id`,`slot_id`)
-- `cache_eventi_esterni`: (`azienda_id`,`utente_id`,`data_inizio`,`data_fine`)
+**Nessun indice composito.** Le query filtrano per singolo campo (`azienda_id` o `utente_uid`) e ordinano lato client, come per le altre collezioni aziendali. `firestore.indexes.json` resta vuoto.
 
-### Regole previste
+### Regole implementate (task H01)
 
-- lettura/scrittura solo membri dell'azienda (`memberOf`), super admin incluso dove serve;
-- `impostazioni_agenda` scrittura solo admin;
-- `integrazioni` scrivibili solo dal Worker, token mai in Firestore;
-- `notifiche` e `dispositivi` solo il proprietario;
-- `slot`/`prenotazioni` non leggibili dal pubblico: il link pubblico passa dal Worker;
-- `chat_stanze` e messaggi solo partecipanti attivi della stessa azienda;
+- `appuntamenti`/`task`/`promemoria`/`allegati`: read/create/update solo membro dell'azienda; delete anche super (il super non legge né aggiorna queste collezioni).
+- `notifiche`: read/delete solo destinatario (`utente_uid`); create da membro con `mittente_uid == uid()` e destinatario membro dell'azienda; update solo destinatario e solo sul campo `letta_at`.
+- `dispositivi`: solo il proprietario (`utente_uid`), in lettura, scrittura e cancellazione.
+- `impostazioni_notifiche`: read proprietario o super; create/update/delete solo proprietario.
+- `impostazioni_agenda/{az}`: read membro o super; write solo admin o super.
+- `integrazioni`/`cache_eventi_esterni`: read proprietario/super o membro/super; nessuna scrittura client (`allow write: if false`), gestiti da Worker/Admin.
+- `slot`/`prenotazioni`: read/write membro o super; il pubblico NON legge (il link pubblico passa dal Worker, l'Admin SDK bypassa le regole).
+- `chat_stanze`: read/update membro e partecipante; create membro con `uid()` tra i partecipanti; delete creatore o super. I `messaggi` ereditano `azienda_id` e `partecipanti_uids` dalla stanza (via `get` sul padre); create richiede `mittente_uid == uid()`, update/delete solo mittente o super.
 - upload immagini su Cloudflare R2 tramite URL firmato dal Worker.
 
 **Approvazione**: Andrea ha autorizzato l'aggiunta delle nuove collezioni e regole il 23/10/2026.

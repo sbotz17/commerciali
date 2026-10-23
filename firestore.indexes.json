@@ -46,6 +46,15 @@
   //     ]
   //   },
   // ]
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "chat_stanze",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "azienda_id", "order": "ASCENDING" },
+        { "fieldPath": "partecipanti_uids", "arrayConfig": "CONTAINS" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

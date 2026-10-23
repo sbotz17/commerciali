@@ -69,6 +69,13 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Province italiane | `flutter_app/lib/data/province_italia.dart` | 107 province con sigla e regione per il filtro territoriale dei bandi |
 | Codice prodotto | `flutter_app/lib/data/models/prodotto.dart` | Campo `codice` usato in catalogo e righe preventivo |
 | Nuovo cliente da preventivo | `flutter_app/lib/features/preventivi/preventivo_edit_screen.dart` | Pulsante nella card cliente e selezione automatica dopo la creazione |
+| Agenda — modelli | `flutter_app/lib/data/models/appuntamento.dart`, `task_item.dart`, `promemoria.dart`, `notifica.dart` | Modelli dati dell'area agenda |
+| Chat — modelli | `flutter_app/lib/data/models/stanza_chat.dart`, `messaggio_chat.dart` | Stanze dirette/gruppi e messaggi |
+| Calendario | `flutter_app/lib/features/calendario/calendario_screen.dart`, `appuntamento_form_screen.dart` | Vista giorno/settimana, creazione appuntamento, dettaglio, Maps |
+| Task | `flutter_app/lib/features/task/task_screen.dart`, `task_form_screen.dart` | Lista per periodi, filtri, completamento, form |
+| Notifiche | `flutter_app/lib/features/notifiche/notifiche_screen.dart`, `campanella_notifiche.dart` | Centro notifiche, badge, preferenze |
+| Chat UI | `flutter_app/lib/features/chat/chat_screen.dart`, `chat_thread_screen.dart` | Lista conversazioni, nuove chat/gruppi, thread |
+| Preferenze notifiche | `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart` | Push, WhatsApp, chat, silenzio, anteprima |
 | Nuovo prodotto da preventivo | `flutter_app/lib/features/preventivi/preventivo_edit_screen.dart` | Pulsante nel selettore catalogo e inserimento immediato nella riga |
 | Nuovo cliente da visite | `flutter_app/lib/features/visite/visite_screen.dart`, `flutter_app/lib/features/clienti/clienti_screen.dart` | Callback `onSalvato` del form cliente e ritorno alla visita con cliente selezionato |
 | Report amministrazione/bandi | `docs/progetto/test/2026-10-22-amministrazione-bandi.md` | E2E ruoli, utenti, azienda, import e ATECO |

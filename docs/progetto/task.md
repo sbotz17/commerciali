@@ -107,16 +107,16 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 
 | ID | Area | Task | Criteri di accettazione | Agente | Stato |
 |---|---|---|---|---|---|
-| H01 | DBA | Collezioni agenda/notifiche/chat e regole | schema, indici e regole approvate; nessun dato esistente toccato | dba | DA FARE |
-| H02 | Dati | Modelli `Appuntamento`, `Task`, `Promemoria`, `Notifica` | fromMap/toMap, default, test | sviluppatore-backend | DA FARE |
-| H03 | Dati | `SpService`: CRUD appuntamenti e task | query per azienda, filtro operatore, test | sviluppatore-backend | DA FARE |
-| H04 | UI | Schermata Calendario giorno/settimana | viste, filtri, oggi, senza orario, test | sviluppatore-frontend | DA FARE |
-| H05 | UI | Form appuntamento | titolo/data, cliente, operatore, luogo, Maps, call, promemoria | sviluppatore-frontend | DA FARE |
-| H06 | UI | Pagina Task | lista per scadenza, filtri, completa/riapri, test | sviluppatore-frontend | DA FARE |
-| H07 | UI | Form task | scadenza, operatore, priorità, cliente/appuntamento, note | sviluppatore-frontend | DA FARE |
+| H01 | DBA | Collezioni agenda/notifiche/chat e regole | schema, indici e regole approvate; nessun dato esistente toccato | dba | FATTO |
+| H02 | Dati | Modelli `Appuntamento`, `Task`, `Promemoria`, `Notifica` | fromMap/toMap, default, test | sviluppatore-backend | FATTO |
+| H03 | Dati | `SpService`: CRUD appuntamenti e task | query per azienda, filtro operatore, test | sviluppatore-backend | FATTO |
+| H04 | UI | Schermata Calendario giorno/settimana | viste, filtri, oggi, senza orario, test | sviluppatore-frontend | FATTO |
+| H05 | UI | Form appuntamento | titolo/data, cliente, operatore, luogo, Maps, call, promemoria | sviluppatore-frontend | FATTO |
+| H06 | UI | Pagina Task | lista per scadenza, filtri, completa/riapri, test | sviluppatore-frontend | FATTO |
+| H07 | UI | Form task | scadenza, operatore, priorità, cliente/appuntamento, note | sviluppatore-frontend | FATTO |
 | H08 | UI | Dettaglio appuntamento/task con allegati | immagini R2, anteprima, eliminazione | sviluppatore-frontend | DA FARE |
-| H09 | Notifiche | Centro notifiche e badge in-app | elenco, lette/non lette, deep link, test | sviluppatore-frontend | DA FARE |
-| H10 | Notifiche | Preferenze notifiche per utente | canali, tipi, silenzio, numero WhatsApp, test | sviluppatore-frontend | DA FARE |
+| H09 | Notifiche | Centro notifiche e badge in-app | elenco, lette/non lette, deep link, test | sviluppatore-frontend | FATTO |
+| H10 | Notifiche | Preferenze notifiche per utente | canali, tipi, silenzio, numero WhatsApp, test | sviluppatore-frontend | FATTO |
 | H11 | Push | Dispositivi e token FCM web/Android/iOS | registrazione, logout, token scaduto | sviluppatore-backend | DA FARE |
 | H12 | Worker | Scheduler promemoria e notifiche | cron, idempotenza, retry, fuso, test | sviluppatore-backend | DA FARE |
 | H13 | WhatsApp | Invio operatore via server Volty | endpoint, secret, template, errore/retry | sviluppatore-backend | DA FARE |
@@ -125,8 +125,8 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 | H16 | Microsoft | OAuth Microsoft/Teams | collega/scollega, online meeting, sync, conflitti | sviluppatore-backend | DA FARE |
 | H17 | R2 | Upload immagini firmato | limiti, formati, URL firmati, pulizia | sviluppatore-backend | DA FARE |
 | H18 | Prenotazione | Slot e pagina pubblica | token, scadenza, doppia prenotazione, conferma | sviluppatore-backend | DA FARE |
-| H19 | Chat | Modelli e stanze/messaggi | dirette senza duplicati, gruppi, partecipanti | sviluppatore-backend | DA FARE |
-| H20 | Chat | Lista conversazioni e thread | realtime, non letti, letture, immagini, soft delete | sviluppatore-frontend | DA FARE |
+| H19 | Chat | Modelli e stanze/messaggi | dirette senza duplicati, gruppi, partecipanti | sviluppatore-backend | FATTO |
+| H20 | Chat | Lista conversazioni e thread | realtime, non letti, letture, immagini, soft delete | sviluppatore-frontend | FATTO |
 | H21 | Chat | Notifiche chat in-app/push | badge, anteprima generica, silenzio, no duplicati | sviluppatore-backend | DA FARE |
 | H22 | Impostazioni | Sezione Calendario e notifiche | tutte le configurazioni, secret non visibili, test | sviluppatore-frontend | DA FARE |
 | H23 | Qualità | E2E agenda/notifiche/chat | appuntamento, task, promemoria, chat, Maps, push | tester | DA FARE |

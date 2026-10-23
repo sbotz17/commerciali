@@ -379,3 +379,12 @@
 - Verifiche: `flutter analyze` 0, **517 test verdi**, prova reale su staging: cliente creato e selezionato, prodotto creato e inserito in riga.
 - Report: `docs/progetto/test/2026-10-23-preventivo-nuovo-cliente-prodotto.md`.
 - Pubblicato Closer anche su `https://commerciali-app.web.app`.
+
+## 2026-10-23/24 — Base agenda, task, notifiche e chat
+
+- Create collezioni e regole Firestore per appuntamenti, task, promemoria, notifiche, dispositivi, allegati, impostazioni agenda/notifiche, integrazioni, slot/prenotazioni, cache eventi, chat e messaggi. Regole **compilate e pubblicate su staging**; indice composito chat pubblicato.
+- Modelli: Appuntamento, TaskItem, Promemoria, Notifica, StanzaChat, MessaggioChat.
+- Servizi: CRUD appuntamenti/task, notifiche (lista, stream, letta, tutte lette, preferenze), chat (stanze, dirette/gruppi, messaggi, letture).
+- UI: Calendario giorno/settimana con filtri e creazione appuntamento; form appuntamento con Maps; pagina Task e form task; centro notifiche con badge; preferenze notifiche; lista chat, chat diretta/gruppo e thread testo.
+- Test: `flutter analyze` 0, **720 test verdi**.
+- Ancora da fare: push FCM, scheduler Worker, WhatsApp operatore, SMTP, Google/Microsoft, R2 immagini, prenotazione pubblica, notifiche chat, impostazioni agenda complete, E2E.

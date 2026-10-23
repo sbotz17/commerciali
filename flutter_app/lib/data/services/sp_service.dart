@@ -1,15 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../models/appuntamento.dart';
 import '../models/azienda.dart';
 import '../models/bando.dart';
 import '../models/categoria.dart';
 import '../models/cliente.dart';
 import '../models/fonte_bando.dart';
 import '../models/licenza.dart';
+import '../models/messaggio_chat.dart';
+import '../models/notifica.dart';
 import '../models/preventivo.dart';
+import '../models/stanza_chat.dart';
 import '../models/prodotto.dart';
 import '../models/ruolo.dart';
+import '../models/task_item.dart';
 import '../models/user_profile.dart';
 import '../models/visita.dart';
 
@@ -59,6 +64,121 @@ String chiaveRuoloDaNome(String nome) {
   s = s.replaceAll(RegExp('_+'), '_');
   s = s.replaceAll(RegExp('^_+|_+\$'), '');
   return s.isEmpty ? 'ruolo' : s;
+}
+
+/// Filtra una lista di appuntamenti per intervallo di date e operatore.
+///
+/// [dal] e [al] sono estremi inclusivi, confrontati sul `DateTime` ottenuto da
+/// [dataOraAppuntamento] (data + ora). Se [dal] o [al] è indicato, gli
+/// appuntamenti senza data/ora valida vengono esclusi. [operatoreId] filtra
+/// per `operatoreId`. I filtri sono opzionali e si applicano in AND.
+List<Appuntamento> filtraAppuntamenti(
+  List<Appuntamento> appuntamenti, {
+  DateTime? dal,
+  DateTime? al,
+  String? operatoreId,
+}) {
+  final haIntervallo = dal != null || al != null;
+  return appuntamenti.where((a) {
+    if (operatoreId != null && a.operatoreId != operatoreId) return false;
+    if (haIntervallo) {
+      final dt = dataOraAppuntamento(a);
+      if (dt == null) return false;
+      if (dal != null && dt.isBefore(dal)) return false;
+      if (al != null && dt.isAfter(al)) return false;
+    }
+    return true;
+  }).toList();
+}
+
+/// Filtra una lista di task per stato (aperti) e operatore.
+///
+/// [soloAperti] `true` tiene solo i task con `stato == 'aperto'`;
+/// [operatoreId] filtra per `operatoreId`. I filtri sono opzionali e in AND.
+List<TaskItem> filtraTask(
+  List<TaskItem> task, {
+  bool? soloAperti,
+  String? operatoreId,
+}) {
+  return task.where((t) {
+    if (operatoreId != null && t.operatoreId != operatoreId) return false;
+    if (soloAperti == true && t.stato != 'aperto') return false;
+    return true;
+  }).toList();
+}
+
+/// Ordina una lista di task per scadenza crescente, con gli elementi senza
+/// scadenza in fondo; a parità di scadenza mette prima i task `urgente`.
+///
+/// Restituisce una nuova lista (non muta quella in ingresso).
+List<TaskItem> ordinaTask(List<TaskItem> task) {
+  final ordinati = [...task];
+  ordinati.sort((a, b) {
+    final da = dataOraTask(a);
+    final db = dataOraTask(b);
+    if (da != null && db != null) {
+      final cmp = da.compareTo(db);
+      if (cmp != 0) return cmp;
+    } else if (da != null) {
+      return -1;
+    } else if (db != null) {
+      return 1;
+    }
+    final pa = a.priorita == 'urgente' ? 1 : 0;
+    final pb = b.priorita == 'urgente' ? 1 : 0;
+    return pb.compareTo(pa);
+  });
+  return ordinati;
+}
+
+/// Filtra le notifiche non ancora lette (`lettaAt` assente o vuoto), come
+/// [notificaNonLetta].
+List<Notifica> filtraNotificheNonLette(List<Notifica> notifiche) {
+  return notifiche.where(notificaNonLetta).toList();
+}
+
+/// Ordina una lista di notifiche per `createdAt` discendente (le più recenti
+/// per prime), con le notifiche senza data in fondo.
+///
+/// Restituisce una nuova lista (non muta quella in ingresso).
+List<Notifica> ordinaNotifiche(List<Notifica> notifiche) {
+  final ordinate = [...notifiche];
+  ordinate.sort((a, b) {
+    final da = a.createdAt;
+    final db = b.createdAt;
+    if (da != null && db != null) {
+      final cmp = db.compareTo(da);
+      if (cmp != 0) return cmp;
+    } else if (da != null) {
+      return -1;
+    } else if (db != null) {
+      return 1;
+    }
+    return 0;
+  });
+  return ordinate;
+}
+
+/// Ordina una lista di stanze chat per `updatedAt` discendente (le più
+/// recenti per prime), con le stanze senza `updatedAt` in fondo.
+///
+/// Restituisce una nuova lista (non muta quella in ingresso).
+List<StanzaChat> ordinaStanzeChat(List<StanzaChat> stanze) {
+  final ordinate = [...stanze];
+  ordinate.sort((a, b) {
+    final da = a.updatedAt;
+    final db = b.updatedAt;
+    if (da != null && db != null) {
+      final cmp = db.compareTo(da);
+      if (cmp != 0) return cmp;
+    } else if (da != null) {
+      return -1;
+    } else if (db != null) {
+      return 1;
+    }
+    return 0;
+  });
+  return ordinate;
 }
 
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
@@ -732,6 +852,206 @@ class SpService {
     return payload;
   }
 
+  // ---------- agenda: appuntamenti ----------
+
+  /// Elenco degli appuntamenti dell'azienda attiva.
+  ///
+  /// Legge `appuntamenti` filtrando per `azienda_id`, poi applica lato client
+  /// i filtri [dal]/[al] (estremi inclusivi) e [operatoreId] via
+  /// [filtraAppuntamenti] e ordina per `data` e `ora` crescenti. Ritorna una
+  /// lista vuota se non è impostata un'azienda attiva.
+  Future<List<Appuntamento>> getAppuntamenti({
+    DateTime? dal,
+    DateTime? al,
+    String? operatoreId,
+  }) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('appuntamenti')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final appuntamenti = filtraAppuntamenti(
+      snap.docs.map((d) => Appuntamento.fromMap(d.data(), id: d.id)).toList(),
+      dal: dal,
+      al: al,
+      operatoreId: operatoreId,
+    );
+    appuntamenti.sort((a, b) {
+      final cmpData = (a.data ?? '').compareTo(b.data ?? '');
+      if (cmpData != 0) return cmpData;
+      return (a.ora ?? '').compareTo(b.ora ?? '');
+    });
+    return appuntamenti;
+  }
+
+  /// Crea un appuntamento nell'azienda attiva.
+  ///
+  /// Normalizza i dati (payload snake_case, campi del modello [Appuntamento])
+  /// e aggiunge `azienda_id`, `created_by` (uid corrente), `created_at` e
+  /// `updated_at`. Ritorna `{id, ...payload}`.
+  Future<Map<String, dynamic>> inserisciAppuntamento(
+    Map<String, dynamic> dati,
+  ) async {
+    _richiediAzienda();
+    final payload = _appuntamentoPayload(dati);
+    payload['created_by'] = FirebaseAuth.instance.currentUser?.uid;
+    payload['created_at'] = _now();
+    payload['updated_at'] = _now();
+    final ref = await _firestore.collection('appuntamenti').add(payload);
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Aggiorna un appuntamento esistente.
+  ///
+  /// Normalizza i dati, imposta `updated_at` e non modifica `azienda_id`
+  /// (l'appuntamento resta nella sua azienda). Ritorna `{id, ...patch}`.
+  Future<Map<String, dynamic>> aggiornaAppuntamento(
+    String id,
+    Map<String, dynamic> dati,
+  ) async {
+    final patch = _appuntamentoPayload(dati);
+    patch.remove('azienda_id');
+    patch['updated_at'] = _now();
+    await _firestore.collection('appuntamenti').doc(id).update(patch);
+    return {'id': id, ...patch};
+  }
+
+  /// Elimina l'appuntamento con l'[id] indicato.
+  Future<void> eliminaAppuntamento(String id) {
+    return _firestore.collection('appuntamenti').doc(id).delete();
+  }
+
+  /// Costruisce il payload Firestore di un appuntamento, coerente con il
+  /// modello [Appuntamento].
+  ///
+  /// I campi testuali vengono ripuliti (trim); `durata_min` è un intero
+  /// (default 60), `tipo` default `appuntamento`, `stato` default `da_fare`.
+  /// `azienda_id` è incluso solo se è impostata un'azienda attiva.
+  Map<String, dynamic> _appuntamentoPayload(Map<String, dynamic> dati) {
+    final payload = <String, dynamic>{
+      'titolo': _stringa(dati['titolo']),
+      'tipo': _stringa(dati['tipo'], fallback: 'appuntamento'),
+      'data': _stringaNull(dati['data']),
+      'ora': _stringaNull(dati['ora']),
+      'durata_min': _intero(dati['durata_min'], fallback: 60),
+      'cliente_id': _stringaNull(dati['cliente_id']),
+      'cliente_nome': _stringa(dati['cliente_nome']),
+      'operatore_id': _stringaNull(dati['operatore_id']),
+      'luogo': _stringaNull(dati['luogo']),
+      'indirizzo': _stringaNull(dati['indirizzo']),
+      'note': _stringaNull(dati['note']),
+      'stato': _stringa(dati['stato'], fallback: 'da_fare'),
+      'visita_id': _stringaNull(dati['visita_id']),
+      'call_provider': _stringaNull(dati['call_provider']),
+      'call_url': _stringaNull(dati['call_url']),
+      'meeting_id': _stringaNull(dati['meeting_id']),
+      'google_event_id': _stringaNull(dati['google_event_id']),
+      'outlook_event_id': _stringaNull(dati['outlook_event_id']),
+    };
+    if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
+    return payload;
+  }
+
+  // ---------- agenda: task ----------
+
+  /// Elenco dei task dell'azienda attiva.
+  ///
+  /// Legge `task` filtrando per `azienda_id`, poi applica lato client i filtri
+  /// [soloAperti] e [operatoreId] via [filtraTask] e ordina per scadenza
+  /// crescente (senza scadenza in fondo) con gli `urgente` prima a parità di
+  /// scadenza via [ordinaTask]. Ritorna una lista vuota se non è impostata
+  /// un'azienda attiva.
+  Future<List<TaskItem>> getTask({
+    bool? soloAperti,
+    String? operatoreId,
+  }) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return [];
+    final snap = await _firestore
+        .collection('task')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final task = snap.docs
+        .map((d) => TaskItem.fromMap(d.data(), id: d.id))
+        .toList();
+    return ordinaTask(filtraTask(task, soloAperti: soloAperti, operatoreId: operatoreId));
+  }
+
+  /// Crea un task nell'azienda attiva.
+  ///
+  /// Normalizza i dati (payload snake_case, campi del modello [TaskItem]) e
+  /// aggiunge `azienda_id`, `created_by` (uid corrente), `created_at` e
+  /// `updated_at`. Ritorna `{id, ...payload}`.
+  Future<Map<String, dynamic>> inserisciTask(Map<String, dynamic> dati) async {
+    _richiediAzienda();
+    final payload = _taskPayload(dati);
+    payload['created_by'] = FirebaseAuth.instance.currentUser?.uid;
+    payload['created_at'] = _now();
+    payload['updated_at'] = _now();
+    final ref = await _firestore.collection('task').add(payload);
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Aggiorna un task esistente.
+  ///
+  /// Normalizza i dati, imposta `updated_at` e non modifica `azienda_id`
+  /// (il task resta nella sua azienda). Ritorna `{id, ...patch}`.
+  Future<Map<String, dynamic>> aggiornaTask(
+    String id,
+    Map<String, dynamic> dati,
+  ) async {
+    final patch = _taskPayload(dati);
+    patch.remove('azienda_id');
+    patch['updated_at'] = _now();
+    await _firestore.collection('task').doc(id).update(patch);
+    return {'id': id, ...patch};
+  }
+
+  /// Elimina il task con l'[id] indicato.
+  Future<void> eliminaTask(String id) {
+    return _firestore.collection('task').doc(id).delete();
+  }
+
+  /// Segna il task [id] come completato.
+  ///
+  /// Scrive `stato: completato`, `completato_at`, `updated_at` e, se noto,
+  /// `completato_da` ([utenteId] o l'uid corrente).
+  Future<void> completaTask(String id, {String? utenteId}) async {
+    final uid = utenteId ?? FirebaseAuth.instance.currentUser?.uid;
+    final patch = <String, dynamic>{
+      'stato': 'completato',
+      'completato_at': _now(),
+      'updated_at': _now(),
+    };
+    if (uid != null) patch['completato_da'] = uid;
+    await _firestore.collection('task').doc(id).update(patch);
+  }
+
+  /// Costruisce il payload Firestore di un task, coerente con il modello
+  /// [TaskItem].
+  ///
+  /// I campi testuali vengono ripuliti (trim); `priorita` default `normale`,
+  /// `stato` default `aperto`. `azienda_id` è incluso solo se è impostata
+  /// un'azienda attiva.
+  Map<String, dynamic> _taskPayload(Map<String, dynamic> dati) {
+    final payload = <String, dynamic>{
+      'titolo': _stringa(dati['titolo']),
+      'descrizione': _stringa(dati['descrizione']),
+      'scadenza_data': _stringaNull(dati['scadenza_data']),
+      'scadenza_ora': _stringaNull(dati['scadenza_ora']),
+      'operatore_id': _stringaNull(dati['operatore_id']),
+      'priorita': _stringa(dati['priorita'], fallback: 'normale'),
+      'stato': _stringa(dati['stato'], fallback: 'aperto'),
+      'cliente_id': _stringaNull(dati['cliente_id']),
+      'cliente_nome': _stringa(dati['cliente_nome']),
+      'appuntamento_id': _stringaNull(dati['appuntamento_id']),
+      'note': _stringaNull(dati['note']),
+    };
+    if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
+    return payload;
+  }
+
   // ---------- preventivi ----------
 
   /// Elenco dei preventivi dell'azienda attiva, ordinati lato client per
@@ -1098,6 +1418,378 @@ class SpService {
         .toList();
     fonti.sort((a, b) => (a.nome ?? '').compareTo(b.nome ?? ''));
     return fonti;
+  }
+
+  // ---------- notifiche ----------
+
+  /// Elenco delle notifiche dell'utente corrente, ordinate per `created_at`
+  /// discendente (le più recenti per prime, via [ordinaNotifiche]).
+  ///
+  /// Filtra `notifiche` per `utente_uid == uid corrente`. Se [soloNonLette] è
+  /// `true`, tiene solo le notifiche non ancora lette (via
+  /// [filtraNotificheNonLette]). Ritorna una lista vuota se non c'è un utente
+  /// autenticato.
+  Future<List<Notifica>> getNotifiche({bool soloNonLette = false}) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return [];
+    final snap = await _firestore
+        .collection('notifiche')
+        .where('utente_uid', isEqualTo: uid)
+        .get();
+    var notifiche = snap.docs
+        .map((d) => Notifica.fromMap(d.data(), id: d.id))
+        .toList();
+    if (soloNonLette) notifiche = filtraNotificheNonLette(notifiche);
+    return ordinaNotifiche(notifiche);
+  }
+
+  /// Stream in tempo reale delle notifiche dell'utente corrente (per i badge),
+  /// con lo stesso filtro e ordinamento di [getNotifiche].
+  ///
+  /// Se [soloNonLette] è `true`, emette solo le notifiche non ancora lette.
+  /// Emette una lista vuota se non c'è un utente autenticato.
+  Stream<List<Notifica>> notificheStream({bool soloNonLette = false}) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return Stream.value(const []);
+    return _firestore
+        .collection('notifiche')
+        .where('utente_uid', isEqualTo: uid)
+        .snapshots()
+        .map((snap) {
+      var notifiche = snap.docs
+          .map((d) => Notifica.fromMap(d.data(), id: d.id))
+          .toList();
+      if (soloNonLette) notifiche = filtraNotificheNonLette(notifiche);
+      return ordinaNotifiche(notifiche);
+    });
+  }
+
+  /// Segna la notifica [id] come letta (imposta `letta_at` ISO).
+  Future<void> segnaNotificaLetta(String id) {
+    return _firestore.collection('notifiche').doc(id).update({
+      'letta_at': _now(),
+    });
+  }
+
+  /// Segna come lette più notifiche in batch da massimo 400 elementi ciascuna.
+  ///
+  /// Ignora gli id vuoti; non esegue alcuna scrittura se la lista è vuota.
+  Future<void> segnaTutteNotificheLette(List<String> ids) async {
+    final lista = ids.where((id) => id.trim().isNotEmpty).toList();
+    if (lista.isEmpty) return;
+    final ora = _now();
+    for (final blocco in aBlocchi(lista, 400)) {
+      final batch = _firestore.batch();
+      for (final id in blocco) {
+        batch.update(
+          _firestore.collection('notifiche').doc(id),
+          {'letta_at': ora},
+        );
+      }
+      await batch.commit();
+    }
+  }
+
+  /// Crea una notifica per l'utente [utenteUid] nell'azienda attiva.
+  ///
+  /// Richiede un'azienda attiva; il mittente è l'uid corrente. Imposta
+  /// `created_at`, `stato: 'programmata'`, `tentativi: 0` e una
+  /// `idempotenza_key` stabile. Ritorna `{id, ...payload}`.
+  Future<Map<String, dynamic>> creaNotifica({
+    required String utenteUid,
+    required String tipo,
+    required String titolo,
+    String testo = '',
+    String? targetTipo,
+    String? targetId,
+    String canale = 'inapp',
+  }) async {
+    _richiediAzienda();
+    final payload = <String, dynamic>{
+      'azienda_id': _aziendaAttiva,
+      'utente_uid': utenteUid,
+      'mittente_uid': FirebaseAuth.instance.currentUser?.uid,
+      'tipo': tipo,
+      'titolo': titolo,
+      'testo': testo,
+      'target_tipo': targetTipo,
+      'target_id': targetId,
+      'canale': canale,
+      'stato': 'programmata',
+      'tentativi': 0,
+      'idempotenza_key':
+          '$tipo:$targetId:${DateTime.now().microsecondsSinceEpoch}',
+      'created_at': _now(),
+    };
+    final ref = await _firestore.collection('notifiche').add(payload);
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Preferenze di notifica dell'utente corrente per l'azienda attiva.
+  ///
+  /// Legge `impostazioni_notifiche/{aziendaId}_{uid}`. Ritorna `null` se non è
+  /// impostata un'azienda attiva, non c'è un utente autenticato o il documento
+  /// non esiste.
+  Future<Map<String, dynamic>?> getPreferenzeNotifiche() async {
+    final aziendaId = _aziendaAttiva;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (aziendaId == null || uid == null) return null;
+    final snap = await _firestore
+        .collection('impostazioni_notifiche')
+        .doc('${aziendaId}_$uid')
+        .get();
+    final dati = snap.data();
+    if (!snap.exists || dati == null) return null;
+    return dati;
+  }
+
+  /// Salva le preferenze di notifica dell'utente corrente per l'azienda attiva.
+  ///
+  /// Scrive `impostazioni_notifiche/{aziendaId}_{uid}` con merge, garantendo
+  /// sempre `azienda_id`, `utente_uid` e `updated_at`.
+  Future<void> salvaPreferenzeNotifiche(Map<String, dynamic> dati) async {
+    _richiediAzienda();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Nessun utente autenticato.');
+    }
+    await _firestore
+        .collection('impostazioni_notifiche')
+        .doc('${_aziendaAttiva}_$uid')
+        .set({
+          ...dati,
+          'azienda_id': _aziendaAttiva,
+          'utente_uid': uid,
+          'updated_at': _now(),
+        }, SetOptions(merge: true));
+  }
+
+  // ---------- chat ----------
+
+  /// Elenco delle stanze di chat dell'azienda attiva a cui partecipa l'utente
+  /// corrente, ordinate per `updated_at` discendente (le più recenti per
+  /// prime) via [ordinaStanzeChat].
+  ///
+  /// Legge `chat_stanze` filtrando per `azienda_id` e per
+  /// `partecipanti_uids array-contains uid corrente`. Ritorna una lista vuota
+  /// se non è impostata un'azienda attiva o non c'è un utente autenticato.
+  Future<List<StanzaChat>> getChatStanze() async {
+    final aziendaId = _aziendaAttiva;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (aziendaId == null || uid == null) return [];
+    final snap = await _firestore
+        .collection('chat_stanze')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .where('partecipanti_uids', arrayContains: uid)
+        .get();
+    return ordinaStanzeChat(
+      snap.docs.map((d) => StanzaChat.fromMap(d.data(), id: d.id)).toList(),
+    );
+  }
+
+  /// Stream in tempo reale delle stanze di chat dell'azienda attiva a cui
+  /// partecipa l'utente corrente, con lo stesso filtro e ordinamento di
+  /// [getChatStanze].
+  ///
+  /// Emette una lista vuota se non è impostata un'azienda attiva o non c'è un
+  /// utente autenticato.
+  Stream<List<StanzaChat>> chatStanzeStream() {
+    final aziendaId = _aziendaAttiva;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (aziendaId == null || uid == null) return Stream.value(const []);
+    return _firestore
+        .collection('chat_stanze')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .where('partecipanti_uids', arrayContains: uid)
+        .snapshots()
+        .map((snap) => ordinaStanzeChat(
+              snap.docs
+                  .map((d) => StanzaChat.fromMap(d.data(), id: d.id))
+                  .toList(),
+            ));
+  }
+
+  /// Crea (o restituisce, se già esiste) la stanza diretta tra l'utente
+  /// corrente e [altroUid].
+  ///
+  /// Usa l'id deterministico [idChatDiretta] su `chat_stanze`; se il documento
+  /// esiste lo restituisce senza riscriverlo, altrimenti lo crea con
+  /// `tipo: diretta`, partecipanti `[uid, altroUid]`, `creatore_uid`, e
+  /// `created_at`/`updated_at`.
+  Future<StanzaChat> creaChatDiretta(String altroUid) async {
+    _richiediAzienda();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Nessun utente autenticato.');
+    }
+    final aziendaId = _aziendaAttiva!;
+    final id = idChatDiretta(aziendaId, uid, altroUid);
+    final ref = _firestore.collection('chat_stanze').doc(id);
+    final snap = await ref.get();
+    if (snap.exists && snap.data() != null) {
+      return StanzaChat.fromMap(snap.data()!, id: snap.id);
+    }
+    final ora = _now();
+    final payload = <String, dynamic>{
+      'azienda_id': aziendaId,
+      'tipo': 'diretta',
+      'partecipanti_uids': [uid, altroUid],
+      'creatore_uid': uid,
+      'created_at': ora,
+      'updated_at': ora,
+    };
+    await ref.set(payload);
+    return StanzaChat.fromMap(payload, id: id);
+  }
+
+  /// Crea una stanza di gruppo nell'azienda attiva.
+  ///
+  /// Il [nome] (dopo trim) non può essere vuoto; i [partecipanti] vengono
+  /// ripuliti, deduplicati e integrati sempre con il creatore (uid corrente).
+  /// Usa `add` con `tipo: gruppo`.
+  Future<StanzaChat> creaGruppo(String nome, List<String> partecipanti) async {
+    _richiediAzienda();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Nessun utente autenticato.');
+    }
+    final n = nome.trim();
+    if (n.isEmpty) {
+      throw ArgumentError.value(nome, 'nome', 'Non può essere vuoto');
+    }
+    final uids = <String>[];
+    for (final p in [...partecipanti, uid]) {
+      final s = p.trim();
+      if (s.isNotEmpty && !uids.contains(s)) uids.add(s);
+    }
+    final ora = _now();
+    final payload = <String, dynamic>{
+      'azienda_id': _aziendaAttiva,
+      'tipo': 'gruppo',
+      'nome': n,
+      'partecipanti_uids': uids,
+      'creatore_uid': uid,
+      'created_at': ora,
+      'updated_at': ora,
+    };
+    final ref = await _firestore.collection('chat_stanze').add(payload);
+    return StanzaChat.fromMap(payload, id: ref.id);
+  }
+
+  /// Stream dei messaggi della stanza [stanzaId], dalla sottocollezione
+  /// `chat_stanze/{stanzaId}/messaggi`, ordinati lato client per `created_at`
+  /// crescente.
+  Stream<List<MessaggioChat>> messaggiStream(String stanzaId) {
+    return _firestore
+        .collection('chat_stanze')
+        .doc(stanzaId)
+        .collection('messaggi')
+        .snapshots()
+        .map((snap) {
+      final messaggi = snap.docs
+          .map((d) => MessaggioChat.fromMap(d.data(), id: d.id))
+          .toList();
+      messaggi.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
+      return messaggi;
+    });
+  }
+
+  /// Invia un messaggio nella stanza [stanzaId].
+  ///
+  /// Richiede un'azienda attiva; [testo] (trim) o [imageKey] (trim) devono
+  /// essere valorizzati. Aggiunge il messaggio nella sottocollezione
+  /// `chat_stanze/{stanzaId}/messaggi` con `mittente_uid` (uid corrente),
+  /// `tipo` testo/immagine, `created_at`, `eliminato: false` e una
+  /// `idempotenza_key`; poi aggiorna la stanza con `ultimo_messaggio`,
+  /// `ultimo_messaggio_at` e `updated_at`. Ritorna `{id, ...payload}`.
+  Future<Map<String, dynamic>> inviaMessaggio(
+    String stanzaId,
+    String testo, {
+    String? imageKey,
+  }) async {
+    _richiediAzienda();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Nessun utente autenticato.');
+    }
+    final t = testo.trim();
+    final img = _stringaNull(imageKey);
+    final haImmagine = img != null;
+    if (t.isEmpty && !haImmagine) {
+      throw ArgumentError('Servono testo o immagine per inviare un messaggio.');
+    }
+    final ora = _now();
+    final payload = <String, dynamic>{
+      'mittente_uid': uid,
+      'testo': t,
+      'tipo': haImmagine ? 'immagine' : 'testo',
+      'image_key': img,
+      'created_at': ora,
+      'eliminato': false,
+      'idempotenza_key': '$stanzaId:$uid:${DateTime.now().microsecondsSinceEpoch}',
+    };
+    final ref = await _firestore
+        .collection('chat_stanze')
+        .doc(stanzaId)
+        .collection('messaggi')
+        .add(payload);
+    await _firestore.collection('chat_stanze').doc(stanzaId).update({
+      'ultimo_messaggio': t.isNotEmpty ? t : '[Immagine]',
+      'ultimo_messaggio_at': ora,
+      'updated_at': ora,
+    });
+    return {'id': ref.id, ...payload};
+  }
+
+  /// Elimina (soft delete) il messaggio [messaggioId] della stanza [stanzaId]:
+  /// imposta `eliminato: true`, `testo: ''` e `image_key: null`.
+  Future<void> eliminaMessaggio(String stanzaId, String messaggioId) {
+    return _firestore
+        .collection('chat_stanze')
+        .doc(stanzaId)
+        .collection('messaggi')
+        .doc(messaggioId)
+        .update({
+          'eliminato': true,
+          'testo': '',
+          'image_key': null,
+        });
+  }
+
+  /// Segna la stanza [stanzaId] come letta dall'utente corrente.
+  ///
+  /// Scrive `chat_stanze/{stanzaId}/letture/{uid}` con `ultima_lettura_at`.
+  /// Non fa nulla se non c'è un utente autenticato.
+  Future<void> segnaChatLetta(String stanzaId) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return Future.value();
+    return _firestore
+        .collection('chat_stanze')
+        .doc(stanzaId)
+        .collection('letture')
+        .doc(uid)
+        .set({'ultima_lettura_at': _now()});
+  }
+
+  /// Timestamp dell'ultima lettura della stanza [stanzaId] da parte
+  /// dell'utente corrente, letto da `chat_stanze/{stanzaId}/letture/{uid}`.
+  ///
+  /// Ritorna `null` se non c'è un utente autenticato, il documento non esiste
+  /// o il valore non è un timestamp ISO-8601 valido.
+  Future<DateTime?> ultimaLetturaChat(String stanzaId) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return null;
+    final snap = await _firestore
+        .collection('chat_stanze')
+        .doc(stanzaId)
+        .collection('letture')
+        .doc(uid)
+        .get();
+    final dati = snap.data();
+    if (!snap.exists || dati == null) return null;
+    final s = dati['ultima_lettura_at'] as String?;
+    if (s == null) return null;
+    return DateTime.tryParse(s);
   }
 
   /// Costruisce il payload Firestore di un prodotto.

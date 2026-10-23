@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../notifiche/campanella_notifiche.dart';
 
 /// Struttura comune delle schermate applicative.
 ///
@@ -62,10 +63,34 @@ class AppShell extends StatelessWidget {
       rotta: '/catalogo',
     ),
     _VoceNavigazione(
+      etichetta: 'Calendario',
+      icona: Icons.calendar_month_outlined,
+      iconaSelezionata: Icons.calendar_month,
+      rotta: '/calendario',
+    ),
+    _VoceNavigazione(
       etichetta: 'Visite',
       icona: Icons.event_outlined,
       iconaSelezionata: Icons.event,
       rotta: '/visite',
+    ),
+    _VoceNavigazione(
+      etichetta: 'Task',
+      icona: Icons.task_alt,
+      iconaSelezionata: Icons.task_alt,
+      rotta: '/task',
+    ),
+    _VoceNavigazione(
+      etichetta: 'Chat',
+      icona: Icons.chat_bubble_outline,
+      iconaSelezionata: Icons.chat_bubble,
+      rotta: '/chat',
+    ),
+    _VoceNavigazione(
+      etichetta: 'Notifiche',
+      icona: Icons.notifications_none,
+      iconaSelezionata: Icons.notifications,
+      rotta: '/notifiche',
     ),
     _VoceNavigazione(
       etichetta: 'Impostazioni',
@@ -82,12 +107,17 @@ class AppShell extends StatelessWidget {
     '/preventivi': 'Preventivi',
     '/preventivi/nuovo': 'Nuovo preventivo',
     '/visite': 'Visite',
+    '/task': 'Task',
+    '/chat': 'Chat',
+    '/calendario': 'Calendario',
     '/bandi': 'Bandi',
     '/bandi/importa': 'Importa bandi',
+    '/notifiche': 'Notifiche',
     '/impostazioni': 'Impostazioni',
     '/impostazioni/utenti': 'Utenti',
     '/impostazioni/ruoli': 'Ruoli e permessi',
     '/impostazioni/licenze': 'Licenze',
+    '/impostazioni/notifiche': 'Notifiche',
     '/superadmin': 'Super admin',
   };
 
@@ -123,6 +153,7 @@ class AppShell extends StatelessWidget {
           appBar: AppBar(
             automaticallyImplyLeading: false,
             title: Text(_titolo),
+            actions: const [CampanellaNotifiche()],
           ),
           drawer: _DrawerAltro(
             percorso: percorso,

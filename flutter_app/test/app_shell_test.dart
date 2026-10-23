@@ -86,5 +86,30 @@ void main() {
       // `/visite` vive sotto "Altro".
       expect(barra.selectedIndex, 4);
     });
+
+    testWidgets('Chat è nel drawer Altro con il titolo in AppBar',
+        (tester) async {
+      await mostraShell(tester, percorso: '/chat');
+
+      expect(
+        find.descendant(of: find.byType(AppBar), matching: find.text('Chat')),
+        findsOneWidget,
+      );
+
+      await tester.tap(nellaBarra('Altro'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(of: find.byType(Drawer), matching: find.text('Chat')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(Drawer),
+          matching: find.byIcon(Icons.chat_bubble_outline),
+        ),
+        findsOneWidget,
+      );
+    });
   });
 }
