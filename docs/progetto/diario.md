@@ -370,3 +370,12 @@
 - Nel form **Nuova visita** c'è il pulsante **Nuovo cliente**: apre l'anagrafica, salva il cliente e torna alla visita con il cliente già selezionato.
 - Verifiche: `flutter analyze` 0, **517 test verdi**, prova reale su staging con codice `PRD-777` visibile in catalogo e cliente creato da Visite e selezionato.
 - Report: `docs/progetto/test/2026-10-23-visite-codice-prodotto.md`.
+
+## 2026-10-23 — Nuovo cliente e nuovo prodotto dal preventivo
+
+- Nella card Cliente del preventivo c'è **Nuovo cliente**: apre l'anagrafica, salva e seleziona il cliente senza uscire.
+- Nel selettore prodotti c'è **Nuovo prodotto**: apre il form catalogo, salva e inserisce subito il prodotto nella riga.
+- Il nuovo prodotto viene restituito direttamente dal form, senza dipendere da una rilettura del catalogo (più robusto in caso di rete lenta).
+- Verifiche: `flutter analyze` 0, **517 test verdi**, prova reale su staging: cliente creato e selezionato, prodotto creato e inserito in riga.
+- Report: `docs/progetto/test/2026-10-23-preventivo-nuovo-cliente-prodotto.md`.
+- Pubblicato Closer anche su `https://commerciali-app.web.app`.

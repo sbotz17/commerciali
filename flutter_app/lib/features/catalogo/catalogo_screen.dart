@@ -810,6 +810,7 @@ class ProdottoFormScreen extends ConsumerStatefulWidget {
     this.prodotto,
     this.categorie = const [],
     this.prodotti = const [],
+    this.onSalvato,
   });
 
   /// Prodotto da modificare; `null` per crearne uno nuovo.
@@ -820,6 +821,10 @@ class ProdottoFormScreen extends ConsumerStatefulWidget {
 
   /// Tutti i prodotti dell'azienda, per scegliere i sotto-prodotti (figli).
   final List<Prodotto> prodotti;
+
+  /// Callback invocata dopo il salvataggio riuscito con il prodotto creato
+  /// (utile a chi apre il form per selezionarlo subito).
+  final ValueChanged<Prodotto?>? onSalvato;
 
   @override
   ConsumerState<ProdottoFormScreen> createState() => _ProdottoFormScreenState();
@@ -911,12 +916,35 @@ class _ProdottoFormScreenState extends ConsumerState<ProdottoFormScreen> {
     try {
       final servizio = ref.read(spServiceProvider);
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final String? id;
       if (_modifica) {
+        id = widget.prodotto!.id;
         await servizio.aggiornaProdotto(widget.prodotto!.id, dati);
       } else {
-        await servizio.inserisciProdotto(dati);
+        final nuovo = await servizio.inserisciProdotto(dati);
+        id = nuovo['id'] as String?;
       }
       if (!mounted) return;
+      final salvato = id == null
+          ? null
+          : Prodotto(
+              id: id,
+              aziendaId: ref.read(aziendaAttivaProvider),
+              codice: _codice.text.trim().isEmpty
+                  ? null
+                  : _codice.text.trim(),
+              nome: _nome.text.trim(),
+              categoria: _categoria,
+              prezzo: prezzoDaTesto(_prezzo.text) ?? 0,
+              descrizione: _descrizione.text.trim(),
+              immagine: _immagine.text.trim().isEmpty
+                  ? null
+                  : _immagine.text.trim(),
+              attivo: widget.prodotto?.attivo ?? true,
+              figliIds: _figliIds.toList(growable: false),
+              figliAZero: _figliAZero,
+            );
+      widget.onSalvato?.call(salvato);
       Navigator.of(context).pop(true);
       return;
     } catch (errore) {

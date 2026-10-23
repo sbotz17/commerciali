@@ -92,6 +92,8 @@ Il coordinatore assegna un task alla volta. Stati: `DA FARE`, `IN CORSO`, `FATTO
 | E01 | Catalogo | Codice prodotto nei dati | `Prodotto.codice`, payload, codice riportato nella riga preventivo; test | sviluppatore-backend | FATTO |
 | E02 | Catalogo | Codice prodotto in UI | campo nel form, colonna tabella, sottotitolo e selettore preventivo; test | sviluppatore-frontend | FATTO |
 | F01 | Visite | Nuovo cliente dal giro visite | pulsante nel form visita, ritorno al form con cliente selezionato; test | sviluppatore-frontend | FATTO |
+| G01 | Preventivi | Nuovo cliente dal preventivo | pulsante nella card cliente, creazione, ricarica e selezione automatica; test | sviluppatore-frontend | FATTO |
+| G02 | Preventivi | Nuovo prodotto dal catalogo del preventivo | pulsante nel selettore, form prodotto, ritorno e inserimento nella riga; test | sviluppatore-frontend | FATTO |
 
 ## Regole di gestione
 

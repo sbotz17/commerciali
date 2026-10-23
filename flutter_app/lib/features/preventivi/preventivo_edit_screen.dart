@@ -21,6 +21,7 @@ import 'package:printing/printing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/avviso_errore.dart';
 import '../../core/ui/stato_centrato.dart';
+import '../../data/models/categoria.dart';
 import '../../data/models/cliente.dart';
 import '../../data/models/preventivo.dart';
 import '../../data/models/prodotto.dart';
@@ -28,7 +29,8 @@ import '../../data/panieri.dart';
 import '../../data/services/preventivo_pdf.dart';
 import '../../state/azienda_providers.dart';
 import '../catalogo/catalogo_screen.dart'
-    show etichettaPaniere, formattaPrezzo, prezzoDaTesto;
+    show etichettaPaniere, formattaPrezzo, prezzoDaTesto, ProdottoFormScreen;
+import '../clienti/clienti_screen.dart';
 import 'preventivi_screen.dart'
     show etichettaStatoPreventivo, numeroVisualizzatoPreventivo;
 
@@ -388,6 +390,12 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
   bool _caricandoProdotti = true;
   Object? _erroreProdotti;
 
+  /// Categorie dell'azienda attiva, passate al form "Nuovo prodotto".
+  ///
+  /// Un errore di lettura viene ignorato: l'editor resta utilizzabile e la
+  /// tendina del form prodotto resta vuota.
+  List<Categoria> _categorie = const [];
+
   String? _clienteId;
   String _stato = 'bozza';
 
@@ -433,6 +441,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     }
     _caricaClienti();
     _caricaProdotti();
+    _caricaCategorie();
   }
 
   @override
@@ -555,6 +564,65 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     }
   }
 
+  /// Carica le categorie dell'azienda attiva per il form "Nuovo prodotto".
+  ///
+  /// Come per clienti e prodotti, un errore non blocca l'editor: la lista
+  /// resta quella già disponibile (vuota all'avvio) e si riprova alla
+  /// successiva apertura del form.
+  Future<void> _caricaCategorie() async {
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final categorie = await servizio.getCategorie();
+      if (!mounted) return;
+      setState(() => _categorie = categorie);
+    } catch (_) {
+      // Errore ignorato di proposito: l'editor resta utilizzabile.
+    }
+  }
+
+  /// Apre il form cliente e, se il salvataggio riesce, lo seleziona qui.
+  Future<void> _apriNuovoCliente() async {
+    String? nuovoId;
+    final salvato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ClienteFormScreen(onSalvato: (id) => nuovoId = id),
+      ),
+    );
+    if (salvato != true) return;
+    await _caricaClienti();
+    if (mounted && nuovoId != null) setState(() => _clienteId = nuovoId);
+  }
+
+  /// Apre il form "Nuovo prodotto" e restituisce il prodotto creato.
+  ///
+  /// Dopo il salvataggio ricarica prodotti e categorie e cerca il nuovo id
+  /// nell'elenco aggiornato; se non lo trova (o il form viene annullato)
+  /// ritorna `null` e il foglio di scelta resta aperto.
+  Future<Prodotto?> _creaNuovoProdotto() async {
+    Prodotto? nuovo;
+    final salvato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ProdottoFormScreen(
+          prodotti: _prodotti,
+          categorie: _categorie,
+          onSalvato: (prodotto) => nuovo = prodotto,
+        ),
+      ),
+    );
+    if (salvato != true || nuovo == null) return null;
+
+    // Il prodotto è già completo: non dipendiamo dalla rilettura del catalogo.
+    // La ricarica serve solo ad allineare l'elenco per i prossimi inserimenti.
+    await _caricaProdotti();
+    await _caricaCategorie();
+    if (!mounted) return nuovo;
+    if (!_prodotti.any((prodotto) => prodotto.id == nuovo!.id)) {
+      setState(() => _prodotti = [..._prodotti, nuovo!]);
+    }
+    return nuovo;
+  }
+
   void _aggiungiRiga() {
     setState(() => _righe.add(_RigaPreventivo()));
   }
@@ -571,7 +639,10 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => _CatalogoProdottiSheet(prodotti: _prodotti),
+      builder: (_) => _CatalogoProdottiSheet(
+        prodotti: _prodotti,
+        onNuovo: _creaNuovoProdotto,
+      ),
     );
     if (scelto == null || !mounted) return;
     _inserisciProdottoNelPreventivo(scelto);
@@ -588,7 +659,10 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => _CatalogoProdottiSheet(prodotti: _prodotti),
+      builder: (_) => _CatalogoProdottiSheet(
+        prodotti: _prodotti,
+        onNuovo: _creaNuovoProdotto,
+      ),
     );
     if (scelto == null || !mounted) return;
 
@@ -814,6 +888,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       if (precedente != attuale) {
         _caricaClienti();
         _caricaProdotti();
+        _caricaCategorie();
       }
     });
 
@@ -1018,13 +1093,22 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
             ] else if (!_caricandoClienti && opzioni.isEmpty) ...[
               const SizedBox(height: AppSpazi.xs),
               Text(
-                'Nessun cliente disponibile. Creane uno da Clienti.',
+                'Nessun cliente disponibile. Creane uno con il pulsante sotto.',
                 key: const Key('preventivo-clienti-vuoto'),
                 style: tema.textTheme.bodySmall?.copyWith(
                   color: tema.colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                key: const Key('preventivo-nuovo-cliente'),
+                onPressed: _apriNuovoCliente,
+                icon: const Icon(Icons.person_add_alt_1),
+                label: const Text('Nuovo cliente'),
+              ),
+            ),
             const SizedBox(height: AppSpazi.s),
             DropdownButtonFormField<String>(
               key: const Key('preventivo-stato'),
@@ -1781,9 +1865,13 @@ class _RigaTotale extends StatelessWidget {
 /// Mostra solo i prodotti attivi con un nome, con ricerca per nome o
 /// categoria. Toccando una voce si chiude restituendo il prodotto scelto.
 class _CatalogoProdottiSheet extends StatefulWidget {
-  const _CatalogoProdottiSheet({required this.prodotti});
+  const _CatalogoProdottiSheet({required this.prodotti, this.onNuovo});
 
   final List<Prodotto> prodotti;
+
+  /// Callback che apre il form "Nuovo prodotto": se restituisce il prodotto
+  /// creato, il foglio si chiude con quello; con `null` resta aperto.
+  final Future<Prodotto?> Function()? onNuovo;
 
   @override
   State<_CatalogoProdottiSheet> createState() => _CatalogoProdottiSheetState();
@@ -1792,10 +1880,33 @@ class _CatalogoProdottiSheet extends StatefulWidget {
 class _CatalogoProdottiSheetState extends State<_CatalogoProdottiSheet> {
   final _ricerca = TextEditingController();
 
+  /// Creazione di un nuovo prodotto in corso: disabilita il pulsante.
+  bool _creando = false;
+
   @override
   void dispose() {
     _ricerca.dispose();
     super.dispose();
+  }
+
+  /// Apre il form "Nuovo prodotto" e, se riesce, chiude il foglio con il
+  /// prodotto creato.
+  Future<void> _nuovoProdotto() async {
+    final onNuovo = widget.onNuovo;
+    if (onNuovo == null || _creando) return;
+    setState(() => _creando = true);
+    try {
+      final prodotto = await onNuovo();
+      if (!mounted) return;
+      if (prodotto != null) {
+        Navigator.of(context).pop(prodotto);
+        return;
+      }
+      setState(() => _creando = false);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _creando = false);
+    }
   }
 
   /// Prodotti attivi con nome, filtrati per nome o categoria.
@@ -1880,6 +1991,28 @@ class _CatalogoProdottiSheetState extends State<_CatalogoProdottiSheet> {
                         );
                       },
                     ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpazi.m,
+                AppSpazi.xs,
+                AppSpazi.m,
+                AppSpazi.m,
+              ),
+              child: FilledButton.icon(
+                key: const Key('catalogo-nuovo-prodotto'),
+                onPressed: widget.onNuovo == null || _creando
+                    ? null
+                    : _nuovoProdotto,
+                icon: _creando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add),
+                label: Text(_creando ? 'Creazione…' : 'Nuovo prodotto'),
+              ),
             ),
           ],
         ),

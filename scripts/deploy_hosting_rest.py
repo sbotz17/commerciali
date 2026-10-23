@@ -18,7 +18,7 @@ import urllib.parse
 import urllib.request
 
 PROJECT = "commerciali-app"
-SITE = "commerciali-flutter"
+SITE = sys.argv[1] if len(sys.argv) > 1 else "commerciali-flutter"
 API = "https://firebasehosting.googleapis.com/v1beta1"
 PUBLIC = pathlib.Path("flutter_app/build/web")
 
