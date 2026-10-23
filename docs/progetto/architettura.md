@@ -305,12 +305,11 @@ Online meeting: `POST /users/{id}/onlineMeetings` (o evento con `isOnlineMeeting
 
 ### 8. Allegati
 
-Confronto: **Firebase Storage** (Spark gratuito 5 GB, già nel progetto, Storage Rules per azienda) →
-**raccomandato**; Cloudflare R2 (economico, S3, egress gratis ma serve Worker per URL firmati, più
-setup); Firestore base64 (limite 1 MB/doc, costoso, pessimo per immagini) → NO. Metadati in
-`allegati`; limite dimensione/numero configurabile validato prima dell'upload; regole Storage
-`allegati/{aziendaId}/...` solo membri. Privacy/GDPR: foto = dati personali, accesso solo azienda,
-cancellazione con l'elemento (da decidere: cascade via Worker o pulizia orfani).
+**Scelta di Andrea: Cloudflare R2** (free tier) con upload firmato dal Worker. Firebase Storage e
+Firestore base64 sono stati scartati (Blaze/costi/limiti). Metadati in `allegati` (`object_key`,
+`thumb_key`, mime, dimensione); limiti dimensione/numero configurabili; URL firmati a scadenza;
+immagini solo per i membri dell'azienda. Privacy/GDPR: foto = dati personali; cancellazione
+dell'oggetto R2 quando l'allegato viene eliminato e scansione periodica degli orfani.
 
 ### 9. Prenotazione pubblica
 

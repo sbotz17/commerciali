@@ -77,3 +77,49 @@ Così non servono indici compositi (`azienda_id` + campo di ordinamento): un fil
 `azienda_id` copre tutti i casi, e l'ordinamento (`clienti`/`prodotti` per `nome`, `categorie` per `ordine`,
 `preventivi` per `created_at` discendente) avviene in memoria. Eventuali filtri aggiuntivi (es. `soloUtenteId`
 dei preventivi) si applicano anch'essi in Dart dopo la lettura. `firestore.indexes.json` resta vuoto.
+
+## 2026-10-23 — Nuove collezioni pianificate: agenda, notifiche, chat
+
+**Stato: pianificate, non ancora create.** La creazione effettiva e le Security Rules richiedono il task DBA e il deploy approvato.
+
+Tutte le collezioni hanno `azienda_id` e sono isolate per azienda.
+
+| Collezione | Scopo | Campi principali |
+|---|---|---|
+| `appuntamenti` | Appuntamenti generici o collegati a visite | titolo, data, ora, durata_min, cliente_id/nome, operatore_id, luogo, note, stato, visita_id, call_provider/url, meeting_id, google_event_id, outlook_event_id, etag_esterno |
+| `task` | Attività e compiti | titolo, scadenza, operatore_id, priorita, note, cliente_id, appuntamento_id, stato, completato_da/at |
+| `promemoria` | Eventi programmati da inviare | riferito_a, elemento_id, destinatario_tipo, canale, destinatario, quando_at, stato, inviato_at, tentativi, errore, idempotenza_key |
+| `notifiche` | Consegne effettive in-app/push/WhatsApp | utente_uid, tipo, titolo, testo, target_tipo/id, canale, stato, programmata_at, inviata_at, letta_at, tentativi, errore, idempotenza_key |
+| `dispositivi` | Token push per dispositivo | utente_uid, piattaforma, token_fcm, attivo, ultimo_uso_at |
+| `impostazioni_notifiche/{aziendaId}_{uid}` | Preferenze personali | canali, tipi, numero WhatsApp, consenso, silenzio, fuso, anteprima |
+| `allegati` | Metadati immagini | elemento_tipo/id, nome, mime, dimensione, object_key R2, thumb_url |
+| `impostazioni_agenda/{aziendaId}` | Configurazione aziendale | fuso, anticipo, orario invio cliente, canale, template, slot, limiti allegati, Maps |
+| `integrazioni/{aziendaId}_{uid}` | Stato account Google/Microsoft | provider, calendar_id, tenant_id, stato, scopes (nessun token) |
+| `slot/{token}` | Disponibilità condivise | operatore_id, data, ora, durata, stato, scade_at |
+| `prenotazioni` | Prenotazioni ricevute | slot_id, nome, email, telefono, stato, appuntamento_id |
+| `cache_eventi_esterni` | Eventi Google/Outlook importati | utente_id, provider, evento_id, inizio/fine, titolo, luogo, etag |
+| `chat_stanze` | Conversazioni dirette e gruppi | tipo, nome, partecipanti_uids, creatore_uid, ultimo_messaggio, ultimo_messaggio_at |
+| `chat_stanze/{id}/messaggi` | Messaggi della conversazione | mittente_uid, testo, tipo, image_key, created_at, eliminato, idempotenza_key |
+
+### Indici previsti
+
+- `appuntamenti`: (`azienda_id`,`data`,`ora`), (`azienda_id`,`operatore_id`,`data`), (`azienda_id`,`stato`,`data`)
+- `task`: (`azienda_id`,`scadenza`), (`azienda_id`,`operatore_id`,`stato`)
+- `promemoria`: (`azienda_id`,`quando_at`,`stato`), (`azienda_id`,`elemento_id`)
+- `notifiche`: (`utente_uid`,`letta_at`), (`utente_uid`,`programmata_at`)
+- `dispositivi`: (`utente_uid`,`attivo`)
+- `slot`: (`azienda_id`,`operatore_id`,`data`,`ora`)
+- `prenotazioni`: (`azienda_id`,`slot_id`)
+- `cache_eventi_esterni`: (`azienda_id`,`utente_id`,`data_inizio`,`data_fine`)
+
+### Regole previste
+
+- lettura/scrittura solo membri dell'azienda (`memberOf`), super admin incluso dove serve;
+- `impostazioni_agenda` scrittura solo admin;
+- `integrazioni` scrivibili solo dal Worker, token mai in Firestore;
+- `notifiche` e `dispositivi` solo il proprietario;
+- `slot`/`prenotazioni` non leggibili dal pubblico: il link pubblico passa dal Worker;
+- `chat_stanze` e messaggi solo partecipanti attivi della stessa azienda;
+- upload immagini su Cloudflare R2 tramite URL firmato dal Worker.
+
+**Approvazione**: Andrea ha autorizzato l'aggiunta delle nuove collezioni e regole il 23/10/2026.

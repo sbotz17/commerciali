@@ -398,11 +398,11 @@ auto-gestione in MVP); fuso orario del cliente.
 - Invio email: deliverability, provider a pagamento o con limiti; nessuna credenziale nel codice.
 - WhatsApp: dipende dal server Volty già esistente (`/send`, `x-api-key`); oggi la API key sta in
   `whatsapp_config/1` → valutare secret lato server. Disponibilità e costi del server da verificare.
-- Archiviazione allegati: limiti/costi Firebase Storage; immagini = dati personali.
+- Archiviazione allegati: **Cloudflare R2** (scelta di Andrea); limiti free tier, URL firmati, immagini = dati personali.
 - Fuso orario e ora legale; sincronizzazioni e conflitti; token scaduti e riconnessione.
 - Privacy/GDPR: consenso per email/WhatsApp, foto di luoghi/persone, link pubblici non indovinabili,
   conservazione e cancellazione.
-- Limiti Firebase gratuiti (query, Storage, funzioni programmate): da verificare prima delle stime.
+- Limiti Firebase gratuiti (query, funzioni programmate): da verificare prima delle stime; allegati su R2.
 
 **Domande aperte per Andrea**
 1. Nell'MVP le visite attuali diventano appuntamenti o restano due cose separate?
