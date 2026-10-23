@@ -422,6 +422,13 @@ class _CardAccessi extends StatelessWidget {
         onTap: () => onVoce('/impostazioni/notifiche'),
       ),
       _VoceAccesso(
+        chiave: const Key('impostazioni-voce-agenda'),
+        icona: Icons.event_available_outlined,
+        titolo: 'Calendario e agenda',
+        sottotitolo: 'Orari di invio, template e slot prenotabili',
+        onTap: () => onVoce('/impostazioni/agenda'),
+      ),
+      _VoceAccesso(
         chiave: const Key('impostazioni-voce-utenti'),
         icona: Icons.people_outline,
         titolo: 'Utenti',

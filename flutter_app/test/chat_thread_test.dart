@@ -1,7 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:commerciali_app/data/models/messaggio_chat.dart';
+import 'package:commerciali_app/data/models/stanza_chat.dart';
 import 'package:commerciali_app/features/chat/chat_thread_screen.dart';
+
+StanzaChat _stanza(List<String> partecipanti) {
+  return StanzaChat(id: 'stanza-1', partecipantiUids: partecipanti);
+}
 
 MessaggioChat _messaggio({
   required String id,
@@ -110,6 +115,57 @@ void main() {
 
     test('giorno assente', () {
       expect(etichettaGiornoChat(null, adesso: adesso), 'Senza data');
+    });
+  });
+
+  group('destinatariNotificaChat', () {
+    test('esclude il mittente', () {
+      final stanza = _stanza(['ana', 'bruno', 'carla']);
+
+      expect(
+        destinatariNotificaChat(stanza, mittenteUid: 'bruno'),
+        ['ana', 'carla'],
+      );
+    });
+
+    test('rimuove i duplicati mantenendo l\'ordine', () {
+      final stanza = _stanza(['ana', 'bruno', 'ana', 'bruno']);
+
+      expect(
+        destinatariNotificaChat(stanza, mittenteUid: 'carla'),
+        ['ana', 'bruno'],
+      );
+    });
+
+    test('scarta gli uid vuoti o con soli spazi', () {
+      final stanza = _stanza(['', '  ', 'ana', ' ', 'bruno']);
+
+      expect(
+        destinatariNotificaChat(stanza, mittenteUid: 'carla'),
+        ['ana', 'bruno'],
+      );
+    });
+
+    test('stanza senza partecipanti: nessun destinatario', () {
+      expect(
+        destinatariNotificaChat(_stanza([]), mittenteUid: 'ana'),
+        isEmpty,
+      );
+    });
+
+    test('chat diretta: solo l\'altro partecipante', () {
+      final stanza = _stanza(['ana', 'bruno']);
+
+      expect(destinatariNotificaChat(stanza, mittenteUid: 'ana'), ['bruno']);
+    });
+
+    test('mittente assente tra i partecipanti: li restituisce tutti', () {
+      final stanza = _stanza(['ana', 'bruno']);
+
+      expect(
+        destinatariNotificaChat(stanza, mittenteUid: 'carla'),
+        ['ana', 'bruno'],
+      );
     });
   });
 }

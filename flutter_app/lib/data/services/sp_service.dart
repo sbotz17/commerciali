@@ -181,6 +181,69 @@ List<StanzaChat> ordinaStanzeChat(List<StanzaChat> stanze) {
   return ordinate;
 }
 
+/// Normalizza le impostazioni dell'agenda aziendale.
+///
+/// Accetta chiavi snake_case o camelCase; valida gli interi positivi e gli
+/// orari `HH:MM`: i valori invalidi ricadono sul default. Restituisce sempre
+/// una mappa completa con chiavi snake_case.
+Map<String, dynamic> normalizzaImpostazioniAgenda(Map<String, dynamic> dati) {
+  /// Valore testuale ripulito (trim), con [fallback] se vuoto o assente.
+  String stringa(dynamic valore, String fallback) {
+    final s = (valore?.toString() ?? '').trim();
+    return s.isEmpty ? fallback : s;
+  }
+
+  /// Legge un valore accettando sia la chiave snake_case sia quella camelCase
+  /// (la prima, se presente, ha la precedenza).
+  dynamic val(String snake, String camel) =>
+      dati.containsKey(snake) ? dati[snake] : dati[camel];
+
+  /// Intero strettamente positivo; i valori nulli, non numerici o <= 0
+  /// ricadono su [fallback].
+  int interoPositivo(String snake, String camel, int fallback) {
+    final v = val(snake, camel);
+    int? n;
+    if (v is int) {
+      n = v;
+    } else if (v is num) {
+      n = v.toInt();
+    } else if (v != null) {
+      n = int.tryParse(v.toString().trim());
+    }
+    return (n == null || n <= 0) ? fallback : n;
+  }
+
+  /// Orario in formato `HH:MM`; gli orari non conformi ricadono su [fallback].
+  String orario(String snake, String camel, String fallback) {
+    final s = stringa(val(snake, camel), '');
+    final m = RegExp(r'^([01]\d|2[0-3]):[0-5]\d$').firstMatch(s);
+    return m == null ? fallback : s;
+  }
+
+  /// Booleano; i valori non booleani ricadono su [fallback].
+  bool booleano(String snake, String camel, bool fallback) {
+    final v = val(snake, camel);
+    return v is bool ? v : fallback;
+  }
+
+  return <String, dynamic>{
+    'fuso_orario': stringa(val('fuso_orario', 'fusoOrario'), 'Europe/Rome'),
+    'anticipo_min': interoPositivo('anticipo_min', 'anticipoMin', 1440),
+    'orario_invio_cliente':
+        orario('orario_invio_cliente', 'orarioInvioCliente', '18:00'),
+    'canale_cliente':
+        stringa(val('canale_cliente', 'canaleCliente'), 'whatsapp'),
+    'slot_durata_min': interoPositivo('slot_durata_min', 'slotDurataMin', 60),
+    'slot_finestra_giorni':
+        interoPositivo('slot_finestra_giorni', 'slotFinestraGiorni', 14),
+    'slot_scadenza_giorni':
+        interoPositivo('slot_scadenza_giorni', 'slotScadenzaGiorni', 7),
+    'allegati_max_kb': interoPositivo('allegati_max_kb', 'allegatiMaxKb', 5120),
+    'allegati_max': interoPositivo('allegati_max', 'allegatiMax', 10),
+    'maps_attivo': booleano('maps_attivo', 'mapsAttivo', true),
+  };
+}
+
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
 /// vecchia app (sottoinsieme aziende/membri/profilo).
 ///
@@ -1050,6 +1113,41 @@ class SpService {
     };
     if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
     return payload;
+  }
+
+  // ---------- agenda: impostazioni ----------
+
+  /// Legge le impostazioni dell'agenda dell'azienda attiva da
+  /// `impostazioni_agenda/{aziendaId}`.
+  ///
+  /// Ritorna `null` se non è impostata un'azienda attiva o il documento non
+  /// esiste.
+  Future<Map<String, dynamic>?> getImpostazioniAgenda() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return null;
+    final snap = await _firestore
+        .collection('impostazioni_agenda')
+        .doc(aziendaId)
+        .get();
+    final dati = snap.data();
+    if (!snap.exists || dati == null) return null;
+    return dati;
+  }
+
+  /// Salva le impostazioni dell'agenda dell'azienda attiva.
+  ///
+  /// Scrive `impostazioni_agenda/{aziendaId}` con merge, garantendo sempre
+  /// `azienda_id` e `updated_at`. Richiede un'azienda attiva.
+  Future<void> salvaImpostazioniAgenda(Map<String, dynamic> dati) async {
+    _richiediAzienda();
+    await _firestore
+        .collection('impostazioni_agenda')
+        .doc(_aziendaAttiva)
+        .set({
+          ...dati,
+          'azienda_id': _aziendaAttiva,
+          'updated_at': _now(),
+        }, SetOptions(merge: true));
   }
 
   // ---------- preventivi ----------

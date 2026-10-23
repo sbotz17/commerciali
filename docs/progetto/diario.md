@@ -388,3 +388,5 @@
 - UI: Calendario giorno/settimana con filtri e creazione appuntamento; form appuntamento con Maps; pagina Task e form task; centro notifiche con badge; preferenze notifiche; lista chat, chat diretta/gruppo e thread testo.
 - Test: `flutter analyze` 0, **720 test verdi**.
 - Ancora da fare: push FCM, scheduler Worker, WhatsApp operatore, SMTP, Google/Microsoft, R2 immagini, prenotazione pubblica, notifiche chat, impostazioni agenda complete, E2E.
+
+- Aggiunte notifiche chat in-app e impostazioni agenda di base; suite a **740 test verdi**.

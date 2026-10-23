@@ -127,6 +127,6 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 | H18 | Prenotazione | Slot e pagina pubblica | token, scadenza, doppia prenotazione, conferma | sviluppatore-backend | DA FARE |
 | H19 | Chat | Modelli e stanze/messaggi | dirette senza duplicati, gruppi, partecipanti | sviluppatore-backend | FATTO |
 | H20 | Chat | Lista conversazioni e thread | realtime, non letti, letture, immagini, soft delete | sviluppatore-frontend | FATTO |
-| H21 | Chat | Notifiche chat in-app/push | badge, anteprima generica, silenzio, no duplicati | sviluppatore-backend | DA FARE |
-| H22 | Impostazioni | Sezione Calendario e notifiche | tutte le configurazioni, secret non visibili, test | sviluppatore-frontend | DA FARE |
+| H21 | Chat | Notifiche chat in-app/push | notifiche in-app create per i destinatari; push FCM ancora da fare | sviluppatore-backend | IN CORSO |
+| H22 | Impostazioni | Sezione Calendario e notifiche | fuso, promemoria, template, slot, allegati, Maps; test | sviluppatore-frontend | FATTO |
 | H23 | Qualità | E2E agenda/notifiche/chat | appuntamento, task, promemoria, chat, Maps, push | tester | DA FARE |

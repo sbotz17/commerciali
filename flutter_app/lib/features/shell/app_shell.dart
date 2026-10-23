@@ -118,6 +118,7 @@ class AppShell extends StatelessWidget {
     '/impostazioni/ruoli': 'Ruoli e permessi',
     '/impostazioni/licenze': 'Licenze',
     '/impostazioni/notifiche': 'Notifiche',
+    '/impostazioni/agenda': 'Agenda',
     '/superadmin': 'Super admin',
   };
 

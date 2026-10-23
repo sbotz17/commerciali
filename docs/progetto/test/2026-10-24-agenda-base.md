@@ -1,6 +1,6 @@
 # Report — Base agenda, task, notifiche e chat (24/10/2026)
 
-**Stato: base implementata e pubblicata su staging. E2E finale ancora da eseguire.**
+**Stato: base implementata e pubblicata su staging. E2E regole Firestore PASS; E2E UI da rifare con browser visibile.**
 
 ## Cosa è stato fatto
 
@@ -32,7 +32,7 @@
 | Controllo | Esito |
 |---|---|
 | `flutter analyze` | 0 problemi |
-| `flutter test` | **720 test verdi** |
+| `flutter test` | ****740 test verdi**** |
 | Regole Firestore | compilate e pubblicate |
 | Indice chat | pubblicato |
 | Deploy hosting | `commerciali-app.web.app` e `commerciali-flutter.web.app` |
@@ -49,12 +49,19 @@
 - Impostazioni agenda complete.
 - E2E finale con browser su staging.
 
-## Nota sulla prova E2E
+## Prova E2E regole (riuscita)
+
+`python3 scripts/e2e-agenda.py` → **PASS**: con due utenti reali della stessa azienda ha verificato
+creazione/lettura/modifica appuntamento, task, chat, messaggio e notifica; ha verificato che un utente
+non possa leggere la notifica privata di un altro né inviare un messaggio spacciandosi per un collega.
+Cleanup completo eseguito.
+
+## Nota sulla prova E2E UI
 
 La finestra del browser automatizzato non è più visibile nell'ambiente di lavoro attuale:
 le schermate vengono caricate ma non è possibile acquisire screenshot o interagire
-in modo affidabile. La base è coperta dai test automatici; la prova E2E va rifatta
-appena la finestra browser è disponibile.
+in modo affidabile. La base è coperta dai test automatici e dall'E2E regole; la prova UI
+va rifatta appena la finestra browser è disponibile.
 
 ## File principali
 
@@ -64,3 +71,30 @@ appena la finestra browser è disponibile.
 - `flutter_app/lib/features/chat/`
 - `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart`
 - `firestore.rules`, `firestore.indexes.json`
+
+
+## Verifica tester
+
+| Controllo | Comando | Esito |
+|---|---|---|
+| Analisi | `flutter analyze` | 0 problemi |
+| Test | `flutter test` | 740 verdi |
+| E2E regole | `python3 scripts/e2e-agenda.py` | PASS |
+| Indice | `node scripts/controlla-indice.mjs` | INDICE OK |
+| Regole | `firestore.rules` | compilate e pubblicate; `letture` chat inclusa |
+| Indici | `firestore.indexes.json` | indice chat pubblicato |
+| Rotte | `/calendario`, `/task`, `/chat`, `/notifiche`, `/impostazioni/notifiche` | reali, nessun segnaposto |
+| Sicurezza script | client secret rimosso | nessun segreto hardcoded |
+
+**Verdetto base tecnica: SUPERATO.** Restano fuori da questa base:
+H08 allegati/R2, push FCM, scheduler, WhatsApp, SMTP, Google/Microsoft,
+prenotazione pubblica, notifiche chat e prova E2E UI (browser non visibile).
+La DoD completa richiede ancora la prova UI: il milestone non è dichiarato rilasciabile in produzione.
+
+
+## Aggiornamenti successivi (24/10/2026)
+
+- Aggiunte **notifiche chat in-app**: ogni messaggio crea una notifica per gli altri partecipanti.
+- Aggiunta schermata **Calendario e agenda** nelle Impostazioni: fuso, anticipo, orario invio cliente, template, slot, limiti allegati, Maps.
+- Test aggiornati: **740 test verdi**, analyze 0.
+- Restano push FCM, scheduler, WhatsApp, SMTP, Google/Microsoft, R2, prenotazione pubblica ed E2E UI.

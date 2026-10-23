@@ -125,6 +125,28 @@ String messaggioErroreChat(Object errore, {bool caricamento = false}) {
       : 'Invio non riuscito. Riprova.';
 }
 
+/// Uid dei partecipanti alla stanza che devono ricevere la notifica di un
+/// nuovo messaggio: tutti tranne [mittenteUid], senza duplicati e senza uid
+/// vuoti. L'ordine è quello di [StanzaChat.partecipantiUids].
+List<String> destinatariNotificaChat(
+  StanzaChat stanza, {
+  required String mittenteUid,
+}) {
+  final mittente = mittenteUid.trim();
+  final visti = <String>{};
+  final destinatari = <String>[];
+
+  for (final grezzo in stanza.partecipantiUids) {
+    final uid = grezzo.trim();
+    if (uid.isEmpty) continue;
+    if (uid == mittente) continue;
+    if (!visti.add(uid)) continue;
+    destinatari.add(uid);
+  }
+
+  return destinatari;
+}
+
 /// Nome leggibile di un utente per il titolo della stanza.
 String _nomeUtente(UserProfile utente) {
   for (final valore in [utente.nome, utente.username, utente.email]) {
@@ -248,6 +270,43 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
     });
   }
 
+  /// Notifica i partecipanti della stanza dopo un invio riuscito.
+  ///
+  /// La notifica è un effetto collaterale: ogni errore viene ignorato per non
+  /// bloccare l'invio del messaggio.
+  Future<void> _notificaDestinatari() async {
+    if (!mounted) return;
+    try {
+      final mittenteUid =
+          ref.read(firebaseAuthProvider).currentUser?.uid ?? '';
+      if (mittenteUid.isEmpty) return;
+
+      final destinatari = destinatariNotificaChat(
+        widget.stanza,
+        mittenteUid: mittenteUid,
+      );
+      if (destinatari.isEmpty) return;
+
+      final servizio = ref.read(spServiceProvider);
+      for (final destinatario in destinatari) {
+        try {
+          await servizio.creaNotifica(
+            utenteUid: destinatario,
+            tipo: 'chat',
+            titolo: 'Nuovo messaggio',
+            testo: 'Hai ricevuto un nuovo messaggio in chat',
+            targetTipo: 'chat',
+            targetId: widget.stanza.id,
+          );
+        } catch (_) {
+          // Errore ignorato: non deve influire sull'invio del messaggio.
+        }
+      }
+    } catch (_) {
+      // Errore ignorato: non deve influire sull'invio del messaggio.
+    }
+  }
+
   Future<void> _invia() async {
     final testo = _controller.text.trim();
     if (testo.isEmpty || _invioInCorso) return;
@@ -258,6 +317,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       if (!mounted) return;
       _controller.clear();
       setState(() => _invioInCorso = false);
+      await _notificaDestinatari();
     } catch (errore) {
       if (!mounted) return;
       setState(() => _invioInCorso = false);
