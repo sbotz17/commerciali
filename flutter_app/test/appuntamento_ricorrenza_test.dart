@@ -222,5 +222,36 @@ void main() {
         '2026-10-06',
       ]);
     });
+
+    testWidgets('la griglia nasconde il titolo degli appuntamenti privati', (
+      tester,
+    ) async {
+      final privato = appuntamento(
+        privato: true,
+        createdBy: 'andrea',
+        operatoreId: 'simone',
+      );
+      final elementi = elementiDaAppuntamenti([privato]);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: Scaffold(
+            body: SizedBox(
+              height: 600,
+              child: VistaGrigliaOraria(
+                giorni: [DateTime(2026, 10, 5)],
+                elementi: elementi,
+                uidCorrente: 'altro',
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Impegno privato'), findsOneWidget);
+      expect(find.text('Visita'), findsNothing);
+    });
   });
 }

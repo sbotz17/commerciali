@@ -272,3 +272,11 @@ Stati: vuoto ("Non hai ancora condiviso il tuo calendario"), caricamento, errore
 - Se manca una configurazione, dirlo: "Senza Google o Microsoft, il link call va incollato a mano."; "Senza SMTP, le email non partono: i promemoria restano dentro Closer."
 - **Mai** mostrare token, Client Secret o password dopo il salvataggio; sempre mascherati.
 - Nessun pulsante "Pubblica sugli store" o simile.
+
+**Aggiornamento 2026-10-24 — form appuntamento**
+- Campi inizio/fine con data e ora; flag **Tutto il giorno** accanto alla data di inizio.
+- **Ripeti**: mai, giornaliero, settimanale, bisettimanale, mensile, annuale, personalizzato con giorni e
+  intervallo in settimane.
+- **Notifica**: all'ora, 5/10/15/30 minuti prima, personalizzata.
+- **Appuntamento privato**: titolo, luogo e dettagli mascherati per chi non è creatore o operatore.
+- Gli allegati restano fuori finché R2 non è attivo; nessun pulsante finto nel form.

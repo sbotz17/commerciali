@@ -86,7 +86,7 @@ Tutte le collezioni hanno `azienda_id` e sono isolate per azienda.
 
 | Collezione | Scopo | Campi principali |
 |---|---|---|
-| `appuntamenti` | Appuntamenti generici o collegati a visite | titolo, data, ora, durata_min, cliente_id/nome, operatore_id, luogo, note, stato, visita_id, call_provider/url, meeting_id, google_event_id, outlook_event_id, etag_esterno, invitati_uids, conferme, stato_condivisione |
+| `appuntamenti` | Appuntamenti generici o collegati a visite | titolo, data, ora, data_fine, ora_fine, tutto_il_giorno, durata_min, ripetizione, notifica_min, privato, cliente_id/nome, operatore_id, luogo, note, stato, visita_id, call_provider/url, meeting_id, google_event_id, outlook_event_id, etag_esterno, invitati_uids, conferme, stato_condivisione |
 | `task` | Attività e compiti | titolo, scadenza, operatore_id, priorita, note, cliente_id, appuntamento_id, stato, completato_da/at |
 | `promemoria` | Eventi programmati da inviare | riferito_a, elemento_id, destinatario_tipo, canale, destinatario, quando_at, stato, inviato_at, tentativi, errore, idempotenza_key |
 | `notifiche` | Consegne effettive in-app/push/WhatsApp | utente_uid, tipo, titolo, testo, target_tipo/id, canale, stato, programmata_at, inviata_at, letta_at, tentativi, errore, idempotenza_key |
@@ -398,3 +398,18 @@ vivono nel **KV del Worker Cloudflare** (`WHATSAPP_CONFIG`, chiave `server`). Il
 al super admin autenticato e li usa per gli invii richiesti dagli utenti autenticati. La regola Firestore
 `whatsapp_config` è stata quindi ristretta al solo super admin. I numeri/consensi restano in
 `contatti_notifiche`, letti dal Worker con il token del chiamante.
+
+### 2026-10-24 — Inizio/fine, ripetizione, notifica e privacy
+
+Campi aggiunti a `appuntamenti` (nessuna collezione nuova):
+
+- `data_fine`, `ora_fine`: fine esplicita, con `durata_min` ricalcolata;
+- `tutto_il_giorno`: appuntamento senza orario;
+- `ripetizione`: `{tipo, giorni_settimana, intervallo_settimane}` con tipi
+  `mai|giornaliera|settimanale|bisettimanale|mensile|annuale|personalizzata`;
+- `notifica_min`: `0` all'ora, positivo = minuti prima, `null` = nessuna;
+- `privato`: maschera titolo/luogo/dettagli nella UI per chi non è creatore o operatore.
+
+Le occorrenze ricorrenti non generano documenti: il client le espande nel periodo visibile. La privacy è
+applicata nella UI; i campi restano leggibili dai membri dell'azienda (per una privacy forte servono una
+collezione separata o regole dedicate, fuori da questo task).

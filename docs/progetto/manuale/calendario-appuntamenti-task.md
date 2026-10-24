@@ -29,13 +29,19 @@ Gli elementi senza orario compaiono in **Senza orario**.
 
 1. Premi **+** accanto a **Card** nella barra del calendario.
 2. Inserisci il **titolo** (obbligatorio).
-3. Scegli data, ora e durata.
-4. Collega un cliente, se serve. Con il **+** accanto al campo Cliente puoi crearne uno nuovo e selezionarlo subito.
-5. Assegna un **operatore**.
-6. Inserisci luogo e indirizzo.
-7. In **Condivisione** scegli una o più persone oppure un gruppo: ricevono una notifica e devono confermare.
-8. Aggiungi note e, se serve, foto o immagini.
-9. Salva.
+3. Scegli **data e ora di inizio** e **data e ora di fine**. Il flag **Tutto il giorno** accanto alla data
+   disattiva gli orari.
+4. Se serve, imposta **Ripeti**: mai, ogni giorno, ogni settimana, ogni due settimane, ogni mese, ogni anno
+   o personalizza scegliendo i giorni della settimana e ogni quante settimane.
+5. Scegli la **notifica**: all'ora dell'evento, 5/10/15/30 minuti prima oppure personalizzata.
+6. Collega un cliente, se serve. Con il **+** accanto al campo Cliente puoi crearne uno nuovo e selezionarlo subito.
+7. Assegna un **operatore**.
+8. Inserisci luogo e indirizzo.
+9. In **Condivisione** scegli una o più persone oppure un gruppo: ricevono una notifica e devono confermare.
+10. Attiva **Appuntamento privato** se titolo, luogo e dettagli devono essere visibili solo a te e
+    all'utente assegnato.
+11. Aggiungi note.
+12. Salva.
 
 L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invitato non conferma la
 disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
