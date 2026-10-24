@@ -814,6 +814,8 @@ class _AppuntamentoFormScreenState
                             ),
                           ),
                         ),
+                      ],
+                      extra: [
                         TextFormField(
                           key: const Key('appuntamento-note'),
                           controller: _note,

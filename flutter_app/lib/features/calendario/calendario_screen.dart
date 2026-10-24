@@ -469,11 +469,21 @@ class _BarraCalendario extends StatelessWidget {
       ),
     );
 
-    final pulsanteNuovo = FilledButton.icon(
+    final pulsanteNuovo = IconButton.filled(
       key: const Key('calendario-nuovo-appuntamento'),
+      tooltip: 'Nuovo appuntamento',
       onPressed: onNuovo,
       icon: const Icon(Icons.add),
-      label: const Text('Nuovo appuntamento'),
+      visualDensity: VisualDensity.compact,
+    );
+
+    final gruppoStile = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        selettoreStile,
+        const SizedBox(width: AppSpazi.xxs),
+        pulsanteNuovo,
+      ],
     );
 
     if (!riga) {
@@ -491,7 +501,7 @@ class _BarraCalendario extends StatelessWidget {
             spacing: AppSpazi.xs,
             runSpacing: AppSpazi.xs,
             crossAxisAlignment: WrapCrossAlignment.center,
-            children: [selettoreVista, selettoreStile, filtro, pulsanteNuovo],
+            children: [selettoreVista, gruppoStile, filtro],
           ),
         ],
       );
@@ -505,8 +515,6 @@ class _BarraCalendario extends StatelessWidget {
             navigazione,
             const SizedBox(width: AppSpazi.xs),
             pulsanteOggi,
-            const Spacer(),
-            pulsanteNuovo,
           ],
         ),
         const SizedBox(height: AppSpazi.xs),
@@ -514,7 +522,7 @@ class _BarraCalendario extends StatelessWidget {
           spacing: AppSpazi.s,
           runSpacing: AppSpazi.xs,
           crossAxisAlignment: WrapCrossAlignment.center,
-          children: [selettoreVista, selettoreStile, filtro],
+          children: [selettoreVista, gruppoStile, filtro],
         ),
       ],
     );

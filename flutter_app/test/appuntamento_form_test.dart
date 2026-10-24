@@ -205,13 +205,30 @@ void main() {
       }
     });
 
-    testWidgets('propone la data iniziale e la durata di 60 minuti',
-        (tester) async {
+    testWidgets('il campo note occupa tutta la larghezza', (tester) async {
+      await apriForm(tester);
+
+      final larghezzaNote = tester
+          .getSize(find.byKey(const Key('appuntamento-note')))
+          .width;
+      final larghezzaLuogo = tester
+          .getSize(find.byKey(const Key('appuntamento-luogo')))
+          .width;
+
+      expect(larghezzaNote, greaterThan(larghezzaLuogo * 1.5));
+    });
+
+    testWidgets('propone la data iniziale e la durata di 60 minuti', (
+      tester,
+    ) async {
       await apriForm(tester);
 
       expect(find.text('24/10/2026'), findsOneWidget);
       expect(
-        tester.widget<TextFormField>(find.byKey(const Key('appuntamento-durata'))).controller!.text,
+        tester
+            .widget<TextFormField>(find.byKey(const Key('appuntamento-durata')))
+            .controller!
+            .text,
         '60',
       );
       expect(find.text('Da fare'), findsOneWidget);
@@ -240,11 +257,15 @@ void main() {
       );
       await premiSalva(tester);
 
-      expect(find.text('Inserisci una data valida (gg/mm/aaaa)'), findsOneWidget);
+      expect(
+        find.text('Inserisci una data valida (gg/mm/aaaa)'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('il salvataggio fallito mostra l\'avviso d\'errore',
-        (tester) async {
+    testWidgets('il salvataggio fallito mostra l\'avviso d\'errore', (
+      tester,
+    ) async {
       await apriForm(tester);
 
       await tester.enterText(
