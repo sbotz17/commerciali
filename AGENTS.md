@@ -120,6 +120,15 @@ tutto il repository a ogni richiesta.
   l'endpoint con `curl`.
 - Se la UI non è provabile, il task è **BLOCCATO**, non “SUPERATO con residuo”.
 
+### Produzione: zero bug noti
+
+- In produzione non entra codice con bug noti aperti.
+- Ogni rilascio richiede E2E reale su staging, smoke test in produzione e rollback pronto.
+- Un bug in produzione: rollback immediato, correzione su staging, test che lo riproduce, tester, validatore e
+  nuovo rilascio. Mai correzione diretta in produzione.
+- Staging può contenere bug e dati di test; la produzione no.
+- Non si dichiara “nessun bug”: si dichiara “nessun bug noto, prove eseguite, residui elencati”.
+
 ### Sincronizzazione delle regole
 
 - La fonte globale delle regole è il repository `sbotz17/squadraalphalab` (`CLAUDE.md`).

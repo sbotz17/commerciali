@@ -41,6 +41,16 @@ Per ogni schermata che usa un servizio esterno (Worker, server WhatsApp, OAuth, 
 - un test unitario con una risposta inventata non sostituisce la prova UI;
 - se la UI non è provabile, il task è **BLOCCATO**, non "SUPERATO con residuo": non si dichiara FATTO.
 
+## Produzione: zero bug noti
+
+- Nessun bug noto aperto può entrare in produzione.
+- Prima del rilascio: E2E reale su staging, smoke test sulla produzione e rollback pronto.
+- Dopo il rilascio: verifica in sola lettura di login, azienda attiva, dati principali e assenza di
+  `permission-denied`.
+- Se un bug arriva in produzione: rollback immediato, correzione su staging, test che lo riproduce, tester,
+  validatore e nuovo rilascio. Mai correzione diretta in produzione.
+- Non si dichiara “nessun bug”: si dichiara “nessun bug noto, prove eseguite, residui elencati”.
+
 ## Validazione
 
 Il validatore **respinge** se:
