@@ -129,3 +129,18 @@ Il precedente verdetto `NON SUPERATO` era dovuto a modifiche non committate di u
 - Le voci di amministrazione (Calendario e agenda, Integrazioni, Utenti, Ruoli, Licenze) restano visibili solo all’admin.
 - Test widget dedicato: il commerciale vede `impostazioni-voce-notifiche` e `impostazioni-voce-condivisioni`, non vede `impostazioni-voce-utenti`, `ruoli`, `licenze`, `integrazioni`.
 - `flutter analyze` 0; `flutter test` **850 verdi**; app pubblicata su staging e produzione.
+
+## Lezione appresa — stato WhatsApp
+
+La schermata mostrava “non connesso” mentre il server era connesso. Causa: il server risponde con
+`connesso`/`numero`, la UI leggeva `connected`/`number`; il Worker inoltrava la risposta senza normalizzarla.
+I test coprivano permessi e endpoint, non lo stato reale nella schermata.
+
+Correzioni:
+- normalizzazione unica `normalizzaStatoWhatsapp` con test sui due formati;
+- test della risposta reale del Worker;
+- regola nella Definition of Done: per i servizi esterni serve la prova UI completa, non solo `curl`;
+- se la UI non è provabile, il task è BLOCCATO, non “SUPERATO con residuo”.
+
+**Responsabilità di processo**: tester e validatore avevano approvato la fetta tecnica dichiarando l’E2E UI
+come residuo. Con la regola attuale quel verdetto non sarebbe stato sufficiente.

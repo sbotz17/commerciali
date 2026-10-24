@@ -556,3 +556,9 @@
 - R2 e Blaze non sono disponibili: allegati su KV e promemoria su WhatsApp sono la soluzione temporanea,
   registrata nel registro decisioni.
 - `flutter analyze` 0; `flutter test` 856 verdi; Worker, regole e Cron pubblicati; E2E Worker PASS.
+
+## 2026-10-24 — Lezione appresa: stato WhatsApp
+
+- Il server era connesso ma la UI mostrava “non connesso”: la risposta usava `connesso`/`numero`, la schermata `connected`/`number`.
+- Aggiunta normalizzazione con test; aggiornata la Definition of Done: per i servizi esterni serve la prova UI completa, non solo l’endpoint.
+- Se la UI non è provabile, il task è BLOCCATO e non “SUPERATO con residuo”.

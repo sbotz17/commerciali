@@ -31,6 +31,16 @@ Il tester deve eseguire l'app pubblicata su `https://commerciali-app.web.app` co
 
 Il report deve contenere comandi, passi, esito atteso/ottenuto e almeno una prova (screenshot o log).
 
+## Servizi esterni e contratti
+
+Per ogni schermata che usa un servizio esterno (Worker, server WhatsApp, OAuth, SMTP, push):
+
+- il tester deve provare il **flusso completo nella UI**, non solo l'endpoint con `curl`;
+- la risposta del servizio deve essere normalizzata in un contratto unico e coperta da un test che usa una
+  risposta reale o un fixture identico alla produzione;
+- un test unitario con una risposta inventata non sostituisce la prova UI;
+- se la UI non è provabile, il task è **BLOCCATO**, non "SUPERATO con residuo": non si dichiara FATTO.
+
 ## Validazione
 
 Il validatore **respinge** se:
