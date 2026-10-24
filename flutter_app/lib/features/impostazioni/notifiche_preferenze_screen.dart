@@ -606,7 +606,9 @@ class _CorpoNotifichePreferenzeState extends State<CorpoNotifichePreferenze> {
                       ),
                       OutlinedButton.icon(
                         key: const Key('notifiche-push-disattiva'),
-                        onPressed: widget.pushInCorso
+                        onPressed: (!widget.pushSupportato ||
+                                widget.pushInCorso ||
+                                widget.onDisattivaPush == null)
                             ? null
                             : widget.onDisattivaPush,
                         icon: const Icon(Icons.notifications_off_outlined),

@@ -525,6 +525,13 @@ String etichettaStatoCondivisione(String? stato) {
   }
 }
 
+/// Etichetta della notifica configurata.
+String etichettaNotificaAppuntamento(int? minuti) {
+  if (minuti == null) return 'Nessuna';
+  if (minuti <= 0) return 'All\'ora dell\'evento';
+  return '$minuti minuti prima';
+}
+
 /// Etichetta della risposta di un singolo invitato (`null` = in attesa).
 String etichettaRispostaInvito(String? stato) {
   switch (stato?.trim().toLowerCase()) {

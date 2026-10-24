@@ -46,7 +46,7 @@ impediscono il funzionamento della versione precedente.
   l'operatore assegnato; è stata recuperata anche la conferma già presente di Simone.
 - L'invio WhatsApp è implementato con rubrica aziendale e consenso, ma **non è attivo** finché non vengono
   configurati URL/API key nel Worker e il numero/consenso dell'utente.
-- I test sono della squadra: analyze, 833 test, E2E regole reali e Worker. Andrea deve solo validare l'esperienza.
+- I test sono della squadra: analyze, 849 test, E2E regole reali e Worker. Andrea deve solo validare l'esperienza.
 
 ### Aggiornamento — configurazione WhatsApp dal pannello Super Admin
 
@@ -54,3 +54,11 @@ impediscono il funzionamento della versione precedente.
 - La API key è nel KV del Worker Cloudflare, non in Firestore e non sul dispositivo degli utenti.
 - Per usarla: aprire la schermata e inserire i dati del server; poi ogni utente imposta numero e consenso in
   Impostazioni → Notifiche. Non servono test tecnici da parte di Andrea.
+
+### Aggiornamento — form appuntamento completo
+
+- Data/ora di inizio e fine, flag **Tutto il giorno**.
+- **Ripeti** (giorno, settimana, due settimane, mese, anno, personalizzato con giorni e intervallo).
+- **Notifica** (all'ora, 5/10/15/30 minuti prima, personalizzata).
+- **Appuntamento privato** con mascheramento di titolo/luogo/dettagli per chi non è creatore o operatore.
+- **Allegati**: non ancora disponibili perché Cloudflare R2 non è attivo; nessun pulsante finto.

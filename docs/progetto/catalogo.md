@@ -75,7 +75,8 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Calendario — logica | `flutter_app/lib/features/calendario/calendario_logica.dart` | `VistaAgenda`/`StileAgenda`, `ElementoAgenda`, raggruppamento, periodi, griglia del mese, posizionamento eventi sovrapposti |
 | Calendario — viste classiche | `flutter_app/lib/features/calendario/viste_calendario.dart` | `VistaMeseCalendario` e `VistaGrigliaOraria` per giorno/settimana, con “Senza orario” e tocco su spazio vuoto |
 | Condivisione appuntamento | `flutter_app/lib/features/calendario/dialogo_condivisione_appuntamento.dart` | Dialogo persone/gruppi chat, inviti e conferma disponibilità |
-| Inviti appuntamento — dati | `flutter_app/lib/data/models/appuntamento.dart`, `sp_service.dart` | `invitati_uids`, `conferme`, `stato_condivisione`; `rispondiInvitoAppuntamento` transazionale |
+| Inviti appuntamento — dati | `flutter_app/lib/data/models/appuntamento.dart`, `sp_service.dart` | `invitati_uids`, `conferme`, `stato_condivisione`; `rispondiInvitoAppuntamento` transazionale; `data_fine`/`ora_fine`, `tutto_il_giorno`, `ripetizione`, `notifica_min`, `privato` |
+| Ricorrenze appuntamento | `flutter_app/lib/data/models/appuntamento.dart`, `calendario_logica.dart` | `occorrenzeAppuntamento`, etichette ripetizione, espansione nel periodo visibile, mascheramento privacy |
 | Notifiche invito | `flutter_app/lib/data/services/sp_service.dart` | Notifica In-App a creatore/operatore dopo la risposta; `inviaWhatsapp`/`inviaWhatsappAUtente` best-effort |
 | Rubrica WhatsApp | `firestore.rules`, `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart` | `contatti_notifiche` aziendale: numero e consenso, leggibile dai colleghi |
 | Configurazione WhatsApp | `flutter_app/lib/features/superadmin/whatsapp_server_screen.dart`, `worker/src/index.js` | Super Admin → Server WhatsApp; URL/API key nel KV del Worker, QR e stato; invio autenticato tramite Worker |

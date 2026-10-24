@@ -181,6 +181,14 @@ void main() {
     });
   });
 
+  group('notifica', () {
+    test('etichette', () {
+      expect(etichettaNotificaAppuntamento(null), 'Nessuna');
+      expect(etichettaNotificaAppuntamento(0), 'All\'ora dell\'evento');
+      expect(etichettaNotificaAppuntamento(15), '15 minuti prima');
+    });
+  });
+
   group('privacy', () {
     final privato = appuntamento(
       privato: true,

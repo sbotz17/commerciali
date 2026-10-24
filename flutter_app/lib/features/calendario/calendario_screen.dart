@@ -1187,6 +1187,16 @@ class _DialogoElemento extends StatelessWidget {
               ),
               _RigaDettaglio(etichetta: 'Invitati', valore: risposteInvitati),
             ],
+            if (dettagliVisibili && appuntamento != null) ...[
+              _RigaDettaglio(
+                etichetta: 'Ripetizione',
+                valore: etichettaRipetizione(appuntamento.ripetizione),
+              ),
+              _RigaDettaglio(
+                etichetta: 'Notifica',
+                valore: etichettaNotificaAppuntamento(appuntamento.notificaMin),
+              ),
+            ],
             if (luogo.isNotEmpty)
               _RigaDettaglio(etichetta: 'Luogo', valore: luogo),
             if (indirizzo.isNotEmpty)

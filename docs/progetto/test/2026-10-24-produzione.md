@@ -117,3 +117,7 @@ Dopo la chiusura e il commit della fetta calendario/ricorrenza, l’albero è pu
 | Indice | INDICE OK |
 
 Il precedente verdetto `NON SUPERATO` era dovuto a modifiche non committate di un’altra fetta. Sulla fetta Web Push chiusa il gate tecnico è verde. Resta obbligatoria la prova di consegna reale su un dispositivo con permesso notifiche (Chrome/Android e iPhone con PWA installata): non è una prova da chiedere ad Andrea, la esegue la squadra.
+
+## Validazione Web Push — 24/10/2026
+
+**APPROVATO TECNICO per staging/produzione** (non per rilascio ufficiale): gate tecnico verde (analyze 0, 848 verdi, indice OK, statici 200) e codice conforme. Restano a carico della squadra la consegna reale su dispositivo (Chrome/Android), la prova iOS PWA e l'E2E browser. Nota minore risolta: il pulsante “Disattiva” ora è disabilitato quando il push non è supportato nell’ambiente.

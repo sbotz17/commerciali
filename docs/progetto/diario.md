@@ -524,4 +524,4 @@
 - **Appuntamento privato**: titolo, luogo e dettagli mascherati nella UI per chi non è creatore o operatore;
   gli invitati possono comunque confermare la disponibilità.
 - Allegati immagini/video: **non implementati** perché Cloudflare R2 non è attivo; nessun pulsante finto.
-- `flutter analyze` 0; `flutter test` 848 verdi; regole/Worker già pubblicati.
+- `flutter analyze` 0; `flutter test` 849 verdi; regole/Worker già pubblicati.
