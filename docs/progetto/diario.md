@@ -562,3 +562,9 @@
 - Il server era connesso ma la UI mostrava “non connesso”: la risposta usava `connesso`/`numero`, la schermata `connected`/`number`.
 - Aggiunta normalizzazione con test; aggiornata la Definition of Done: per i servizi esterni serve la prova UI completa, non solo l’endpoint.
 - Se la UI non è provabile, il task è BLOCCATO e non “SUPERATO con residuo”.
+
+## 2026-10-24 — Audit completo, nuove funzioni congelate
+
+- Creato `docs/progetto/test/audit-completa.md` con 15 aree e criteri di prova UI reale.
+- Nuove funzioni congelate fino alla chiusura dell’audit; ogni area richiede tester e validatore.
+- I bug noti restano elencati nell’audit e vanno chiusi con prova nella schermata, non solo con endpoint.

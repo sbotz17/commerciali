@@ -88,3 +88,14 @@ Cloud Functions. Per non lasciare le funzioni incompiute:
   usando la configurazione del server. Non c’è ancora push/In-App programmato: per quello serve Blaze.
 - **Privacy**: i dettagli degli appuntamenti privati sono in `appuntamenti/{id}/privato/dettagli`,
   leggibili solo da creatore, operatore e super admin; il documento principale resta redatto.
+
+## 2026-10-24 — Audit completo e blocco nuove funzioni
+
+**Decisione**: dopo i bug sfuggiti su WhatsApp, push e accesso, le nuove funzioni sono congelate. La squadra
+esegue un audit per aree (`docs/progetto/test/audit-completa.md`) con test automatici, prova E2E reale nella
+UI pubblicata, report tester e validazione. Un'area senza prova UI è `BLOCCATA`, non “SUPERATA con residuo”.
+
+**Motivo**: i test precedenti coprivano pezzi isolati e non il flusso usato dall'utente. La fiducia si
+ricostruisce con prove ripetibili, non con nuove funzioni.
+
+**Effetto**: nessun rilascio e nessuna nuova funzione fino alla chiusura delle aree AU01–AU15.

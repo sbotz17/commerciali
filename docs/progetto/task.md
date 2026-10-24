@@ -160,3 +160,26 @@ Decisioni confermate da Andrea il 24/10/2026. Un task = un obiettivo verificabil
 **Dipendenze**: O01 → O02/O03 → O04/O05; O06/O07 richiedono credenziali Google/Azure e Worker; O08 dopo O06/O07; O09/O10 dopo O01/O03; O11 dopo O06/O07; O12/O13 alla fine.
 
 **Prima fetta**: O01 + O02 + O03 + O04, con O06/O07 simulati da un `Test connessione` stub che non chiama servizi esterni. Serve a rendere visibili e salvabili le configurazioni senza credenziali.
+
+## Audit completo dell'applicazione (AU)
+
+**Decisione 24/10/2026**: nuove funzioni congelate fino alla chiusura dell'audit. Ogni area richiede test
+automatici, prova E2E reale nella UI, report tester e validazione. Piano: `docs/progetto/test/audit-completa.md`.
+
+| ID | Area | Criterio | Agente | Stato |
+|---|---|---|---|---|
+| AU01 | Auth e onboarding | login/reset/Google/onboarding/ruoli provati nella UI | tester | DA FARE |
+| AU02 | Dashboard | conteggi e dati corretti per azienda | tester | DA FARE |
+| AU03 | Clienti | CRUD, VIES, duplicati, persistenza | tester | DA FARE |
+| AU04 | Catalogo | prodotti, categorie, panieri, immagini | tester | DA FARE |
+| AU05 | Preventivi | numero, totali, revisioni, PDF | tester | DA FARE |
+| AU06 | Visite | CRUD, riordino, stati, calendario | tester | DA FARE |
+| AU07 | Calendario | viste, ricorrenza, privato, partecipanti, call, allegati | tester | DA FARE |
+| AU08 | Task | CRUD, scadenze, completamento, filtri | tester | DA FARE |
+| AU09 | Notifiche | centro, preferenze, push, WhatsApp, silenzio | tester | DA FARE |
+| AU10 | Chat | dirette, gruppi, letture, immagini, notifiche | tester | DA FARE |
+| AU11 | Bandi | lista, filtri, dettaglio, import | tester | DA FARE |
+| AU12 | Impostazioni | profilo, utenti, ruoli, licenze, superadmin, integrazioni | tester | DA FARE |
+| AU13 | Integrazioni | WhatsApp, SMTP, push, Google/Microsoft, R2 | tester | DA FARE |
+| AU14 | Trasversale | permessi, multi-azienda, errori, mobile/desktop | tester | DA FARE |
+| AU15 | Produzione | progetto, Auth, DB, regole, hosting, admin | tester | DA FARE |
