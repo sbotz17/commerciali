@@ -55,14 +55,23 @@ function normalizzaUrl(valore) {
 }
 
 async function leggiConfig(env) {
-  if (!env.WHATSAPP_CONFIG) return null;
-  const raw = await env.WHATSAPP_CONFIG.get(CONFIG_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch (_) {
-    return null;
+  // Prima il KV (modificabile dal super admin); se il KV è vuoto usa i valori
+  // di ambiente, così la configurazione resta disponibile anche dopo un reset
+  // o una rotazione del namespace.
+  if (env.WHATSAPP_CONFIG) {
+    const raw = await env.WHATSAPP_CONFIG.get(CONFIG_KEY);
+    if (raw) {
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        // passa al fallback
+      }
+    }
   }
+  if (env.WHATSAPP_URL && env.WHATSAPP_API_KEY) {
+    return { url: env.WHATSAPP_URL, apiKey: env.WHATSAPP_API_KEY };
+  }
+  return null;
 }
 
 async function scriviConfig(env, config) {

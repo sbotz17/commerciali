@@ -4,6 +4,7 @@ compatibility_date = "2026-10-21"
 
 [vars]
 FIREBASE_PROJECT = "commerciali-app"
+WHATSAPP_URL = "https://35.188.136.131.sslip.io"
 FIREBASE_API_KEY = "AIzaSyC1u1OVQxcgHXoKx_oWq_9Rv_YUqW43da4"
 
 [[kv_namespaces]]
