@@ -913,9 +913,8 @@ class _AppuntamentoFormScreenState
                       extra: [
                         if (_invitatiUids.isEmpty)
                           Text(
-                            'Nessun collega invitato. Puoi condividere '
-                            'l\'appuntamento con una persona o un gruppo: '
-                            'riceveranno una notifica e dovranno confermare.',
+                            'Nessun collega invitato.',
+                            key: const Key('appuntamento-nessun-invitato'),
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(
                                   color: Theme.of(context)
@@ -988,55 +987,16 @@ class _AppuntamentoFormScreenState
                             label: const Text('Scegli persone o gruppi'),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpazi.m),
-                    _SezioneAppuntamento(
-                      titolo: 'Partecipanti',
-                      figli: [
-                        if (_invitatiUids.isEmpty)
-                          Text(
-                            'Nessun collega invitato.',
-                            key: const Key('appuntamento-nessun-invitato'),
-                            style: tema.textTheme.bodyMedium?.copyWith(
-                              color: tema.colorScheme.onSurfaceVariant,
-                            ),
-                          )
-                        else
-                          Wrap(
-                            spacing: AppSpazi.xs,
-                            runSpacing: AppSpazi.xs,
-                            children: [
-                              for (final uid in _invitatiUids)
-                                InputChip(
-                                  key: Key('appuntamento-invitato-$uid'),
-                                  label: Text(_nomeInvitato(uid)),
-                                  onDeleted: _salvando
-                                      ? null
-                                      : () => _rimuoviInvitato(uid),
-                                ),
-                            ],
-                          ),
-                        const SizedBox(height: AppSpazi.xs),
-                        OutlinedButton.icon(
-                          key: const Key('appuntamento-condividi'),
-                          onPressed: (_salvando || _caricamentoGruppi)
-                              ? null
-                              : _apriCondivisione,
-                          icon: const Icon(Icons.group_add_outlined),
-                          label: Text(
-                            _caricamentoGruppi
-                                ? 'Caricamento partecipanti…'
-                                : 'Scegli partecipanti',
-                          ),
-                        ),
                         const SizedBox(height: AppSpazi.xxs),
                         Text(
-                          'I colleghi invitati ricevono l’appuntamento nella '
-                          'loro area e possono confermare o rifiutare.',
-                          style: tema.textTheme.bodySmall?.copyWith(
-                            color: tema.colorScheme.onSurfaceVariant,
-                          ),
+                          'I colleghi invitati ricevono una notifica e possono '
+                          'confermare o rifiutare la disponibilità.',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
                         ),
                       ],
                     ),

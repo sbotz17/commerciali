@@ -454,4 +454,4 @@
 - Gli invitati ricevono una notifica In-App; il tocco apre il dettaglio (`/calendario?appuntamento=…`), dove possono confermare o rifiutare.
 - La risposta passa da `rispondiInvitoAppuntamento` in transazione e ricalcola lo stato: `in_attesa` → `confermato` / `rifiutato`.
 - Badge “In attesa di conferma” sulle card e nel dettaglio; icona clessidra nella griglia.
-- `flutter analyze` 0; `flutter test` 821 verdi.
+- `flutter analyze` 0; `flutter test` 822 verdi; `scripts/e2e-agenda.py` PASS con invito e conferma da un secondo utente.

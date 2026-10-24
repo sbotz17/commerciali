@@ -122,11 +122,14 @@ def main():
                 created_docs.append(path)
             return st, d
 
-        # appuntamento
+        # appuntamento con invito al collega B
         app_id = f"e2e-app-{suffix}"
         st, d = crea(f"appuntamenti/{app_id}", {
             "azienda_id": s(az), "titolo": s("Appuntamento E2E"), "data": s("2026-12-01"),
             "ora": s("10:00"), "operatore_id": s(users[0]["uid"]), "stato": s("da_fare"),
+            "invitati_uids": arr([users[1]["uid"]]),
+            "conferme": m({}),
+            "stato_condivisione": s("in_attesa"),
         }, token_a)
         if st != 200:
             errori.append(f"create appuntamento: {st} {d}")
@@ -138,6 +141,22 @@ def main():
                          {"fields": {"stato": s("fatto")}}, token_a)
             if st != 200:
                 errori.append(f"update appuntamento: {st}")
+            # B, invitato, conferma la disponibilità aggiornando i campi di condivisione
+            st, d = call(
+                "PATCH",
+                percorso(f"appuntamenti/{app_id}?updateMask.fieldPaths=conferme&updateMask.fieldPaths=stato_condivisione"),
+                {"fields": {
+                    "conferme": m({users[1]["uid"]: m({"stato": s("confermato"), "at": s(now)})}),
+                    "stato_condivisione": s("confermato"),
+                }},
+                token_b,
+            )
+            if st != 200:
+                errori.append(f"conferma invito da B: {st} {d}")
+            else:
+                st, d = call("GET", percorso(f"appuntamenti/{app_id}"), token=token_a)
+                if st != 200 or "stato_condivisione" not in d.get("fields", {}):
+                    errori.append("A non vede la conferma di B sull'appuntamento")
 
         # task
         task_id = f"e2e-task-{suffix}"
