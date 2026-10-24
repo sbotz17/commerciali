@@ -78,13 +78,18 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Preferenze notifiche | `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart` | Push, WhatsApp, chat, silenzio, anteprima |
 | Nuovo prodotto da preventivo | `flutter_app/lib/features/preventivi/preventivo_edit_screen.dart` | Pulsante nel selettore catalogo e inserimento immediato nella riga |
 | Nuovo cliente da visite | `flutter_app/lib/features/visite/visite_screen.dart`, `flutter_app/lib/features/clienti/clienti_screen.dart` | Callback `onSalvato` del form cliente e ritorno alla visita con cliente selezionato |
+| Integrazioni aziendali | `flutter_app/lib/features/impostazioni/impostazioni_integrazioni_screen.dart`, `data/models/integrazione_azienda.dart` | Card Google/Microsoft/SMTP/WhatsApp/R2/Push, modalità app Closer/app propria, nessun secret in Firestore |
+| Condivisione calendario | `flutter_app/lib/features/impostazioni/condivisione_calendario_screen.dart`, `data/models/condivisione_calendario.dart` | Condivisione con colleghi, livelli, revoca, “Condivisi con me” |
+| Call manuale | `flutter_app/lib/features/calendario/appuntamento_form_screen.dart` | Provider Meet/Teams/altro, link, copia, apertura, validazione |
+| Report integrazioni/calendario | `docs/progetto/test/2026-10-24-integrazioni-calendario.md` | O01–O04, E2E regole, 778 test verdi |
 | Report amministrazione/bandi | `docs/progetto/test/2026-10-22-amministrazione-bandi.md` | E2E ruoli, utenti, azienda, import e ATECO |
 
 ## Collezioni Firestore
 
 `aziende`, `utenti`, `membri`, `ruoli`, `licenze`, `piani_config`, `whatsapp_config`, `impostazioni`,
 `prodotti`, `categorie`, `clienti`, `preventivi`, `giro_visite`, `bandi_fonti`, `bandi_incentivi`,
-`bandi_sync_log`, `contatori`.
+`bandi_sync_log`, `contatori`, `appuntamenti`, `task`, `promemoria`, `notifiche`, `chat_stanze`,
+`integrazioni_azienda`, `integrazioni`, `condivisioni_calendario`, `impostazioni_agenda`.
 
 ## Memoria ad albero
 

@@ -45,6 +45,35 @@ String? validaDataAppuntamento(String? valore) {
   return null;
 }
 
+/// Provider di call selezionabili nel form. `nessuna` è solo un valore UI.
+const Map<String, String> providerCallAppuntamento = {
+  'nessuna': 'Nessuna call',
+  'google_meet': 'Google Meet',
+  'teams': 'Microsoft Teams',
+  'manuale': 'Altro link',
+};
+
+/// Validazione della call: se c'è un provider serve un link http/https valido.
+///
+/// Con provider `nessuna` (o assente) il link non è richiesto e viene ignorato.
+String? validaCallAppuntamento(String? provider, String? link) {
+  final p = (provider ?? '').trim();
+  final testo = (link ?? '').trim();
+  if (p.isEmpty || p == 'nessuna') {
+    return null;
+  }
+  if (testo.isEmpty) {
+    return 'Incolla il link della call o scegli "Nessuna call"';
+  }
+  final uri = Uri.tryParse(testo);
+  if (uri == null ||
+      (uri.scheme != 'https' && uri.scheme != 'http') ||
+      uri.host.isEmpty) {
+    return 'Inserisci un link valido (https://...)';
+  }
+  return null;
+}
+
 /// Link Google Maps per raggiungere [indirizzo], o `null` se è vuoto.
 ///
 /// Il link usa lo schema `https` (mai schemi diversi da http/https) e la
@@ -169,9 +198,11 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
   late final TextEditingController _luogo;
   late final TextEditingController _indirizzo;
   late final TextEditingController _note;
+  late final TextEditingController _callUrl;
 
   late DateTime _dataScelta;
   late String _stato;
+  late String _callProvider;
   String? _clienteId;
   String? _operatoreId;
 
@@ -201,12 +232,18 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
     _luogo = TextEditingController(text: appuntamento?.luogo ?? '');
     _indirizzo = TextEditingController(text: appuntamento?.indirizzo ?? '');
     _note = TextEditingController(text: appuntamento?.note ?? '');
+    _callUrl = TextEditingController(text: appuntamento?.callUrl ?? '');
 
     _clienteId = appuntamento?.clienteId;
     _operatoreId = appuntamento?.operatoreId ?? _uidCorrente();
 
     final stato = (appuntamento?.stato ?? 'da_fare').trim().toLowerCase();
     _stato = statiAppuntamento.containsKey(stato) ? stato : 'da_fare';
+
+    final provider = (appuntamento?.callProvider ?? '').trim();
+    _callProvider = providerCallAppuntamento.containsKey(provider)
+        ? provider
+        : 'nessuna';
 
     _caricaDati();
   }
@@ -220,6 +257,7 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
     _luogo.dispose();
     _indirizzo.dispose();
     _note.dispose();
+    _callUrl.dispose();
     super.dispose();
   }
 
@@ -365,6 +403,36 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
   }
 
   /// Apre Google Maps sull'indirizzo inserito, se non è vuoto.
+  /// Copia il link call negli appunti, se presente.
+  Future<void> _copiaCall() async {
+    final testo = _callUrl.text.trim();
+    if (testo.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: testo));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Link call copiato')),
+    );
+  }
+
+  /// Apre il link call nel browser o nell'app esterna.
+  Future<void> _apriCall() async {
+    final testo = _callUrl.text.trim();
+    final uri = Uri.tryParse(testo);
+    if (uri == null ||
+        (uri.scheme != 'https' && uri.scheme != 'http') ||
+        uri.host.isEmpty) {
+      return;
+    }
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Non è stato possibile aprire il link.')),
+      );
+    }
+  }
+
   Future<void> _apriMaps() async {
     final messenger = ScaffoldMessenger.of(context);
     final uri = uriMapsIndirizzo(_indirizzo.text);
@@ -415,8 +483,8 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
       'stato': _stato,
       // Campi non gestiti dal form: preservati in modifica.
       'visita_id': appuntamento?.visitaId,
-      'call_provider': appuntamento?.callProvider,
-      'call_url': appuntamento?.callUrl,
+      'call_provider': _callProvider == 'nessuna' ? null : _callProvider,
+      'call_url': _callUrl.text.trim().isEmpty ? null : _callUrl.text.trim(),
       'meeting_id': appuntamento?.meetingId,
       'google_event_id': appuntamento?.googleEventId,
       'outlook_event_id': appuntamento?.outlookEventId,
@@ -645,6 +713,65 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
                             ),
                           ),
                         ],
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Call',
+                      figli: [
+                        DropdownButtonFormField<String>(
+                          key: const Key('appuntamento-call-provider'),
+                          initialValue: _callProvider,
+                          decoration: const InputDecoration(
+                            labelText: 'Tipo di call',
+                            helperText: 'Puoi incollare un link Meet o Teams.',
+                          ),
+                          items: [
+                            for (final voce in providerCallAppuntamento.entries)
+                              DropdownMenuItem(
+                                value: voce.key,
+                                child: Text(voce.value),
+                              ),
+                          ],
+                          onChanged: _salvando
+                              ? null
+                              : (valore) {
+                                  if (valore == null) return;
+                                  setState(() => _callProvider = valore);
+                                },
+                        ),
+                        TextFormField(
+                          key: const Key('appuntamento-call-url'),
+                          controller: _callUrl,
+                          enabled:
+                              !_salvando && _callProvider != 'nessuna',
+                          keyboardType: TextInputType.url,
+                          textInputAction: TextInputAction.next,
+                          validator: (valore) =>
+                              validaCallAppuntamento(_callProvider, valore),
+                          decoration: InputDecoration(
+                            labelText: 'Link call',
+                            hintText: 'https://meet.google.com/...',
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  key: const Key('appuntamento-call-copia'),
+                                  tooltip: 'Copia link',
+                                  onPressed:
+                                      _salvando ? null : _copiaCall,
+                                  icon: const Icon(Icons.copy_outlined),
+                                ),
+                                IconButton(
+                                  key: const Key('appuntamento-call-apri'),
+                                  tooltip: 'Apri link',
+                                  onPressed: _salvando ? null : _apriCall,
+                                  icon: const Icon(Icons.open_in_new),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpazi.m),

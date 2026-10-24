@@ -32,7 +32,9 @@ flutter_app/lib/
 - F07c redirect: rinviato dopo F08 (vedi registro decisioni).
 - F20 pagina introduttiva installazione: fatto.
 - F21 intro interattiva con scelta dispositivo e mockup animati: fatto.
-- Prossimo: F16b bandi UI, F17b utenti/ruoli, F18 super admin.
+- Agenda, task, notifiche, chat: base fatta (vedi `memoria/ui/` e report).
+- Integrazioni aziendali e condivisione calendario: O01–O04 fatti; O10 parziale; call manuale O11.
+- Prossimo: Worker OAuth (O06/O07), connessioni utente (O08), vista calendario condiviso (O09), call automatica (O11), E2E browser (O12).
 
 ## Punti fermi
 
@@ -41,4 +43,4 @@ flutter_app/lib/
 - La vecchia app resta in uso finché non c'è parità.
 - `flutter analyze` e `flutter test` devono restare verdi a ogni task.
 
-**Ultima revisione**: 2026-10-22
+**Ultima revisione**: 2026-10-24

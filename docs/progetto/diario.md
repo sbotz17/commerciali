@@ -408,3 +408,11 @@
 - Creata `Impostazioni → Calendario e integrazioni` con card Google, Microsoft, SMTP, WhatsApp, R2 e Push; il Client Secret è disabilitato finché non c'è il Worker.
 - `flutter analyze` 0; `flutter test` 778 verdi; `scripts/e2e-agenda.py` PASS anche su integrazioni e condivisioni.
 - Restano O05–O13: Worker OAuth, connessioni utente, condivisione UI e call.
+
+## 2026-10-24 — Condivisione calendario e call manuale (O10/O11 parziali)
+
+- Creata `Impostazioni → Condivisione calendario`: scelta collega, livelli libero/occupato, dettagli, modifica, elenco condivisioni attive, revoca con conferma, sezione “Condivisi con me”.
+- Aggiunti test widget e funzioni pure per il filtro colleghi e i livelli.
+- Form appuntamento: sezione Call con provider (Meet/Teams/altro), link manuale, copia e apertura; validazione http/https.
+- `flutter analyze` 0; `flutter test` 790 verdi; app pubblicata su staging.
+- Restano: vista calendario degli eventi condivisi e mascheramento “Occupato” (O09), creazione automatica Meet/Teams (O11), Worker OAuth (O06/O07), connessioni utente (O08), E2E browser (O12).

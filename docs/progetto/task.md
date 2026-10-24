@@ -146,8 +146,8 @@ Decisioni confermate da Andrea il 24/10/2026. Un task = un obiettivo verificabil
 | O07 | Worker | OAuth Microsoft/Graph: app multi-tenant, token, Teams, test connessione | consenso tenant, token KV, online meeting; test con mock | sviluppatore-backend | DA FARE |
 | O08 | UI | `Impostazioni utente → Connessioni` Google/Microsoft | collega/ricollega/scollega, calendario scelto, stato; test | sviluppatore-frontend | DA FARE |
 | O09 | Dati/Worker | Condivisione calendario e mascheramento eventi esterni | livelli libero/occupato/dettagli/modifica; stesso azienda; revoca; nessun dato mascherato al client; test | sviluppatore-backend | DA FARE |
-| O10 | UI | Condivisione calendario e sezione "Condivisi con me" | dialog, livelli, revoca, badge, eventi "Occupato"; test | sviluppatore-frontend | DA FARE |
-| O11 | Worker | Creazione evento e call Meet/Teams sul calendario dell'operatore | evento sul calendario corretto, cliente invitato, link salvato, conflitti; test | sviluppatore-backend | DA FARE |
+| O10 | UI | Condivisione calendario e sezione "Condivisi con me" | dialog, livelli, revoca, badge, eventi "Occupato"; test | sviluppatore-frontend | IN CORSO |
+| O11 | Worker | Creazione evento e call Meet/Teams sul calendario dell'operatore | evento sul calendario corretto, cliente invitato, link salvato, conflitti; test | sviluppatore-backend | IN CORSO |
 | O12 | Qualità | E2E staging calendario condiviso e OAuth | connessione, evento, call, condivisione, revoca, 0 `permission-denied`, nessun secret esposto | tester | DA FARE |
 | O13 | Qualità | Validazione finale F32 | report tester, DoD, approvazione; residui dichiarati | validatore | DA FARE |
 

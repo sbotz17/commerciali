@@ -436,6 +436,13 @@ class _CardAccessi extends StatelessWidget {
         onTap: () => onVoce('/impostazioni/integrazioni'),
       ),
       _VoceAccesso(
+        chiave: const Key('impostazioni-voce-condivisioni'),
+        icona: Icons.share_outlined,
+        titolo: 'Condivisione calendario',
+        sottotitolo: 'Condividi i tuoi appuntamenti con i colleghi',
+        onTap: () => onVoce('/impostazioni/condivisioni-calendario'),
+      ),
+      _VoceAccesso(
         chiave: const Key('impostazioni-voce-utenti'),
         icona: Icons.people_outline,
         titolo: 'Utenti',

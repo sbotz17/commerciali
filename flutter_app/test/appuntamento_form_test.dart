@@ -72,6 +72,47 @@ void main() {
     });
   });
 
+  group('validaCallAppuntamento', () {
+    test('nessuna call non richiede link', () {
+      expect(validaCallAppuntamento('nessuna', null), isNull);
+      expect(validaCallAppuntamento('nessuna', 'testo non url'), isNull);
+      expect(validaCallAppuntamento(null, null), isNull);
+    });
+
+    test('provider senza link è un errore', () {
+      expect(
+        validaCallAppuntamento('google_meet', ''),
+        'Incolla il link della call o scegli "Nessuna call"',
+      );
+      expect(
+        validaCallAppuntamento('teams', '   '),
+        'Incolla il link della call o scegli "Nessuna call"',
+      );
+    });
+
+    test('link non http/https è un errore', () {
+      expect(
+        validaCallAppuntamento('manuale', 'meet.google.com/abc'),
+        'Inserisci un link valido (https://...)',
+      );
+      expect(
+        validaCallAppuntamento('manuale', 'ftp://example.com'),
+        'Inserisci un link valido (https://...)',
+      );
+    });
+
+    test('link http/https valido supera la validazione', () {
+      expect(
+        validaCallAppuntamento('google_meet', 'https://meet.google.com/abc'),
+        isNull,
+      );
+      expect(
+        validaCallAppuntamento('teams', 'http://example.com/team'),
+        isNull,
+      );
+    });
+  });
+
   group('uriMapsIndirizzo', () {
     test('indirizzo assente o vuoto non produce un link', () {
       expect(uriMapsIndirizzo(null), isNull);
@@ -150,6 +191,10 @@ void main() {
         'appuntamento-durata',
         'appuntamento-cliente',
         'appuntamento-operatore',
+        'appuntamento-call-provider',
+        'appuntamento-call-url',
+        'appuntamento-call-copia',
+        'appuntamento-call-apri',
         'appuntamento-luogo',
         'appuntamento-indirizzo',
         'appuntamento-maps',

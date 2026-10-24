@@ -11,6 +11,7 @@
 - `piani_config` definisce pagine e limiti per piano.
 - `whatsapp_config/1` contiene URL e API key del server WhatsApp.
 - `Impostazioni → Calendario e integrazioni`: card Google/Microsoft (modalità app Closer o app propria) e stato SMTP/WhatsApp/R2/Push. I segreti non sono in Firestore: il Client Secret si attiverà con il Worker.
+- `Impostazioni → Condivisione calendario`: condivisione con colleghi, livelli libero/occupato/dettagli/modifica, revoca e “Condivisi con me”.
 - `integrazioni_azienda/{aziendaId}`: configurazione azienda; `condivisioni_calendario/{az}_{prop}_{dest}`: condivisione calendario.
 
 ## Test
