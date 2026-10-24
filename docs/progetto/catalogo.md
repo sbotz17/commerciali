@@ -78,6 +78,8 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Inviti appuntamento — dati | `flutter_app/lib/data/models/appuntamento.dart`, `sp_service.dart` | `invitati_uids`, `conferme`, `stato_condivisione`; `rispondiInvitoAppuntamento` transazionale |
 | Notifiche invito | `flutter_app/lib/data/services/sp_service.dart` | Notifica In-App a creatore/operatore dopo la risposta; `inviaWhatsapp`/`inviaWhatsappAUtente` best-effort |
 | Rubrica WhatsApp | `firestore.rules`, `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart` | `contatti_notifiche` aziendale: numero e consenso, leggibile dai colleghi |
+| Configurazione WhatsApp | `flutter_app/lib/features/superadmin/whatsapp_server_screen.dart`, `worker/src/index.js` | Super Admin → Server WhatsApp; URL/API key nel KV del Worker, QR e stato; invio autenticato tramite Worker |
+| Test Worker WhatsApp | `scripts/e2e-whatsapp-worker.py` | Verifica auth superadmin, salvataggio/lettura/cancellazione config e server non raggiungibile |
 | Report inviti appuntamento | `docs/progetto/test/2026-10-24-inviti-appuntamento.md` | Analyze, 822 test, E2E regole reali e prova manuale da fare |
 | Test calendario | `flutter_app/test/calendario_test.dart` | Unit test di periodi e griglia oraria + widget test di mese, giorno e settimana |
 | Task | `flutter_app/lib/features/task/task_screen.dart`, `task_form_screen.dart` | Lista per periodi, filtri, completamento, form |

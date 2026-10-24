@@ -319,6 +319,11 @@ Uri? uriInvioWhatsapp(String? indirizzo) {
   return uri;
 }
 
+/// Base del Worker Cloudflare che fa da proxy autenticato verso il server
+/// WhatsApp (la API key resta nel KV del Worker).
+const String workerWhatsappBase =
+    'https://commerciali-vies.bottiandrea83.workers.dev';
+
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
 /// vecchia app (sottoinsieme aziende/membri/profilo).
 ///
@@ -1956,6 +1961,49 @@ class SpService {
     return {'id': ref.id, ...payload};
   }
 
+  /// Salva la sottoscrizione Web Push del dispositivo corrente.
+  ///
+  /// La sottoscrizione contiene endpoint e chiavi p256dh/auth, non un token
+  /// Firebase. Il documento è per utente e dispositivo; un nuovo salvataggio
+  /// aggiorna lo stesso dispositivo.
+  Future<void> salvaDispositivoWeb({
+    required String endpoint,
+    required String p256dh,
+    required String auth,
+    String? userAgent,
+  }) async {
+    _richiediAzienda();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Utente non autenticato.');
+    }
+    final id = '${_aziendaAttiva}_${uid}_web';
+    await _firestore.collection('dispositivi').doc(id).set({
+      'azienda_id': _aziendaAttiva,
+      'utente_uid': uid,
+      'piattaforma': 'web',
+      'endpoint': endpoint.trim(),
+      'p256dh': p256dh.trim(),
+      'auth': auth.trim(),
+      'user_agent': userAgent?.trim(),
+      'attivo': true,
+      'ultimo_uso_at': _now(),
+      'created_at': _now(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Disattiva il dispositivo Web Push corrente senza cancellare lo storico.
+  Future<void> disattivaDispositivoWeb() async {
+    _richiediAzienda();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final id = '${_aziendaAttiva}_${uid}_web';
+    await _firestore.collection('dispositivi').doc(id).set({
+      'attivo': false,
+      'ultimo_uso_at': _now(),
+    }, SetOptions(merge: true));
+  }
+
   /// Preferenze di notifica dell'utente corrente per l'azienda attiva.
   ///
   /// Legge `impostazioni_notifiche/{aziendaId}_{uid}`. Ritorna `null` se non è
@@ -2046,66 +2094,119 @@ class SpService {
     return snap.data();
   }
 
-  /// Invia un messaggio WhatsApp al numero [numero] tramite il server
-  /// configurato in `whatsapp_config/1`.
-  ///
-  /// Ritorna `false` (senza sollevare) se WhatsApp non è configurato, se il
-  /// server non risponde o se risponde con un errore: l'avviso In-App resta
-  /// comunque valido. La API key non viene mai loggata.
-  Future<bool> inviaWhatsapp({
-    required String numero,
+  /// Token Firebase dell'utente corrente per le chiamate al Worker.
+  Future<String> _tokenFirebase() async {
+    final utente = FirebaseAuth.instance.currentUser;
+    if (utente == null) throw StateError('Utente non autenticato');
+    final token = await utente.getIdToken();
+    if (token == null || token.isEmpty) {
+      throw StateError('Sessione scaduta. Accedi di nuovo.');
+    }
+    return token;
+  }
+
+  /// Chiamata autenticata al Worker Cloudflare.
+  Future<Map<String, dynamic>> _chiamaWorker(
+    String percorso, {
+    String metodo = 'GET',
+    Map<String, dynamic>? corpo,
+  }) async {
+    final token = await _tokenFirebase();
+    final uri = Uri.parse('$workerWhatsappBase$percorso');
+    final intestazioni = {
+      'Authorization': 'Bearer $token',
+      if (corpo != null) 'Content-Type': 'application/json',
+    };
+    final risposta = metodo == 'POST'
+        ? await http
+              .post(
+                uri,
+                headers: intestazioni,
+                body: corpo == null ? null : jsonEncode(corpo),
+              )
+              .timeout(const Duration(seconds: 20))
+        : await http
+              .get(uri, headers: intestazioni)
+              .timeout(const Duration(seconds: 20));
+
+    final testo = risposta.body.trim();
+    dynamic decodificato;
+    try {
+      decodificato = testo.isEmpty ? <String, dynamic>{} : jsonDecode(testo);
+    } catch (_) {
+      decodificato = <String, dynamic>{};
+    }
+    if (risposta.statusCode < 200 || risposta.statusCode >= 300) {
+      final errore = decodificato is Map
+          ? (decodificato['error']?.toString() ??
+                'Il server ha risposto HTTP ${risposta.statusCode}.')
+          : 'Il server ha risposto HTTP ${risposta.statusCode}.';
+      throw StateError(errore);
+    }
+    return decodificato is Map
+        ? Map<String, dynamic>.from(decodificato)
+        : <String, dynamic>{};
+  }
+
+  /// Invia un avviso WhatsApp a un utente dell'azienda, se ha un recapito con
+  /// consenso attivo. Il numero viene letto dal Worker dalla rubrica aziendale:
+  /// non transita dal client. Best-effort: non interrompe mai il chiamante.
+  Future<bool> inviaWhatsappAUtente({
+    required String utenteUid,
     required String messaggio,
   }) async {
-    final pulito = normalizzaNumeroWhatsapp(numero);
-    if (pulito.isEmpty) return false;
+    final aziendaId = _aziendaAttiva;
+    final uid = utenteUid.trim();
+    if (aziendaId == null || uid.isEmpty || messaggio.trim().isEmpty) {
+      return false;
+    }
     try {
-      final snap = await _firestore
-          .collection('whatsapp_config')
-          .doc('1')
-          .get();
-      final dati = snap.data();
-      final uri = uriInvioWhatsapp(dati?['url']?.toString());
-      if (!snap.exists || uri == null) return false;
-      final risposta = await http
-          .post(
-            uri,
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': (dati?['api_key'] ?? '').toString(),
-            },
-            body: jsonEncode({'to': pulito, 'message': messaggio}),
-          )
-          .timeout(const Duration(seconds: 15));
-      if (risposta.statusCode < 200 || risposta.statusCode >= 300) {
-        return false;
-      }
-      if (risposta.body.trim().isNotEmpty) {
-        final corpo = jsonDecode(risposta.body);
-        if (corpo is Map && corpo['error'] != null) return false;
-      }
-      return true;
+      final esito = await _chiamaWorker(
+        '/whatsapp/send',
+        metodo: 'POST',
+        corpo: {'aziendaId': aziendaId, 'utenteUid': uid, 'message': messaggio},
+      );
+      return esito['ok'] == true;
     } catch (_) {
       return false;
     }
   }
 
-  /// Invia un avviso WhatsApp a un utente dell'azienda, se ha un recapito con
-  /// consenso attivo. Best-effort: non interrompe mai il flusso chiamante.
-  Future<bool> inviaWhatsappAUtente({
-    required String utenteUid,
-    required String messaggio,
+  /// Configurazione del server WhatsApp salvata nel KV del Worker.
+  Future<Map<String, dynamic>?> getWhatsappConfig() async {
+    final dati = await _chiamaWorker('/whatsapp/config');
+    if (dati.isEmpty) return null;
+    return dati;
+  }
+
+  /// Salva URL e API key del server WhatsApp nel KV del Worker. Riservato al
+  /// super admin, che il Worker verifica con il token Firebase.
+  Future<void> salvaWhatsappConfig({
+    required String url,
+    required String apiKey,
   }) async {
-    try {
-      final contatto = await getContattoNotifiche(utenteUid);
-      if (contatto == null || contatto['consenso_whatsapp'] != true) {
-        return false;
-      }
-      final numero = (contatto['numero_whatsapp'] ?? '').toString().trim();
-      if (numero.isEmpty) return false;
-      return await inviaWhatsapp(numero: numero, messaggio: messaggio);
-    } catch (_) {
-      return false;
+    if (uriInvioWhatsapp(url) == null) {
+      throw StateError('Inserisci un indirizzo http/https valido.');
     }
+    if (apiKey.trim().isEmpty) {
+      throw StateError('Inserisci la API key del server WhatsApp.');
+    }
+    await _chiamaWorker(
+      '/whatsapp/config',
+      metodo: 'POST',
+      corpo: {'url': url.trim(), 'apiKey': apiKey.trim()},
+    );
+  }
+
+  /// Stato del server WhatsApp (`GET /status` tramite Worker).
+  Future<Map<String, dynamic>> statoWhatsapp() =>
+      _chiamaWorker('/whatsapp/status');
+
+  /// QR di pairing del server WhatsApp (`GET /qr` tramite Worker).
+  Future<String?> qrWhatsapp() async {
+    final dati = await _chiamaWorker('/whatsapp/qr');
+    final qr = dati['qr']?.toString().trim() ?? '';
+    return qr.isEmpty ? null : qr;
   }
 
   // ---------- chat ----------

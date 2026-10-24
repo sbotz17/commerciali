@@ -264,8 +264,7 @@ service cloud.firestore {
       allow write: if isSuper();
     }
     match /whatsapp_config/{id} {
-      allow read: if signedIn();
-      allow write: if isSuper();
+      allow read, write: if isSuper();
     }
     // I bandi sono dati pubblici: la lettura non richiede login.
     match /bandi_fonti/{id} {

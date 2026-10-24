@@ -37,6 +37,8 @@ flutter_app/lib/
   (`calendario_logica.dart` + `viste_calendario.dart`).
 - Appuntamenti: nuovo cliente dal form e condivisione con persone/gruppi chat; notifica agli invitati,
   conferma disponibilità e stato `in_attesa`/`confermato`/`rifiutato` (`dialogo_condivisione_appuntamento.dart`).
+- WhatsApp: schermata Super Admin → Server WhatsApp; URL/API key nel KV del Worker, non in Firestore;
+  invio tramite `/whatsapp/send` autenticato e rubrica `contatti_notifiche`.
 - Integrazioni aziendali e condivisione calendario: O01–O04 fatti; O10 parziale; call manuale O11.
 - Menu desktop: `NavigationRail` con tutte le pagine e rotella Impostazioni in fondo; telefono con `NavigationBar` + drawer “Altro”.
 - Form appuntamento: sezione Partecipanti per invitare colleghi/gruppi; etichette visibili “Utente/Utenti” (campo dati `operatore_id` invariato).

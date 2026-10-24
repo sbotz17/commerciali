@@ -390,3 +390,11 @@ Per inviare un avviso WhatsApp a un collega, il client deve conoscere il suo num
 
 Regole aggiunte in `firestore.rules` e verificate con `scripts/e2e-agenda.py` (lettura tra colleghi,
 divieto di modifica del recapito altrui). Nessun indice nuovo.
+
+### Configurazione WhatsApp nel Worker
+
+La `whatsapp_config` di Firestore non è più usata dalla nuova app: URL e API key del server WhatsApp
+vivono nel **KV del Worker Cloudflare** (`WHATSAPP_CONFIG`, chiave `server`). Il Worker li restituisce solo
+al super admin autenticato e li usa per gli invii richiesti dagli utenti autenticati. La regola Firestore
+`whatsapp_config` è stata quindi ristretta al solo super admin. I numeri/consensi restano in
+`contatti_notifiche`, letti dal Worker con il token del chiamante.

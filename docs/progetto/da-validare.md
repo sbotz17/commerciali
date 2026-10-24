@@ -45,5 +45,12 @@ impediscono il funzionamento della versione precedente.
 - La conferma di un invitato ora genera una notifica In-App per chi ha creato l'appuntamento e per
   l'operatore assegnato; è stata recuperata anche la conferma già presente di Simone.
 - L'invio WhatsApp è implementato con rubrica aziendale e consenso, ma **non è attivo** finché non vengono
-  configurati `whatsapp_config/1` (URL + API key del server) e il numero/consenso dell'utente.
-- I test sono della squadra: analyze, 827 test, E2E regole reali. Andrea deve solo validare l'esperienza.
+  configurati URL/API key nel Worker e il numero/consenso dell'utente.
+- I test sono della squadra: analyze, 833 test, E2E regole reali e Worker. Andrea deve solo validare l'esperienza.
+
+### Aggiornamento — configurazione WhatsApp dal pannello Super Admin
+
+- Nuova schermata **Super Admin → Server WhatsApp**: URL, API key, verifica connessione, QR.
+- La API key è nel KV del Worker Cloudflare, non in Firestore e non sul dispositivo degli utenti.
+- Per usarla: aprire la schermata e inserire i dati del server; poi ogni utente imposta numero e consenso in
+  Impostazioni → Notifiche. Non servono test tecnici da parte di Andrea.

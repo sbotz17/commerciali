@@ -488,3 +488,16 @@
   `contatti_notifiche`; regole Firestore pubblicate su staging.
 - WhatsApp non può ancora partire: nel progetto Firebase non esiste `whatsapp_config/1` e non ci sono
   numeri/consensi salvati. Serve configurare il server WhatsApp e il proprio numero nelle preferenze.
+
+## 2026-10-24 — Schermata Super Admin Server WhatsApp e proxy Worker
+
+- Aggiunta **Super Admin → Server WhatsApp** (`whatsapp_server_screen.dart`): URL, API key con mostra/nascondi,
+  salvataggio, verifica connessione e QR di pairing. Accesso riservato al super admin.
+- L’API key **non** viene salvata in Firestore: il Worker `commerciali-vies` la conserva nel KV
+  `WHATSAPP_CONFIG`; solo il super admin può leggerla/scriverla tramite token Firebase.
+- Il Worker espone `/whatsapp/config`, `/whatsapp/status`, `/whatsapp/qr`, `/whatsapp/send`. L’invio legge
+  numero e consenso da `contatti_notifiche` con il token del chiamante, quindi il numero non transita dal client.
+- Ristretta la regola Firestore `whatsapp_config` al solo super admin (l’app non la usa più).
+- Aggiunto `scripts/e2e-whatsapp-worker.py`: PASS su autenticazione, salvataggio/lettura/cancellazione KV,
+  rifiuto senza token e server finto non raggiungibile.
+- `flutter analyze` 0; `flutter test` 833 verdi; `scripts/e2e-agenda.py` PASS; Worker e regole pubblicati.

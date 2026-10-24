@@ -10,6 +10,7 @@
 | Firestore | database `(default)`, regione `europe-west8` |
 | Auth | email/password + Google |
 | Proxy VIES | https://commerciali-vies.bottiandrea83.workers.dev |
+| Proxy WhatsApp | stesso Worker, endpoint `/whatsapp/*`; URL/API key nel KV `WHATSAPP_CONFIG` |
 | Vecchio backend | Supabase `segbfdfoqxrnitboeyof` — dismesso |
 
 ## Produzione (attiva)

@@ -123,11 +123,14 @@ Le **password e i token** non vanno mai incollati in chat, in Firestore o nel co
 
 ### Configurazione
 
-1. **Impostazioni → Integrazioni → WhatsApp**.
-2. Inserisci URL e API key (salvati come secret).
-3. Imposta numero mittente e numero operatore.
-4. Invia un messaggio di prova.
-5. Attiva il canale.
+1. **Super Admin → Server WhatsApp** (nella nuova app Closer).
+2. Inserisci URL e API key del server: vengono salvati nel KV del Worker
+   Cloudflare, non in Firestore e non sul dispositivo degli utenti.
+3. Premi **Verifica connessione**; se il numero non è collegato, usa
+   **Mostra QR** e scansiona il QR da WhatsApp → Dispositivi collegati.
+4. Ogni utente imposta il proprio numero e il consenso in
+   **Impostazioni → Notifiche → WhatsApp**.
+5. Gli inviti e le conferme degli appuntamenti partono in automatico.
 
 ### Comportamento
 

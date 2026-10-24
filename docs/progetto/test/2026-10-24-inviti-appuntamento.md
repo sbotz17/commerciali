@@ -9,8 +9,9 @@ disponibilità, apertura dell'appuntamento dalla notifica.
 | Verifica | Esito |
 |---|---|
 | `flutter analyze` | 0 problemi |
-| `flutter test` | 827 test verdi |
+| `flutter test` | 833 test verdi |
 | `scripts/e2e-agenda.py` su staging | PASS: invito e conferma tra due utenti, notifiche private e rubrica `contatti_notifiche` |
+| `scripts/e2e-whatsapp-worker.py` | PASS: config protetta, KV salva/rilegge/cancella, server finto gestito |
 | `scripts/controlla-indice.mjs` | INDICE OK |
 
 ## Copertura dei test aggiunti
@@ -20,6 +21,8 @@ disponibilità, apertura dell'appuntamento dalla notifica.
 - `test/appuntamento_form_test.dart`: pulsante nuovo cliente e apertura del dialogo di condivisione.
 - `test/calendario_test.dart`: badge e colore della condivisione.
 - `test/notifiche_screen_test.dart`: rotta verso `/calendario?appuntamento=…`.
+- `test/whatsapp_server_screen_test.dart`: schermata riservata al super admin.
+- `test/whatsapp_service_test.dart`: normalizzazione numero e URL del Worker.
 
 ## Verifica funzionale per Andrea (dopo i test della squadra)
 

@@ -26,6 +26,7 @@ import '../features/preventivi/preventivo_edit_screen.dart';
 import '../features/preventivi/preventivi_screen.dart';
 import '../features/shell/auth_gate.dart';
 import '../features/superadmin/superadmin_screen.dart';
+import '../features/superadmin/whatsapp_server_screen.dart';
 import '../features/task/task_screen.dart';
 import '../features/visite/visite_screen.dart';
 
@@ -149,6 +150,10 @@ GoRouter creaAppRouter({String? initialLocation}) {
           GoRoute(
             path: '/superadmin',
             builder: (context, state) => const SuperAdminScreen(),
+          ),
+          GoRoute(
+            path: '/superadmin/whatsapp',
+            builder: (context, state) => const WhatsappServerScreen(),
           ),
         ],
       ),

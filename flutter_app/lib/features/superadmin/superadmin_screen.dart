@@ -161,14 +161,31 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
 
         return Padding(
           padding: EdgeInsets.all(orizzontale),
-          child: CorpoSuperAdmin(
-            aziende: _aziende,
-            caricamento: !_avviato || _caricamento,
-            errore: _errore,
-            largo: largo,
-            onRiprova: _carica,
-            onEntra: _entra,
-            onNuova: _apriNuovaAzienda,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  key: const Key('superadmin-whatsapp'),
+                  onPressed: () => context.go('/superadmin/whatsapp'),
+                  icon: const Icon(Icons.chat_outlined),
+                  label: const Text('Server WhatsApp'),
+                ),
+              ),
+              const SizedBox(height: AppSpazi.s),
+              Expanded(
+                child: CorpoSuperAdmin(
+                  aziende: _aziende,
+                  caricamento: !_avviato || _caricamento,
+                  errore: _errore,
+                  largo: largo,
+                  onRiprova: _carica,
+                  onEntra: _entra,
+                  onNuova: _apriNuovaAzienda,
+                ),
+              ),
+            ],
           ),
         );
       },
