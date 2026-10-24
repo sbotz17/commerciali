@@ -51,8 +51,44 @@ class VistaMeseCalendario extends StatelessWidget {
             ? 0
             : ((altezzaCella - 34) / 20).floor().clamp(0, 4);
 
+        final griglia = SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: AppSpazi.xs),
+          child: Column(
+            children: [
+              for (var settimana = 0; settimana < settimane; settimana++)
+                SizedBox(
+                  height: altezzaCella,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var indice = 0; indice < 7; indice++)
+                        Expanded(
+                          child: _CellaMese(
+                            giorno: giorni[settimana * 7 + indice],
+                            mese: mese,
+                            voci:
+                                gruppi[dataIsoVisita(
+                                  giorni[settimana * 7 + indice],
+                                )] ??
+                                const <ElementoAgenda>[],
+                            compatto: compatto,
+                            massimoVoci: massimoVoci,
+                            onTapVoce: onTapVoce,
+                            onTapGiorno: onTapGiorno,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+
         return Column(
           key: const Key('calendario-mese'),
+          mainAxisSize: constraints.hasBoundedHeight
+              ? MainAxisSize.max
+              : MainAxisSize.min,
           children: [
             SizedBox(
               height: 32,
@@ -75,40 +111,10 @@ class VistaMeseCalendario extends StatelessWidget {
                 ],
               ),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.only(bottom: AppSpazi.xs),
-                child: Column(
-                  children: [
-                    for (var settimana = 0; settimana < settimane; settimana++)
-                      SizedBox(
-                        height: altezzaCella,
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            for (var indice = 0; indice < 7; indice++)
-                              Expanded(
-                                child: _CellaMese(
-                                  giorno: giorni[settimana * 7 + indice],
-                                  mese: mese,
-                                  voci:
-                                      gruppi[dataIsoVisita(
-                                        giorni[settimana * 7 + indice],
-                                      )] ??
-                                      const <ElementoAgenda>[],
-                                  compatto: compatto,
-                                  massimoVoci: massimoVoci,
-                                  onTapVoce: onTapVoce,
-                                  onTapGiorno: onTapGiorno,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
+            if (constraints.hasBoundedHeight)
+              Expanded(child: griglia)
+            else
+              griglia,
           ],
         );
       },
@@ -347,9 +353,29 @@ class VistaGrigliaOraria extends StatelessWidget {
         final altezzaGriglia =
             ((intervallo.fine - intervallo.inizio) / 60) * altezzaOra;
 
+        final corpo = SingleChildScrollView(
+          child: SizedBox(
+            height: altezzaGriglia,
+            child: _GrigliaOraria(
+              giorni: giorni,
+              gruppi: gruppi,
+              intervallo: intervallo,
+              altezzaOra: altezzaOra,
+              larghezzaOra: larghezzaOra,
+              larghezzaGiorno: larghezzaGiorno,
+              nomiOperatori: nomiOperatori,
+              onTapVoce: onTapVoce,
+              onTapVuoto: onTapVuoto,
+            ),
+          ),
+        );
+
         final contenuto = SizedBox(
           width: larghezzaTotale,
           child: Column(
+            mainAxisSize: constraints.hasBoundedHeight
+                ? MainAxisSize.max
+                : MainAxisSize.min,
             children: [
               _IntestazioneGiorni(
                 giorni: giorni,
@@ -357,24 +383,10 @@ class VistaGrigliaOraria extends StatelessWidget {
                 larghezzaGiorno: larghezzaGiorno,
                 onTapGiorno: onTapGiorno,
               ),
-              Expanded(
-                child: SingleChildScrollView(
-                  child: SizedBox(
-                    height: altezzaGriglia,
-                    child: _GrigliaOraria(
-                      giorni: giorni,
-                      gruppi: gruppi,
-                      intervallo: intervallo,
-                      altezzaOra: altezzaOra,
-                      larghezzaOra: larghezzaOra,
-                      larghezzaGiorno: larghezzaGiorno,
-                      nomiOperatori: nomiOperatori,
-                      onTapVoce: onTapVoce,
-                      onTapVuoto: onTapVuoto,
-                    ),
-                  ),
-                ),
-              ),
+              if (constraints.hasBoundedHeight)
+                Expanded(child: corpo)
+              else
+                corpo,
               if (senzaOrario.isNotEmpty)
                 _BarraSenzaOrario(voci: senzaOrario, onTapVoce: onTapVoce),
             ],
