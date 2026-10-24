@@ -64,3 +64,15 @@ card. Periodi disponibili: **giorno**, **settimana**, **mese**; lo stile **Card*
 selezionabile per tutti e tre i periodi. Scelta di partenza: calendario **mensile**, perché dà subito la
 visione d'insieme; il periodo scelto dall'utente vale solo per la sessione. Nessuna nuova collezione, regola
 o dipendenza: solo UI e funzioni pure, coperte da test.
+
+## 2026-10-24 — Inviti appuntamento con conferma disponibilità
+
+Richiesta di Andrea: condividere un appuntamento con un collega o un gruppo, inviare una notifica e
+lasciare l'appuntamento **provvisorio** fino alla conferma. Scelte:
+
+- nessuna nuova collezione: `invitati_uids`, `conferme` e `stato_condivisione` su `appuntamenti`;
+- i gruppi sono le stanze chat di tipo `gruppo` già esistenti, selezionabili insieme alle singole persone;
+- l'invitato conferma dal dettaglio aperto dalla notifica (`/calendario?appuntamento=…`); la risposta è
+  registrata in transazione per non perdere conferme simultanee;
+- la prima conferma porta lo stato a `confermato`; tutti i rifiuti a `rifiutato`; altrimenti `in_attesa`.
+  Lo stato `stato` dell'appuntamento (da fare/fatto/annullato) resta separato.

@@ -71,9 +71,9 @@ class Appuntamento {
       outlookEventId: map['outlook_event_id'] as String?,
       invitatiUids: _listaUid(map['invitati_uids']),
       conferme: _mappaConferme(map['conferme']),
-      statoCondivisione:
-          (map['stato_condivisione'] as String?) ??
-          statoCondivisioneNonCondiviso,
+      statoCondivisione: _normalizzaStatoCondivisione(
+        map['stato_condivisione'],
+      ),
       createdBy: map['created_by'] as String?,
       createdAt: map['created_at'] as String?,
       updatedAt: map['updated_at'] as String?,
@@ -308,6 +308,18 @@ Map<String, dynamic> _mappaConferme(dynamic valore) {
     risultato[uid] = voce.value;
   }
   return risultato;
+}
+
+String _normalizzaStatoCondivisione(dynamic valore) {
+  final stato = valore?.toString().trim().toLowerCase() ?? '';
+  switch (stato) {
+    case statoCondivisioneInAttesa:
+    case statoCondivisioneConfermato:
+    case statoCondivisioneRifiutato:
+      return stato;
+    default:
+      return statoCondivisioneNonCondiviso;
+  }
 }
 
 DateTime? _combinaDataOra(String? data, String? ora) {

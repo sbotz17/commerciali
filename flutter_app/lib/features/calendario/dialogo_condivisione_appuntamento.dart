@@ -132,8 +132,8 @@ class _DialogoCondivisioneAppuntamentoState
     return AlertDialog(
       key: const Key('dialogo-condivisione-appuntamento'),
       title: const Text('Condividi appuntamento'),
-      content: SizedBox(
-        width: 520,
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

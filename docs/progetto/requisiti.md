@@ -211,6 +211,10 @@ settimana.
 (giorno, settimana, mese) è la vista predefinita e sostituisce l'apertura a card. L'elenco a card esistente
 resta selezionabile per tutti e tre i periodi.
 
+**Aggiornamento 2026-10-24 — condivisione appuntamento**: nel form si possono invitare colleghi e gruppi
+della chat. Ogni invitato riceve una notifica e conferma o rifiuta la disponibilità; l'appuntamento resta
+**in attesa** finché non arriva la prima conferma. Il dettaglio mostra le risposte; nessuna nuova collezione.
+
 **Casi limite**: fuso orario del dispositivo diverso da quello aziendale (mostrare l'ora aziendale con nota);
 molti elementi nel periodo (limite di query); elemento di altra azienda mai visibile.
 

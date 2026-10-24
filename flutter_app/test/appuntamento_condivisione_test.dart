@@ -33,6 +33,13 @@ void main() {
       expect(appuntamento.inAttesaDiConferma, isFalse);
     });
 
+    test('uno stato sconosciuto ricade su non condiviso', () {
+      final appuntamento = Appuntamento.fromMap({
+        'stato_condivisione': 'valore-vecchio',
+      }, id: 'a1');
+      expect(appuntamento.statoCondivisione, statoCondivisioneNonCondiviso);
+    });
+
     test('toMap include i campi di condivisione', () {
       final mappa = Appuntamento(
         id: 'a1',

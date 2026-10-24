@@ -109,6 +109,12 @@ Linee guida per le nuove schermate, da usare in fase di implementazione.
 - La vista card esistente resta disponibile per giorno, settimana e mese.
 - Tocco su uno spazio vuoto della griglia → nuovo appuntamento con data e ora proposte.
 
+**Aggiornamento 2026-10-24 — nuovo cliente e inviti**
+- Nel form appuntamento il cliente ha un pulsante **+** che apre la creazione e seleziona il nuovo cliente.
+- Sezione **Condivisione**: dialogo con gruppi della chat e singole persone; chip degli invitati.
+- Gli invitati ricevono una notifica In-App e confermano o rifiutano dal dettaglio dell'appuntamento.
+- Finché nessuno conferma lo stato è **In attesa di conferma**; poi diventa **Confermato** o **Non disponibile**.
+
 ### Appuntamento / Task
 - Form a sezioni: Dettagli, Cliente e operatore, Luogo, Promemoria, Allegati.
 - Solo titolo e data obbligatori; il resto facoltativo.

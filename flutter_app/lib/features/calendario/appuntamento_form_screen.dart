@@ -453,7 +453,13 @@ class _AppuntamentoFormScreenState
     );
     if (scelti == null || !mounted) return;
 
-    final ordinati = scelti.toList()..sort();
+    final corrente = _uidCorrente();
+    final ammessi = _nomiUtenti.keys.toSet();
+    if (corrente != null) ammessi.remove(corrente);
+    final ordinati = [
+      for (final uid in scelti)
+        if (ammessi.contains(uid)) uid,
+    ]..sort();
     setState(() {
       _invitatiUids = ordinati;
       _conferme = {
@@ -967,8 +973,10 @@ class _AppuntamentoFormScreenState
                           alignment: Alignment.centerLeft,
                           child: OutlinedButton.icon(
                             key: const Key('appuntamento-condivisione'),
-                            onPressed: _salvando ? null : _apriCondivisione,
-                            icon: _caricamentoGruppi
+                            onPressed: _salvando || _caricamentoUtenti
+                                ? null
+                                : _apriCondivisione,
+                            icon: _caricamentoUtenti || _caricamentoGruppi
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,

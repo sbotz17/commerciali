@@ -35,6 +35,8 @@ flutter_app/lib/
 - Agenda, task, notifiche, chat: base fatta (vedi `memoria/ui/` e report).
 - Calendario: vista classica giorno/settimana/mese e stile card; apertura predefinita sul calendario mensile
   (`calendario_logica.dart` + `viste_calendario.dart`).
+- Appuntamenti: nuovo cliente dal form e condivisione con persone/gruppi chat; notifica agli invitati,
+  conferma disponibilità e stato `in_attesa`/`confermato`/`rifiutato` (`dialogo_condivisione_appuntamento.dart`).
 - Integrazioni aziendali e condivisione calendario: O01–O04 fatti; O10 parziale; call manuale O11.
 - Menu desktop: `NavigationRail` con tutte le pagine e rotella Impostazioni in fondo; telefono con `NavigationBar` + drawer “Altro”.
 - Form appuntamento: sezione Partecipanti per invitare colleghi/gruppi; etichette visibili “Utente/Utenti” (campo dati `operatore_id` invariato).

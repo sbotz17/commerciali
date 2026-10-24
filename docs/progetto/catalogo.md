@@ -74,6 +74,8 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Calendario | `flutter_app/lib/features/calendario/calendario_screen.dart`, `calendario_logica.dart`, `viste_calendario.dart`, `appuntamento_form_screen.dart` | Calendario classico giorno/settimana/mese (predefinito) e stile card; creazione appuntamento con data/ora, dettaglio, Maps |
 | Calendario — logica | `flutter_app/lib/features/calendario/calendario_logica.dart` | `VistaAgenda`/`StileAgenda`, `ElementoAgenda`, raggruppamento, periodi, griglia del mese, posizionamento eventi sovrapposti |
 | Calendario — viste classiche | `flutter_app/lib/features/calendario/viste_calendario.dart` | `VistaMeseCalendario` e `VistaGrigliaOraria` per giorno/settimana, con “Senza orario” e tocco su spazio vuoto |
+| Condivisione appuntamento | `flutter_app/lib/features/calendario/dialogo_condivisione_appuntamento.dart` | Dialogo persone/gruppi chat, inviti e conferma disponibilità |
+| Inviti appuntamento — dati | `flutter_app/lib/data/models/appuntamento.dart`, `sp_service.dart` | `invitati_uids`, `conferme`, `stato_condivisione`; `rispondiInvitoAppuntamento` transazionale |
 | Test calendario | `flutter_app/test/calendario_test.dart` | Unit test di periodi e griglia oraria + widget test di mese, giorno e settimana |
 | Task | `flutter_app/lib/features/task/task_screen.dart`, `task_form_screen.dart` | Lista per periodi, filtri, completamento, form |
 | Notifiche | `flutter_app/lib/features/notifiche/notifiche_screen.dart`, `campanella_notifiche.dart` | Centro notifiche, badge, preferenze |

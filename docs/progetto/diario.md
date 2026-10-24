@@ -445,3 +445,13 @@
 - Etichette calendario/task/form cambiate da “Operatore/Operatori” a “Utente/Utenti” (i campi Firestore restano `operatore_id`).
 - Form appuntamento: sezione “Partecipanti” per invitare colleghi e gruppi, con rimozione e stato della condivisione.
 - `flutter analyze` 0; `flutter test` 806 verdi; app pubblicata su `commerciali-app.web.app`.
+
+## 2026-10-24 — Nuovo cliente e inviti con conferma disponibilità
+
+- Form appuntamento: il **+** accanto al cliente apre `ClienteFormScreen` e seleziona il cliente creato.
+- Nuova sezione **Condivisione**: dialogo con persone e gruppi della chat, chip degli invitati e stato.
+- `appuntamenti` esteso con `invitati_uids`, `conferme` e `stato_condivisione`; nessuna nuova collezione né regola.
+- Gli invitati ricevono una notifica In-App; il tocco apre il dettaglio (`/calendario?appuntamento=…`), dove possono confermare o rifiutare.
+- La risposta passa da `rispondiInvitoAppuntamento` in transazione e ricalcola lo stato: `in_attesa` → `confermato` / `rifiutato`.
+- Badge “In attesa di conferma” sulle card e nel dettaglio; icona clessidra nella griglia.
+- `flutter analyze` 0; `flutter test` 821 verdi.

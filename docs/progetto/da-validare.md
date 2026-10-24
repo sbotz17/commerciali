@@ -21,3 +21,21 @@ calendario. Il periodo scelto non viene memorizzato tra sessioni (si riparte dal
 **Come tornare indietro**: ripristinare `calendario_screen.dart` e `appuntamento_form_screen.dart` dal
 commit precedente; i nuovi file `calendario_logica.dart` e `viste_calendario.dart` possono restare senza
 effetto.
+
+## 2026-10-24 — Nuovo cliente e condivisione appuntamento
+
+**Cosa fa**: nel form appuntamento il **+** accanto al cliente apre la creazione cliente e lo seleziona
+subito. La sezione **Condivisione** permette di invitare una o più persone e uno o più gruppi della chat:
+gli invitati ricevono una notifica, aprono l'appuntamento dal centro notifiche e confermano o rifiutano la
+disponibilità. L'appuntamento resta **In attesa di conferma** finché il primo invitato non conferma; il
+dettaglio mostra lo stato di ciascuno.
+
+**Come provarlo**: creare un appuntamento con almeno un invitato; controllare la notifica sul suo account;
+confermare; verificare il badge “Confermato” e il dettaglio con le risposte; provare anche “Non disponibile”.
+
+**Rischi**: campi nuovi su `appuntamenti` (nessuna migrazione, i documenti vecchi restano validi); nessuna
+modifica a regole, indici o collezioni. Se un invito non parte, l'appuntamento viene comunque salvato e
+resta visibile nel calendario.
+
+**Come tornare indietro**: rimuovere i campi dal payload e ripristinare il form; i campi già scritti non
+impediscono il funzionamento della versione precedente.

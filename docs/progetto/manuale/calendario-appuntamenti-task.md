@@ -27,14 +27,19 @@ Gli elementi senza orario compaiono in **Senza orario**.
 
 ## Creare un appuntamento
 
-1. Premi **Nuovo appuntamento**.
+1. Premi **+** accanto a **Card** nella barra del calendario.
 2. Inserisci il **titolo** (obbligatorio).
 3. Scegli data, ora e durata.
-4. Collega un cliente, se serve.
+4. Collega un cliente, se serve. Con il **+** accanto al campo Cliente puoi crearne uno nuovo e selezionarlo subito.
 5. Assegna un **operatore**.
 6. Inserisci luogo e indirizzo.
-7. Aggiungi note e, se serve, foto o immagini.
-8. Salva.
+7. In **Condivisione** scegli una o più persone oppure un gruppo: ricevono una notifica e devono confermare.
+8. Aggiungi note e, se serve, foto o immagini.
+9. Salva.
+
+L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invitato non conferma la
+disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
+**Confermo** e **Non disponibile**.
 
 ### Icona auto
 

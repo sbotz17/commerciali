@@ -86,7 +86,7 @@ Tutte le collezioni hanno `azienda_id` e sono isolate per azienda.
 
 | Collezione | Scopo | Campi principali |
 |---|---|---|
-| `appuntamenti` | Appuntamenti generici o collegati a visite | titolo, data, ora, durata_min, cliente_id/nome, operatore_id, luogo, note, stato, visita_id, call_provider/url, meeting_id, google_event_id, outlook_event_id, etag_esterno |
+| `appuntamenti` | Appuntamenti generici o collegati a visite | titolo, data, ora, durata_min, cliente_id/nome, operatore_id, luogo, note, stato, visita_id, call_provider/url, meeting_id, google_event_id, outlook_event_id, etag_esterno, invitati_uids, conferme, stato_condivisione |
 | `task` | Attività e compiti | titolo, scadenza, operatore_id, priorita, note, cliente_id, appuntamento_id, stato, completato_da/at |
 | `promemoria` | Eventi programmati da inviare | riferito_a, elemento_id, destinatario_tipo, canale, destinatario, quando_at, stato, inviato_at, tentativi, errore, idempotenza_key |
 | `notifiche` | Consegne effettive in-app/push/WhatsApp | utente_uid, tipo, titolo, testo, target_tipo/id, canale, stato, programmata_at, inviata_at, letta_at, tentativi, errore, idempotenza_key |
@@ -363,3 +363,15 @@ automatici in Firestore.
 | N9 | `integrazioni` | write | client (anche self) | ❌ negato (`write: false`) |
 | N10 | `impostazioni_agenda` | write | membro non admin | ❌ negato |
 | N11 | `condivisioni_calendario` | read | utente disattivato (ex-membro) | ❌ negato |
+
+## 2026-10-24 — Inviti agli appuntamenti
+
+Campi aggiunti (facoltativi) a `appuntamenti`, senza nuova collezione e senza modifiche alle regole:
+
+- `invitati_uids`: elenco di uid di colleghi della stessa azienda;
+- `conferme`: mappa `uid → { stato: confermato|rifiutato, at }`;
+- `stato_condivisione`: `non_condiviso` | `in_attesa` | `confermato` | `rifiutato`.
+
+L'invitato aggiorna il documento con una transazione (già consentita dalla regola `update` per i membri);
+la notifica In-App usa la collezione `notifiche` esistente con `target_tipo = appuntamento` e
+`target_id = id` dell'appuntamento. Nessun indice nuovo.
