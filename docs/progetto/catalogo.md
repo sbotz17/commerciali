@@ -76,6 +76,7 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Calendario — viste classiche | `flutter_app/lib/features/calendario/viste_calendario.dart` | `VistaMeseCalendario` e `VistaGrigliaOraria` per giorno/settimana, con “Senza orario” e tocco su spazio vuoto |
 | Condivisione appuntamento | `flutter_app/lib/features/calendario/dialogo_condivisione_appuntamento.dart` | Dialogo persone/gruppi chat, inviti e conferma disponibilità |
 | Inviti appuntamento — dati | `flutter_app/lib/data/models/appuntamento.dart`, `sp_service.dart` | `invitati_uids`, `conferme`, `stato_condivisione`; `rispondiInvitoAppuntamento` transazionale |
+| Report inviti appuntamento | `docs/progetto/test/2026-10-24-inviti-appuntamento.md` | Analyze, 822 test, E2E regole reali e prova manuale da fare |
 | Test calendario | `flutter_app/test/calendario_test.dart` | Unit test di periodi e griglia oraria + widget test di mese, giorno e settimana |
 | Task | `flutter_app/lib/features/task/task_screen.dart`, `task_form_screen.dart` | Lista per periodi, filtri, completamento, form |
 | Notifiche | `flutter_app/lib/features/notifiche/notifiche_screen.dart`, `campanella_notifiche.dart` | Centro notifiche, badge, preferenze |
