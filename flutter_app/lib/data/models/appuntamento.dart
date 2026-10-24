@@ -1,9 +1,16 @@
 // Modello dell'appuntamento in agenda.
 //
 // I campi del documento Firestore sono snake_case (`azienda_id`,
-// `durata_min`, `call_provider`, `created_at`); il modello li espone in
-// camelCase ([aziendaId], [durataMin], [callProvider], [createdAt]) come
+// `durata_min`, `call_provider`, `invitati_uids`, `stato_condivisione`,
+// `created_at`); il modello li espone in camelCase ([aziendaId], [durataMin],
+// [callProvider], [invitatiUids], [statoCondivisione], [createdAt]) come
 // convenzione Dart/Flutter.
+
+/// Stato della condivisione dell'appuntamento con i colleghi.
+const String statoCondivisioneNonCondiviso = 'non_condiviso';
+const String statoCondivisioneInAttesa = 'in_attesa';
+const String statoCondivisioneConfermato = 'confermato';
+const String statoCondivisioneRifiutato = 'rifiutato';
 
 /// Appuntamento come vive nella collezione Firestore `appuntamenti`.
 ///
@@ -31,6 +38,9 @@ class Appuntamento {
     this.meetingId,
     this.googleEventId,
     this.outlookEventId,
+    this.invitatiUids = const [],
+    this.conferme = const {},
+    this.statoCondivisione = statoCondivisioneNonCondiviso,
     this.createdBy,
     this.createdAt,
     this.updatedAt,
@@ -59,6 +69,11 @@ class Appuntamento {
       meetingId: map['meeting_id'] as String?,
       googleEventId: map['google_event_id'] as String?,
       outlookEventId: map['outlook_event_id'] as String?,
+      invitatiUids: _listaUid(map['invitati_uids']),
+      conferme: _mappaConferme(map['conferme']),
+      statoCondivisione:
+          (map['stato_condivisione'] as String?) ??
+          statoCondivisioneNonCondiviso,
       createdBy: map['created_by'] as String?,
       createdAt: map['created_at'] as String?,
       updatedAt: map['updated_at'] as String?,
@@ -128,6 +143,21 @@ class Appuntamento {
   /// Id dell'evento Outlook (campo `outlook_event_id`).
   final String? outlookEventId;
 
+  /// Uid dei colleghi invitati a confermare la disponibilità (campo
+  /// `invitati_uids`).
+  final List<String> invitatiUids;
+
+  /// Risposte degli invitati: uid → `{stato, at}` (campo `conferme`).
+  final Map<String, dynamic> conferme;
+
+  /// Stato della condivisione (`non_condiviso`, `in_attesa`, `confermato`,
+  /// `rifiutato`). Campo `stato_condivisione`, default `non_condiviso`.
+  final String statoCondivisione;
+
+  /// `true` quando ci sono invitati e nessuno ha ancora confermato.
+  bool get inAttesaDiConferma =>
+      invitatiUids.isNotEmpty && statoCondivisione == statoCondivisioneInAttesa;
+
   /// Id dell'utente che ha creato il record (campo `created_by`).
   final String? createdBy;
 
@@ -140,37 +170,39 @@ class Appuntamento {
   /// Serializza verso i campi Firestore (snake_case), escluso [id] che è la
   /// chiave documento.
   Map<String, dynamic> toMap() => {
-        'azienda_id': aziendaId,
-        'titolo': titolo,
-        'tipo': tipo,
-        'data': data,
-        'ora': ora,
-        'durata_min': durataMin,
-        'cliente_id': clienteId,
-        'cliente_nome': clienteNome,
-        'operatore_id': operatoreId,
-        'luogo': luogo,
-        'indirizzo': indirizzo,
-        'note': note,
-        'stato': stato,
-        'visita_id': visitaId,
-        'call_provider': callProvider,
-        'call_url': callUrl,
-        'meeting_id': meetingId,
-        'google_event_id': googleEventId,
-        'outlook_event_id': outlookEventId,
-        'created_by': createdBy,
-        'created_at': createdAt,
-        'updated_at': updatedAt,
-      };
+    'azienda_id': aziendaId,
+    'titolo': titolo,
+    'tipo': tipo,
+    'data': data,
+    'ora': ora,
+    'durata_min': durataMin,
+    'cliente_id': clienteId,
+    'cliente_nome': clienteNome,
+    'operatore_id': operatoreId,
+    'luogo': luogo,
+    'indirizzo': indirizzo,
+    'note': note,
+    'stato': stato,
+    'visita_id': visitaId,
+    'call_provider': callProvider,
+    'call_url': callUrl,
+    'meeting_id': meetingId,
+    'google_event_id': googleEventId,
+    'outlook_event_id': outlookEventId,
+    'invitati_uids': invitatiUids,
+    'conferme': conferme,
+    'stato_condivisione': statoCondivisione,
+    'created_by': createdBy,
+    'created_at': createdAt,
+    'updated_at': updatedAt,
+  };
 }
 
 /// Combina [data] (`YYYY-MM-DD`) e [ora] (`HH:MM`) in un [DateTime].
 ///
 /// Ritorna `null` se una delle due è assente, non rispetta il formato o
 /// rappresenta una data/ora non valida (es. `2026-02-30` o `25:00`).
-DateTime? dataOraAppuntamento(Appuntamento a) =>
-    _combinaDataOra(a.data, a.ora);
+DateTime? dataOraAppuntamento(Appuntamento a) => _combinaDataOra(a.data, a.ora);
 
 /// Etichetta leggibile per lo stato di un appuntamento, con fallback.
 String etichettaStatoAppuntamento(String? stato) {
@@ -184,10 +216,104 @@ String etichettaStatoAppuntamento(String? stato) {
   return etichette[s] ?? s;
 }
 
+/// Etichetta italiana dello stato di condivisione.
+String etichettaStatoCondivisione(String? stato) {
+  switch (stato?.trim().toLowerCase()) {
+    case statoCondivisioneInAttesa:
+      return 'In attesa di conferma';
+    case statoCondivisioneConfermato:
+      return 'Confermato';
+    case statoCondivisioneRifiutato:
+      return 'Non disponibile';
+    default:
+      return 'Non condiviso';
+  }
+}
+
+/// Etichetta della risposta di un singolo invitato (`null` = in attesa).
+String etichettaRispostaInvito(String? stato) {
+  switch (stato?.trim().toLowerCase()) {
+    case 'confermato':
+      return 'Confermato';
+    case 'rifiutato':
+      return 'Non disponibile';
+    default:
+      return 'In attesa';
+  }
+}
+
+/// Stato (`confermato`/`rifiutato`) della risposta dell'utente [uid], oppure
+/// `null` se non ha ancora risposto.
+String? rispostaInvito(Map<String, dynamic> conferme, String uid) {
+  final valore = conferme[uid];
+  if (valore is Map) {
+    final stato = (valore['stato'] as String?)?.trim().toLowerCase();
+    return stato == 'confermato' || stato == 'rifiutato' ? stato : null;
+  }
+  if (valore is String) {
+    final stato = valore.trim().toLowerCase();
+    return stato == 'confermato' || stato == 'rifiutato' ? stato : null;
+  }
+  return null;
+}
+
+/// Calcola lo stato della condivisione dalle risposte ricevute.
+///
+/// - nessun invitato → `non_condiviso`;
+/// - almeno un `confermato` → `confermato`;
+/// - tutti hanno risposto `rifiutato` → `rifiutato`;
+/// - altrimenti → `in_attesa`.
+String statoCondivisioneDaConferme(
+  List<String> invitati,
+  Map<String, dynamic> conferme,
+) {
+  final unici = <String>{
+    for (final uid in invitati)
+      if (uid.trim().isNotEmpty) uid.trim(),
+  };
+  if (unici.isEmpty) return statoCondivisioneNonCondiviso;
+
+  var risposte = 0;
+  var confermati = 0;
+  for (final uid in unici) {
+    final risposta = rispostaInvito(conferme, uid);
+    if (risposta == null) continue;
+    risposte++;
+    if (risposta == 'confermato') confermati++;
+  }
+  if (confermati > 0) return statoCondivisioneConfermato;
+  if (risposte == unici.length) return statoCondivisioneRifiutato;
+  return statoCondivisioneInAttesa;
+}
+
+List<String> _listaUid(dynamic valore) {
+  if (valore is! List) return const [];
+  final visti = <String>{};
+  final risultato = <String>[];
+  for (final elemento in valore) {
+    if (elemento is! String) continue;
+    final uid = elemento.trim();
+    if (uid.isEmpty || !visti.add(uid)) continue;
+    risultato.add(uid);
+  }
+  return risultato;
+}
+
+Map<String, dynamic> _mappaConferme(dynamic valore) {
+  if (valore is! Map) return const {};
+  final risultato = <String, dynamic>{};
+  for (final voce in valore.entries) {
+    final uid = voce.key.toString().trim();
+    if (uid.isEmpty) continue;
+    risultato[uid] = voce.value;
+  }
+  return risultato;
+}
+
 DateTime? _combinaDataOra(String? data, String? ora) {
   if (data == null || ora == null) return null;
-  final dataMatch =
-      RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(data.trim());
+  final dataMatch = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$')
+      .firstMatch(data.trim());
   final oraMatch = RegExp(r'^(\d{2}):(\d{2})$').firstMatch(ora.trim());
   if (dataMatch == null || oraMatch == null) return null;
 

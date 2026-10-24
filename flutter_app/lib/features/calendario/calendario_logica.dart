@@ -512,6 +512,26 @@ String etichettaStatoElemento(ElementoAgenda elemento) {
   return etichettaStatoTask(elemento.task?.stato);
 }
 
+/// Etichetta della condivisione dell'appuntamento, oppure `null` se la voce è
+/// un task o non è condivisa.
+String? etichettaCondivisioneElemento(ElementoAgenda elemento) {
+  final stato = elemento.appuntamento?.statoCondivisione;
+  if (stato == null || stato == statoCondivisioneNonCondiviso) return null;
+  return etichettaStatoCondivisione(stato);
+}
+
+/// Colore del badge di condivisione della voce.
+Color coloreCondivisioneElemento(ElementoAgenda elemento) {
+  switch (elemento.appuntamento?.statoCondivisione) {
+    case statoCondivisioneConfermato:
+      return AppColors.accettato;
+    case statoCondivisioneRifiutato:
+      return AppColors.errore;
+    default:
+      return AppColors.attesa;
+  }
+}
+
 /// Colore del badge di stato della voce.
 Color coloreStatoElemento(ElementoAgenda elemento) {
   final stato = elemento.isAppuntamento
@@ -564,3 +584,7 @@ String etichettaDataOraElemento(ElementoAgenda elemento) {
 const String azioneModificaVoce = 'modifica';
 const String azioneEliminaVoce = 'elimina';
 const String azioneApriTaskVoce = 'apri-task';
+
+/// Azioni di risposta a un invito di condivisione.
+const String azioneConfermaInvitoVoce = 'conferma-invito';
+const String azioneRifiutaInvitoVoce = 'rifiuta-invito';

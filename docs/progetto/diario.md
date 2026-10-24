@@ -437,3 +437,11 @@
 - La rail mostra tutte le pagine (Dashboard, Clienti, Catalogo, Preventivi, Visite, Calendario, Task, Chat, Bandi, Notifiche) e la rotella Impostazioni in fondo.
 - Su telefono resta la `NavigationBar` con quattro voci principali e drawer “Altro”.
 - `flutter analyze` 0; `flutter test` 805 verdi; app pubblicata su `commerciali-app.web.app`.
+
+## 2026-10-24 — Pulizia dati di test ed etichette “Utente”
+
+- Rimossi due utenti E2E rimasti nell’azienda Closer (`Agenda A` e `Agenda B`, email `@commerciali.test`), le loro membership, i documenti personali e gli account Auth. Verificato che in Closer resti solo l’utente reale.
+- Aggiunto `scripts/pulisci-dati-test.py`: cerca utenti `@commerciali.test`/`e2e-` e rimuove membership, dati personali e account Auth senza toccare dati reali.
+- Etichette calendario/task/form cambiate da “Operatore/Operatori” a “Utente/Utenti” (i campi Firestore restano `operatore_id`).
+- Form appuntamento: sezione “Partecipanti” per invitare colleghi e gruppi, con rimozione e stato della condivisione.
+- `flutter analyze` 0; `flutter test` 806 verdi; app pubblicata su `commerciali-app.web.app`.

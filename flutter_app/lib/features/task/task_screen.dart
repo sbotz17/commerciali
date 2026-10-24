@@ -581,13 +581,13 @@ class _Filtri extends StatelessWidget {
             key: const Key('task-filtro-operatore'),
             initialValue: valoreOperatore,
             decoration: const InputDecoration(
-              labelText: 'Operatore',
+              labelText: 'Utente',
               isDense: true,
             ),
             items: [
               const DropdownMenuItem<String>(
                 value: '',
-                child: Text('Tutti gli operatori'),
+                child: Text('Tutti gli utenti'),
               ),
               for (final utente in utenti)
                 DropdownMenuItem<String>(

@@ -8,15 +8,19 @@ import '../../core/theme/app_theme.dart';
 import '../../core/ui/avviso_errore.dart';
 import '../../data/models/appuntamento.dart';
 import '../../data/models/cliente.dart';
+import '../../data/models/stanza_chat.dart';
 import '../../data/models/user_profile.dart';
+import '../../data/services/sp_service.dart';
 import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
+import '../clienti/clienti_screen.dart' show ClienteFormScreen;
 import '../visite/visite_screen.dart'
     show
         dataIsoVisita,
         formattaDataVisita,
         normalizzaOraVisita,
         parseDataItaliana;
+import 'dialogo_condivisione_appuntamento.dart';
 
 // ---------------------------------------------------------------------------
 // Funzioni pure: stati, validazioni, link Maps e messaggi (verificabili senza
@@ -72,6 +76,20 @@ String? validaCallAppuntamento(String? provider, String? link) {
     return 'Inserisci un link valido (https://...)';
   }
   return null;
+}
+
+/// Colore del badge di stato della condivisione.
+Color coloreStatoCondivisione(String stato) {
+  switch (stato.trim().toLowerCase()) {
+    case statoCondivisioneConfermato:
+      return AppColors.accettato;
+    case statoCondivisioneRifiutato:
+      return AppColors.errore;
+    case statoCondivisioneInAttesa:
+      return AppColors.attesa;
+    default:
+      return AppColors.attesa;
+  }
 }
 
 /// Link Google Maps per raggiungere [indirizzo], o `null` se è vuoto.
@@ -213,9 +231,22 @@ class _AppuntamentoFormScreenState
 
   List<Cliente> _clienti = const [];
   List<UserProfile> _utenti = const [];
+  List<StanzaChat> _gruppi = const [];
+  List<String> _invitatiUids = const [];
+  Map<String, dynamic> _conferme = const {};
   bool _caricamentoClienti = true;
   bool _caricamentoUtenti = true;
+  bool _caricamentoGruppi = true;
   Object? _erroreClienti;
+
+  /// Nomi degli utenti dell'azienda per il dialogo di condivisione.
+  Map<String, String> get _nomiUtenti => {
+    for (final utente in _utenti) utente.uid: nomeUtenteAppuntamento(utente),
+  };
+
+  /// Stato della condivisione calcolato dalle risposte presenti nel form.
+  String get _statoCondivisione =>
+      statoCondivisioneDaConferme(_invitatiUids, _conferme);
 
   bool _salvando = false;
   String? _errore;
@@ -245,6 +276,10 @@ class _AppuntamentoFormScreenState
 
     _clienteId = appuntamento?.clienteId;
     _operatoreId = appuntamento?.operatoreId ?? _uidCorrente();
+    _invitatiUids = [...?appuntamento?.invitatiUids];
+    _conferme = Map<String, dynamic>.from(
+      appuntamento?.conferme ?? const <String, dynamic>{},
+    );
 
     final stato = (appuntamento?.stato ?? 'da_fare').trim().toLowerCase();
     _stato = statiAppuntamento.containsKey(stato) ? stato : 'da_fare';
@@ -280,25 +315,29 @@ class _AppuntamentoFormScreenState
     }
   }
 
-  /// Carica clienti e utenti in parallelo.
+  /// Carica clienti, utenti e gruppi in parallelo.
   ///
   /// L'errore dei clienti blocca la tendina e mostra "Riprova"; l'errore degli
-  /// utenti lascia la tendina operatore sul solo utente corrente.
+  /// utenti lascia la tendina operatore sul solo utente corrente. Senza gruppi
+  /// resta disponibile la condivisione con le singole persone.
   Future<void> _caricaDati() async {
     setState(() {
       _caricamentoClienti = true;
       _caricamentoUtenti = true;
+      _caricamentoGruppi = true;
       _erroreClienti = null;
     });
 
     Future<List<Cliente>>? clientiFuturo;
     Future<List<UserProfile>>? utentiFuturo;
+    Future<List<StanzaChat>>? gruppiFuturo;
     Object? erroreAvvio;
     try {
       final servizio = ref.read(spServiceProvider);
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
       clientiFuturo = servizio.getClienti();
       utentiFuturo = servizio.getUtenti();
+      gruppiFuturo = servizio.getChatStanze();
     } catch (errore) {
       erroreAvvio = errore;
     }
@@ -306,6 +345,7 @@ class _AppuntamentoFormScreenState
     List<Cliente>? clienti;
     Object? erroreClienti = erroreAvvio;
     List<UserProfile>? utenti;
+    List<StanzaChat>? gruppi;
     if (clientiFuturo != null) {
       try {
         clienti = await clientiFuturo;
@@ -320,16 +360,28 @@ class _AppuntamentoFormScreenState
         // Senza elenco utenti resta l'operatore corrente (se noto).
       }
     }
+    if (gruppiFuturo != null) {
+      try {
+        gruppi = await gruppiFuturo;
+      } catch (_) {
+        // Senza gruppi si invitano le singole persone.
+      }
+    }
 
     if (!mounted) return;
     setState(() {
       final clientiCaricati = clienti;
       final utentiCaricati = utenti;
+      final gruppiCaricati = gruppi;
       if (clientiCaricati != null) _clienti = clientiCaricati;
       if (utentiCaricati != null) _utenti = utentiCaricati;
+      if (gruppiCaricati != null) {
+        _gruppi = gruppiCaricati.where((g) => g.tipo == 'gruppo').toList();
+      }
       _erroreClienti = erroreClienti;
       _caricamentoClienti = false;
       _caricamentoUtenti = false;
+      _caricamentoGruppi = false;
     });
   }
 
@@ -365,6 +417,64 @@ class _AppuntamentoFormScreenState
       opzioni[id] = 'Utente corrente';
     }
     return opzioni;
+  }
+
+  /// Nome leggibile di un invitato, con uid come fallback.
+  String _nomeInvitato(String uid) {
+    for (final utente in _utenti) {
+      if (utente.uid == uid) return nomeUtenteAppuntamento(utente);
+    }
+    return uid;
+  }
+
+  /// Apre il form cliente e seleziona subito il cliente appena creato.
+  Future<void> _creaCliente() async {
+    String? nuovoId;
+    final salvato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => ClienteFormScreen(onSalvato: (id) => nuovoId = id),
+      ),
+    );
+    if (salvato != true || !mounted) return;
+    final id = nuovoId?.trim() ?? '';
+    if (id.isEmpty) return;
+    setState(() => _clienteId = id);
+    await _caricaDati();
+  }
+
+  /// Apre il dialogo per scegliere colleghi e gruppi da invitare.
+  Future<void> _apriCondivisione() async {
+    final scelti = await mostraDialogoCondivisioneAppuntamento(
+      context,
+      utenti: _nomiUtenti,
+      gruppi: _gruppi,
+      selezionati: _invitatiUids.toSet(),
+      uidCorrente: _uidCorrente(),
+    );
+    if (scelti == null || !mounted) return;
+
+    final ordinati = scelti.toList()..sort();
+    setState(() {
+      _invitatiUids = ordinati;
+      _conferme = {
+        for (final voce in _conferme.entries)
+          if (ordinati.contains(voce.key)) voce.key: voce.value,
+      };
+    });
+  }
+
+  /// Toglie un invitato e la sua risposta.
+  void _rimuoviInvitato(String uid) {
+    setState(() {
+      _invitatiUids = [
+        for (final voce in _invitatiUids)
+          if (voce != uid) voce,
+      ];
+      _conferme = {
+        for (final voce in _conferme.entries)
+          if (voce.key != uid) voce.key: voce.value,
+      };
+    });
   }
 
   Future<void> _scegliData() async {
@@ -480,6 +590,11 @@ class _AppuntamentoFormScreenState
     final durata = int.tryParse(_durata.text.trim()) ?? 60;
 
     setState(() => _salvando = true);
+    final nuoviInvitati = [
+      for (final uid in _invitatiUids)
+        if (!(appuntamento?.invitatiUids ?? const <String>[]).contains(uid))
+          uid,
+    ];
     final dati = <String, dynamic>{
       'titolo': _titolo.text,
       'tipo': appuntamento?.tipo ?? 'appuntamento',
@@ -494,6 +609,9 @@ class _AppuntamentoFormScreenState
       'indirizzo': _indirizzo.text,
       'note': _note.text,
       'stato': _stato,
+      'invitati_uids': _invitatiUids,
+      'conferme': _conferme,
+      'stato_condivisione': _statoCondivisione,
       // Campi non gestiti dal form: preservati in modifica.
       'visita_id': appuntamento?.visitaId,
       'call_provider': _callProvider == 'nessuna' ? null : _callProvider,
@@ -506,11 +624,13 @@ class _AppuntamentoFormScreenState
     try {
       final servizio = ref.read(spServiceProvider);
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final Map<String, dynamic> salvato;
       if (appuntamento != null) {
-        await servizio.aggiornaAppuntamento(appuntamento.id, dati);
+        salvato = await servizio.aggiornaAppuntamento(appuntamento.id, dati);
       } else {
-        await servizio.inserisciAppuntamento(dati);
+        salvato = await servizio.inserisciAppuntamento(dati);
       }
+      await _inviaInviti(servizio, salvato['id']?.toString(), nuoviInvitati);
       if (!mounted) return;
       Navigator.of(context).pop(true);
       return;
@@ -519,6 +639,48 @@ class _AppuntamentoFormScreenState
       setState(() => _errore = messaggioErroreAppuntamenti(errore));
     } finally {
       if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  /// Invia la notifica di invito ai colleghi appena aggiunti.
+  ///
+  /// Un errore di notifica non annulla il salvataggio dell'appuntamento: gli
+  /// inviti restano visibili nel dettaglio e possono essere confermati anche
+  /// dal calendario.
+  Future<void> _inviaInviti(
+    SpService servizio,
+    String? appuntamentoId,
+    List<String> destinatari,
+  ) async {
+    final id = appuntamentoId?.trim() ?? '';
+    if (id.isEmpty || destinatari.isEmpty) return;
+
+    final titolo = _titolo.text.trim();
+    final nome = titolo.isEmpty ? 'Appuntamento' : titolo;
+    final giorno = dataIsoVisita(parseDataItaliana(_data.text) ?? _dataScelta);
+    final data = DateTime.tryParse(giorno);
+    final quando = data == null ? giorno : formattaDataVisita(data);
+    final ora = normalizzaOraVisita(_ora.text);
+    final cliente = _clienteSelezionato?.nome?.trim() ?? '';
+    final testo = [
+      'Invito per "$nome" il $quando${ora == null ? '' : ' alle $ora'}',
+      if (cliente.isNotEmpty) 'Cliente: $cliente',
+      'Apri il calendario e conferma la disponibilità.',
+    ].join('. ');
+
+    for (final uid in destinatari) {
+      try {
+        await servizio.creaNotifica(
+          utenteUid: uid,
+          tipo: 'appuntamento',
+          titolo: 'Conferma disponibilità: $nome',
+          testo: testo,
+          targetTipo: 'appuntamento',
+          targetId: id,
+        );
+      } catch (_) {
+        // La notifica non deve impedire il salvataggio dell'appuntamento.
+      }
     }
   }
 
@@ -645,49 +807,62 @@ class _AppuntamentoFormScreenState
                     _SezioneAppuntamento(
                       titolo: 'Partecipanti',
                       figli: [
-                        DropdownButtonFormField<String>(
-                          key: const Key('appuntamento-cliente'),
-                          initialValue: _clienteId ?? '',
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            labelText: 'Cliente',
-                            helperText: _caricamentoClienti
-                                ? 'Caricamento clienti…'
-                                : null,
-                          ),
-                          items: [
-                            const DropdownMenuItem(
-                              value: '',
-                              child: Text('Nessun cliente'),
-                            ),
-                            for (final voce in opzioniClienti.entries)
-                              DropdownMenuItem(
-                                value: voce.key,
-                                child: Text(
-                                  voce.value,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                key: const Key('appuntamento-cliente'),
+                                initialValue: _clienteId ?? '',
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Cliente',
+                                  helperText: _caricamentoClienti
+                                      ? 'Caricamento clienti…'
+                                      : null,
                                 ),
+                                items: [
+                                  const DropdownMenuItem(
+                                    value: '',
+                                    child: Text('Nessun cliente'),
+                                  ),
+                                  for (final voce in opzioniClienti.entries)
+                                    DropdownMenuItem(
+                                      value: voce.key,
+                                      child: Text(
+                                        voce.value,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                ],
+                                onChanged: _salvando || _caricamentoClienti
+                                    ? null
+                                    : (valore) => setState(() {
+                                        _clienteId =
+                                            (valore == null || valore.isEmpty)
+                                            ? null
+                                            : valore;
+                                      }),
                               ),
+                            ),
+                            const SizedBox(width: AppSpazi.xxs),
+                            IconButton.filledTonal(
+                              key: const Key('appuntamento-nuovo-cliente'),
+                              tooltip: 'Nuovo cliente',
+                              onPressed: _salvando ? null : _creaCliente,
+                              icon: const Icon(Icons.add),
+                            ),
                           ],
-                          onChanged: _salvando || _caricamentoClienti
-                              ? null
-                              : (valore) => setState(() {
-                                  _clienteId =
-                                      (valore == null || valore.isEmpty)
-                                      ? null
-                                      : valore;
-                                }),
                         ),
                         DropdownButtonFormField<String>(
                           key: const Key('appuntamento-operatore'),
                           initialValue: _operatoreId,
                           isExpanded: true,
                           decoration: InputDecoration(
-                            labelText: 'Operatore',
-                            hintText: 'Scegli un operatore',
+                            labelText: 'Utente',
+                            hintText: 'Scegli un utente',
                             helperText: _caricamentoUtenti
-                                ? 'Caricamento operatori…'
+                                ? 'Caricamento utenti…'
                                 : null,
                           ),
                           items: [
@@ -723,6 +898,138 @@ class _AppuntamentoFormScreenState
                             ),
                           ),
                         ],
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Condivisione',
+                      figli: const [],
+                      extra: [
+                        if (_invitatiUids.isEmpty)
+                          Text(
+                            'Nessun collega invitato. Puoi condividere '
+                            'l\'appuntamento con una persona o un gruppo: '
+                            'riceveranno una notifica e dovranno confermare.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          )
+                        else ...[
+                          Wrap(
+                            spacing: AppSpazi.xs,
+                            runSpacing: AppSpazi.xxs,
+                            children: [
+                              for (final uid in _invitatiUids)
+                                InputChip(
+                                  key: Key('appuntamento-invitato-$uid'),
+                                  label: Text(_nomeInvitato(uid)),
+                                  onDeleted: _salvando
+                                      ? null
+                                      : () => _rimuoviInvitato(uid),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpazi.xs),
+                          Row(
+                            children: [
+                              Icon(
+                                _statoCondivisione ==
+                                        statoCondivisioneConfermato
+                                    ? Icons.check_circle_outline
+                                    : _statoCondivisione ==
+                                          statoCondivisioneRifiutato
+                                    ? Icons.cancel_outlined
+                                    : Icons.hourglass_top,
+                                size: 16,
+                                color: coloreStatoCondivisione(
+                                  _statoCondivisione,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpazi.xxs),
+                              Text(
+                                etichettaStatoCondivisione(_statoCondivisione),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: coloreStatoCondivisione(
+                                        _statoCondivisione,
+                                      ),
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: AppSpazi.xs),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            key: const Key('appuntamento-condivisione'),
+                            onPressed: _salvando ? null : _apriCondivisione,
+                            icon: _caricamentoGruppi
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.group_add_outlined),
+                            label: const Text('Scegli persone o gruppi'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Partecipanti',
+                      figli: [
+                        if (_invitatiUids.isEmpty)
+                          Text(
+                            'Nessun collega invitato.',
+                            key: const Key('appuntamento-nessun-invitato'),
+                            style: tema.textTheme.bodyMedium?.copyWith(
+                              color: tema.colorScheme.onSurfaceVariant,
+                            ),
+                          )
+                        else
+                          Wrap(
+                            spacing: AppSpazi.xs,
+                            runSpacing: AppSpazi.xs,
+                            children: [
+                              for (final uid in _invitatiUids)
+                                InputChip(
+                                  key: Key('appuntamento-invitato-$uid'),
+                                  label: Text(_nomeInvitato(uid)),
+                                  onDeleted: _salvando
+                                      ? null
+                                      : () => _rimuoviInvitato(uid),
+                                ),
+                            ],
+                          ),
+                        const SizedBox(height: AppSpazi.xs),
+                        OutlinedButton.icon(
+                          key: const Key('appuntamento-condividi'),
+                          onPressed: (_salvando || _caricamentoGruppi)
+                              ? null
+                              : _apriCondivisione,
+                          icon: const Icon(Icons.group_add_outlined),
+                          label: Text(
+                            _caricamentoGruppi
+                                ? 'Caricamento partecipanti…'
+                                : 'Scegli partecipanti',
+                          ),
+                        ),
+                        const SizedBox(height: AppSpazi.xxs),
+                        Text(
+                          'I colleghi invitati ricevono l’appuntamento nella '
+                          'loro area e possono confermare o rifiutare.',
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpazi.m),
@@ -927,24 +1234,25 @@ class _SezioneAppuntamento extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppSpazi.s),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final doppia = constraints.maxWidth >= 520;
-                final larghezza = doppia
-                    ? (constraints.maxWidth - AppSpazi.s) / 2
-                    : constraints.maxWidth;
-                return Wrap(
-                  spacing: AppSpazi.s,
-                  runSpacing: AppSpazi.s,
-                  children: [
-                    for (final figlio in figli)
-                      SizedBox(width: larghezza, child: figlio),
-                  ],
-                );
-              },
-            ),
+            if (figli.isNotEmpty)
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final doppia = constraints.maxWidth >= 520;
+                  final larghezza = doppia
+                      ? (constraints.maxWidth - AppSpazi.s) / 2
+                      : constraints.maxWidth;
+                  return Wrap(
+                    spacing: AppSpazi.s,
+                    runSpacing: AppSpazi.s,
+                    children: [
+                      for (final figlio in figli)
+                        SizedBox(width: larghezza, child: figlio),
+                    ],
+                  );
+                },
+              ),
             if (extra.isNotEmpty) ...[
-              const SizedBox(height: AppSpazi.s),
+              if (figli.isNotEmpty) const SizedBox(height: AppSpazi.s),
               ...extra,
             ],
           ],

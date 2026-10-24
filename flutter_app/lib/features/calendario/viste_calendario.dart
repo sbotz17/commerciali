@@ -728,6 +728,13 @@ class _EventoGriglia extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (voce.elemento.appuntamento?.inAttesaDiConferma ==
+                            true)
+                          const Icon(
+                            Icons.hourglass_top,
+                            size: 10,
+                            color: AppColors.attesa,
+                          ),
                       ],
                     ),
                   if (altezza >= 32)

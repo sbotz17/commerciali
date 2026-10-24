@@ -18,6 +18,7 @@ import '../../core/ui/stato_centrato.dart';
 import '../../data/models/appuntamento.dart';
 import '../../data/models/task_item.dart';
 import '../../data/models/user_profile.dart';
+import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
 import '../visite/visite_screen.dart' show dataIsoVisita, formattaDataVisita;
 import 'appuntamento_form_screen.dart'
@@ -39,7 +40,11 @@ export 'viste_calendario.dart';
 /// Calendario dell'agenda con viste giorno/settimana/mese (calendario classico
 /// o card) e filtro operatore.
 class CalendarioScreen extends ConsumerStatefulWidget {
-  const CalendarioScreen({super.key});
+  const CalendarioScreen({super.key, this.appuntamentoId});
+
+  /// Id dell'appuntamento da aprire subito, usato dal tocco su una notifica
+  /// di invito (`/calendario?appuntamento=...`).
+  final String? appuntamentoId;
 
   @override
   ConsumerState<CalendarioScreen> createState() => _CalendarioScreenState();
@@ -50,6 +55,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
   VistaAgenda _vista = vistaAgendaPredefinita;
   StileAgenda _stile = stileAgendaPredefinito;
   String _operatoreId = '';
+  bool _appuntamentoApertoDaNotifica = false;
 
   List<Appuntamento> _appuntamenti = const [];
   List<TaskItem> _task = const [];
@@ -128,12 +134,56 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       _errore = errore;
       _caricamento = false;
     });
+    _apriAppuntamentoDaNotifica();
+  }
+
+  @override
+  void didUpdateWidget(covariant CalendarioScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.appuntamentoId != widget.appuntamentoId) {
+      _appuntamentoApertoDaNotifica = false;
+      _apriAppuntamentoDaNotifica();
+    }
+  }
+
+  /// Apre il dettaglio dell'appuntamento indicato dal tocco su una notifica.
+  ///
+  /// Parte solo una volta per id: dopo una risposta o una ricarica il dialogo
+  /// non si riapre da solo.
+  void _apriAppuntamentoDaNotifica() {
+    final id = widget.appuntamentoId?.trim() ?? '';
+    if (id.isEmpty || _appuntamentoApertoDaNotifica || _caricamento) return;
+
+    Appuntamento? trovato;
+    for (final appuntamento in _appuntamenti) {
+      if (appuntamento.id == id) {
+        trovato = appuntamento;
+        break;
+      }
+    }
+    if (trovato == null) return;
+
+    final elementi = elementiDaAppuntamenti([trovato]);
+    if (elementi.isEmpty) return;
+    _appuntamentoApertoDaNotifica = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _apriDettaglio(elementi.first);
+    });
   }
 
   /// Nomi degli operatori per le card, con uid come fallback.
   Map<String, String> get _nomiOperatori => {
     for (final utente in _utenti) utente.uid: nomeUtenteAppuntamento(utente),
   };
+
+  /// Uid dell'utente corrente, `null` se Firebase non è disponibile.
+  String? get _uidCorrente {
+    try {
+      return ref.read(firebaseAuthProvider).currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Voci di tutti i giorni, filtrate per operatore.
   List<ElementoAgenda> get _elementi {
@@ -185,8 +235,11 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
   Future<void> _apriDettaglio(ElementoAgenda elemento) async {
     final azione = await showDialog<String>(
       context: context,
-      builder: (_) =>
-          _DialogoElemento(elemento: elemento, nomiOperatori: _nomiOperatori),
+      builder: (_) => _DialogoElemento(
+        elemento: elemento,
+        nomiOperatori: _nomiOperatori,
+        uidCorrente: _uidCorrente,
+      ),
     );
     if (!mounted || azione == null) return;
 
@@ -201,6 +254,43 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       await _modificaAppuntamento(appuntamento);
     } else if (azione == azioneEliminaVoce) {
       await _eliminaAppuntamento(appuntamento);
+    } else if (azione == azioneConfermaInvitoVoce ||
+        azione == azioneRifiutaInvitoVoce) {
+      await _rispondiInvito(
+        appuntamento,
+        disponibile: azione == azioneConfermaInvitoVoce,
+      );
+    }
+  }
+
+  /// Registra la conferma o il rifiuto dell'utente e ricarica l'agenda.
+  Future<void> _rispondiInvito(
+    Appuntamento appuntamento, {
+    required bool disponibile,
+  }) async {
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      await servizio.rispondiInvitoAppuntamento(
+        appuntamento.id,
+        disponibile: disponibile,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            disponibile
+                ? 'Disponibilità confermata'
+                : 'Disponibilità non confermata',
+          ),
+        ),
+      );
+      await _carica();
+    } catch (errore) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(messaggioErroreAppuntamenti(errore))),
+      );
     }
   }
 
@@ -449,10 +539,7 @@ class _BarraCalendario extends StatelessWidget {
         initialValue: operatoreId,
         isExpanded: true,
         isDense: true,
-        decoration: const InputDecoration(
-          labelText: 'Operatore',
-          isDense: true,
-        ),
+        decoration: const InputDecoration(labelText: 'Utente', isDense: true),
         items: [
           const DropdownMenuItem(value: '', child: Text('Tutti')),
           for (final voce in operatori.entries)
@@ -897,19 +984,45 @@ class _CardElemento extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpazi.xs),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpazi.xs,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: colore.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(AppRaggi.chip),
-                ),
-                child: Text(
-                  etichettaStatoElemento(elemento),
-                  style: tema.textTheme.labelSmall?.copyWith(color: colore),
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpazi.xs,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colore.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppRaggi.chip),
+                    ),
+                    child: Text(
+                      etichettaStatoElemento(elemento),
+                      style: tema.textTheme.labelSmall?.copyWith(color: colore),
+                    ),
+                  ),
+                  if (etichettaCondivisioneElemento(elemento) != null) ...[
+                    const SizedBox(height: AppSpazi.xxs),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpazi.xs,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: coloreCondivisioneElemento(elemento)
+                            .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRaggi.chip),
+                      ),
+                      child: Text(
+                        etichettaCondivisioneElemento(elemento)!,
+                        style: tema.textTheme.labelSmall?.copyWith(
+                          color: coloreCondivisioneElemento(elemento),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ],
           ),
@@ -925,10 +1038,15 @@ class _CardElemento extends StatelessWidget {
 /// `azioneModificaVoce`, `azioneEliminaVoce`, `azioneApriTaskVoce`; i link
 /// esterni (Maps e call) vengono aperti qui.
 class _DialogoElemento extends StatelessWidget {
-  const _DialogoElemento({required this.elemento, required this.nomiOperatori});
+  const _DialogoElemento({
+    required this.elemento,
+    required this.nomiOperatori,
+    this.uidCorrente,
+  });
 
   final ElementoAgenda elemento;
   final Map<String, String> nomiOperatori;
+  final String? uidCorrente;
 
   /// Apre [uri] nel browser/app esterna, con messaggio italiano in caso di
   /// errore.
@@ -966,6 +1084,16 @@ class _DialogoElemento extends StatelessWidget {
     final descrizione = task?.descrizione?.trim() ?? '';
     final note = (appuntamento?.note ?? task?.note ?? '').trim();
 
+    final invitati = appuntamento?.invitatiUids ?? const <String>[];
+    final condivisione =
+        appuntamento?.statoCondivisione ?? statoCondivisioneNonCondiviso;
+    final invitato = uidCorrente != null && invitati.contains(uidCorrente);
+    final risposteInvitati = [
+      for (final uid in invitati)
+        '${(nomiOperatori[uid] ?? '').trim().isEmpty ? uid : nomiOperatori[uid]}: '
+            '${etichettaRispostaInvito(rispostaInvito(appuntamento?.conferme ?? const {}, uid))}',
+    ].join('\n');
+
     return AlertDialog(
       key: const Key('calendario-dettaglio'),
       title: Text(elemento.titolo),
@@ -983,9 +1111,16 @@ class _DialogoElemento extends StatelessWidget {
               valore: etichettaStatoElemento(elemento),
             ),
             _RigaDettaglio(
-              etichetta: 'Cliente e operatore',
+              etichetta: 'Cliente e utente',
               valore: dettaglioElemento(elemento, nomiOperatori),
             ),
+            if (invitati.isNotEmpty) ...[
+              _RigaDettaglio(
+                etichetta: 'Condivisione',
+                valore: etichettaStatoCondivisione(condivisione),
+              ),
+              _RigaDettaglio(etichetta: 'Invitati', valore: risposteInvitati),
+            ],
             if (luogo.isNotEmpty)
               _RigaDettaglio(etichetta: 'Luogo', valore: luogo),
             if (indirizzo.isNotEmpty)
@@ -1013,6 +1148,24 @@ class _DialogoElemento extends StatelessWidget {
             icon: const Icon(Icons.videocam_outlined),
             label: const Text('Apri call'),
           ),
+        if (invitato) ...[
+          FilledButton.icon(
+            key: const Key('calendario-conferma-invito'),
+            onPressed: () =>
+                Navigator.of(context).pop(azioneConfermaInvitoVoce),
+            icon: const Icon(Icons.check),
+            label: const Text('Confermo'),
+          ),
+          TextButton.icon(
+            key: const Key('calendario-rifiuta-invito'),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(context).pop(azioneRifiutaInvitoVoce),
+            icon: const Icon(Icons.close),
+            label: const Text('Non disponibile'),
+          ),
+        ],
         if (elemento.isAppuntamento) ...[
           OutlinedButton(
             key: const Key('calendario-modifica'),

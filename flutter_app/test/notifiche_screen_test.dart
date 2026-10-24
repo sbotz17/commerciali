@@ -14,6 +14,7 @@ void main() {
     String? lettaAt,
     String? createdAt,
     String? targetTipo,
+    String? targetId,
   }) {
     return Notifica(
       id: id,
@@ -23,6 +24,7 @@ void main() {
       lettaAt: lettaAt,
       createdAt: createdAt,
       targetTipo: targetTipo,
+      targetId: targetId,
     );
   }
 
@@ -126,6 +128,15 @@ void main() {
           notifica(id: 'n-1', tipo: 'promemoria', targetTipo: 'task'),
         ),
         '/task',
+      );
+    });
+
+    test('apre l’appuntamento specifico quando c’è targetId', () {
+      expect(
+        rottaNotifica(
+          notifica(id: 'n-1', tipo: 'appuntamento', targetId: 'app 1'),
+        ),
+        '/calendario?appuntamento=app+1',
       );
     });
 

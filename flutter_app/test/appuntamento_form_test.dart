@@ -190,7 +190,9 @@ void main() {
         'appuntamento-ora',
         'appuntamento-durata',
         'appuntamento-cliente',
+        'appuntamento-nuovo-cliente',
         'appuntamento-operatore',
+        'appuntamento-condivisione',
         'appuntamento-call-provider',
         'appuntamento-call-url',
         'appuntamento-call-copia',
@@ -216,6 +218,27 @@ void main() {
           .width;
 
       expect(larghezzaNote, greaterThan(larghezzaLuogo * 1.5));
+    });
+
+    testWidgets('apre il dialogo di condivisione con colleghi e gruppi', (
+      tester,
+    ) async {
+      await apriForm(tester);
+
+      final condivisione = find.byKey(const Key('appuntamento-condivisione'));
+      await tester.ensureVisible(condivisione);
+      await tester.pumpAndSettle();
+      await tester.tap(condivisione);
+      await tester.pumpAndSettle();
+
+      expect(
+        find.byKey(const Key('dialogo-condivisione-appuntamento')),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Nessun collega disponibile da invitare.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('propone la data iniziale e la durata di 60 minuti', (

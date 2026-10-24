@@ -141,3 +141,11 @@ L’E2E verifica con due utenti reali della stessa azienda:
 **Verdetto tester: SUPERATO per la modifica del menu laterale** (analisi 0, 6/6 test mirati verdi, suite completa verde, rail a 10 voci senza “Altro” e senza Impostazioni, rotella `rail-impostazioni` funzionante, barra telefono a 5 voci con drawer “Altro”). L'E2E browser su staging resta un residuo generale del progetto, dichiarato sopra.
 
 **Validazione (24/10/2026): APPROVATO TECNICO per staging** — modifica del menu laterale verificata (rail desktop a 10 voci senza "Altro" né Impostazioni, rotella `rail-impostazioni` in fondo, barra telefono a 5 voci con drawer "Altro", selezione corretta delle rotte). Non rilasciabile in produzione: resta il residuo generale E2E browser (O12).
+
+
+## Pulizia dati di test (24/10/2026)
+
+- Trovati e rimossi due utenti E2E rimasti in Closer: `Agenda A` e `Agenda B` (`@commerciali.test`), con membership, dati personali e account Auth.
+- Verificato che in `Closer` resti solo l’utente reale e che non ci siano altre aziende/utenti con marcatori `e2e`/`test`.
+- Aggiunto `scripts/pulisci-dati-test.py`; eseguito: “Nessun utente di test trovato”.
+- `flutter analyze` 0; `flutter test` 806 verdi; app ripubblicata.

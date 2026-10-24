@@ -477,10 +477,10 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                           initialValue: _operatoreId,
                           isExpanded: true,
                           decoration: InputDecoration(
-                            labelText: 'Operatore',
-                            hintText: 'Scegli un operatore',
+                            labelText: 'Utente',
+                            hintText: 'Scegli un utente',
                             helperText: _caricamento
-                                ? 'Caricamento operatori…'
+                                ? 'Caricamento utenti…'
                                 : null,
                           ),
                           items: [

@@ -231,15 +231,26 @@ Map<String, dynamic> normalizzaImpostazioniAgenda(Map<String, dynamic> dati) {
   return <String, dynamic>{
     'fuso_orario': stringa(val('fuso_orario', 'fusoOrario'), 'Europe/Rome'),
     'anticipo_min': interoPositivo('anticipo_min', 'anticipoMin', 1440),
-    'orario_invio_cliente':
-        orario('orario_invio_cliente', 'orarioInvioCliente', '18:00'),
-    'canale_cliente':
-        stringa(val('canale_cliente', 'canaleCliente'), 'whatsapp'),
+    'orario_invio_cliente': orario(
+      'orario_invio_cliente',
+      'orarioInvioCliente',
+      '18:00',
+    ),
+    'canale_cliente': stringa(
+      val('canale_cliente', 'canaleCliente'),
+      'whatsapp',
+    ),
     'slot_durata_min': interoPositivo('slot_durata_min', 'slotDurataMin', 60),
-    'slot_finestra_giorni':
-        interoPositivo('slot_finestra_giorni', 'slotFinestraGiorni', 14),
-    'slot_scadenza_giorni':
-        interoPositivo('slot_scadenza_giorni', 'slotScadenzaGiorni', 7),
+    'slot_finestra_giorni': interoPositivo(
+      'slot_finestra_giorni',
+      'slotFinestraGiorni',
+      14,
+    ),
+    'slot_scadenza_giorni': interoPositivo(
+      'slot_scadenza_giorni',
+      'slotScadenzaGiorni',
+      7,
+    ),
     'allegati_max_kb': interoPositivo('allegati_max_kb', 'allegatiMaxKb', 5120),
     'allegati_max': interoPositivo('allegati_max', 'allegatiMax', 10),
     'maps_attivo': booleano('maps_attivo', 'mapsAttivo', true),
@@ -342,19 +353,18 @@ class SpService {
         .where('utente_id', isEqualTo: uid)
         .get();
 
-    final aziende = await Future.wait(membri.docs.map((m) async {
-      final aziendaId = m.data()['azienda_id'] as String?;
-      if (aziendaId == null) return null;
-      final az = await _firestore.collection('aziende').doc(aziendaId).get();
-      if (!az.exists) return null;
-      return Azienda.fromMap(
-        {
+    final aziende = await Future.wait(
+      membri.docs.map((m) async {
+        final aziendaId = m.data()['azienda_id'] as String?;
+        if (aziendaId == null) return null;
+        final az = await _firestore.collection('aziende').doc(aziendaId).get();
+        if (!az.exists) return null;
+        return Azienda.fromMap({
           ...az.data()!,
           'ruolo': m.data()['ruolo'],
-        },
-        id: az.id,
-      );
-    }));
+        }, id: az.id);
+      }),
+    );
 
     return aziende.whereType<Azienda>().toList();
   }
@@ -461,20 +471,13 @@ class SpService {
   }
 
   /// Aggiunge (o aggiorna) la membership `membri/{aziendaId}_{utenteId}`.
-  Future<void> aggiungiMembro(
-    String aziendaId,
-    String utenteId,
-    String ruolo,
-  ) {
-    return _firestore
-        .collection('membri')
-        .doc('${aziendaId}_$utenteId')
-        .set({
-          'azienda_id': aziendaId,
-          'utente_id': utenteId,
-          'ruolo': ruolo,
-          'created_at': _now(),
-        }, SetOptions(merge: true));
+  Future<void> aggiungiMembro(String aziendaId, String utenteId, String ruolo) {
+    return _firestore.collection('membri').doc('${aziendaId}_$utenteId').set({
+      'azienda_id': aziendaId,
+      'utente_id': utenteId,
+      'ruolo': ruolo,
+      'created_at': _now(),
+    }, SetOptions(merge: true));
   }
 
   /// Popola un'azienda nuova: 2 ruoli di sistema, 3 categorie e licenza trial.
@@ -521,10 +524,11 @@ class SpService {
       },
     ];
     for (final r in ruoli) {
-      batch.set(
-        _firestore.collection('ruoli').doc(),
-        {...r, 'azienda_id': aziendaId, 'created_at': _now()},
-      );
+      batch.set(_firestore.collection('ruoli').doc(), {
+        ...r,
+        'azienda_id': aziendaId,
+        'created_at': _now(),
+      });
     }
 
     final categorie = <Map<String, dynamic>>[
@@ -533,28 +537,25 @@ class SpService {
       {'nome': 'hardware', 'icona': '🖥️', 'ordine': 3},
     ];
     for (final c in categorie) {
-      batch.set(
-        _firestore.collection('categorie').doc(),
-        {...c, 'azienda_id': aziendaId, 'created_at': _now()},
-      );
+      batch.set(_firestore.collection('categorie').doc(), {
+        ...c,
+        'azienda_id': aziendaId,
+        'created_at': _now(),
+      });
     }
 
     final oggi = DateTime.now();
     final fine = oggi.add(const Duration(days: 14));
-    batch.set(
-      _firestore.collection('licenze').doc(aziendaId),
-      {
-        'azienda_id': aziendaId,
-        'piano': 'trial',
-        'stato': 'attiva',
-        'data_inizio': _data(oggi),
-        'data_fine': _data(fine),
-        'max_utenti': 2,
-        'max_preventivi': 20,
-        'updated_at': _now(),
-      },
-      SetOptions(merge: true),
-    );
+    batch.set(_firestore.collection('licenze').doc(aziendaId), {
+      'azienda_id': aziendaId,
+      'piano': 'trial',
+      'stato': 'attiva',
+      'data_inizio': _data(oggi),
+      'data_fine': _data(fine),
+      'max_utenti': 2,
+      'max_preventivi': 20,
+      'updated_at': _now(),
+    }, SetOptions(merge: true));
 
     await batch.commit();
   }
@@ -574,16 +575,18 @@ class SpService {
         .where('azienda_id', isEqualTo: aziendaId)
         .get();
 
-    final utenti = await Future.wait(membri.docs.map((m) async {
-      final uid = m.data()['utente_id'] as String?;
-      if (uid == null) return null;
-      final u = await _firestore.collection('utenti').doc(uid).get();
-      if (!u.exists) return null;
-      return UserProfile.fromMap(
-        {...u.data()!, 'ruolo': m.data()['ruolo']},
-        id: u.id,
-      );
-    }));
+    final utenti = await Future.wait(
+      membri.docs.map((m) async {
+        final uid = m.data()['utente_id'] as String?;
+        if (uid == null) return null;
+        final u = await _firestore.collection('utenti').doc(uid).get();
+        if (!u.exists) return null;
+        return UserProfile.fromMap({
+          ...u.data()!,
+          'ruolo': m.data()['ruolo'],
+        }, id: u.id);
+      }),
+    );
 
     return utenti.whereType<UserProfile>().toList();
   }
@@ -595,14 +598,11 @@ class SpService {
   Future<void> aggiornaRuoloUtente(String uid, String ruolo) {
     final aziendaId = _aziendaAttiva;
     if (aziendaId == null) return Future.value();
-    return _firestore
-        .collection('membri')
-        .doc('${aziendaId}_$uid')
-        .set({
-          'azienda_id': aziendaId,
-          'utente_id': uid,
-          'ruolo': ruolo,
-        }, SetOptions(merge: true));
+    return _firestore.collection('membri').doc('${aziendaId}_$uid').set({
+      'azienda_id': aziendaId,
+      'utente_id': uid,
+      'ruolo': ruolo,
+    }, SetOptions(merge: true));
   }
 
   /// Elimina la membership `membri/{aziendaId}_{uid}` del membro [uid]
@@ -874,10 +874,9 @@ class SpService {
     if (ordini.isEmpty) return;
     final batch = _firestore.batch();
     for (final o in ordini) {
-      batch.update(
-        _firestore.collection('giro_visite').doc(o.id),
-        {'ordine': o.ordine},
-      );
+      batch.update(_firestore.collection('giro_visite').doc(o.id), {
+        'ordine': o.ordine,
+      });
     }
     await batch.commit();
   }
@@ -1029,6 +1028,52 @@ class SpService {
     return _firestore.collection('appuntamenti').doc(id).delete();
   }
 
+  /// Registra la risposta di disponibilità dell'utente corrente all'invito
+  /// dell'appuntamento [id].
+  ///
+  /// La transazione evita che due invitati che rispondono insieme si
+  /// sovrascrivano la risposta. Aggiorna `conferme.{uid}`, ricalcola
+  /// `stato_condivisione` e `updated_at`. L'utente deve essere tra gli
+  /// invitati dell'appuntamento.
+  Future<void> rispondiInvitoAppuntamento(
+    String id, {
+    required bool disponibile,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) throw StateError('Utente non autenticato');
+    final riferimento = _firestore.collection('appuntamenti').doc(id);
+
+    await _firestore.runTransaction((transazione) async {
+      final documento = await transazione.get(riferimento);
+      if (!documento.exists) {
+        throw StateError('Appuntamento non trovato');
+      }
+      final dati = documento.data() ?? const <String, dynamic>{};
+      final invitati = sanificaFigliIds(dati['invitati_uids']);
+      if (!invitati.contains(uid)) {
+        throw StateError('Non sei invitato a questo appuntamento');
+      }
+
+      final conferme = <String, dynamic>{};
+      final grezze = dati['conferme'];
+      if (grezze is Map) {
+        for (final voce in grezze.entries) {
+          conferme[voce.key.toString()] = voce.value;
+        }
+      }
+      conferme[uid] = {
+        'stato': disponibile ? 'confermato' : 'rifiutato',
+        'at': _now(),
+      };
+
+      transazione.update(riferimento, {
+        'conferme': conferme,
+        'stato_condivisione': statoCondivisioneDaConferme(invitati, conferme),
+        'updated_at': _now(),
+      });
+    });
+  }
+
   /// Costruisce il payload Firestore di un appuntamento, coerente con il
   /// modello [Appuntamento].
   ///
@@ -1055,6 +1100,14 @@ class SpService {
       'meeting_id': _stringaNull(dati['meeting_id']),
       'google_event_id': _stringaNull(dati['google_event_id']),
       'outlook_event_id': _stringaNull(dati['outlook_event_id']),
+      'invitati_uids': sanificaFigliIds(dati['invitati_uids']),
+      'conferme': dati['conferme'] is Map
+          ? Map<String, dynamic>.from(dati['conferme'] as Map)
+          : const <String, dynamic>{},
+      'stato_condivisione': _stringa(
+        dati['stato_condivisione'],
+        fallback: statoCondivisioneNonCondiviso,
+      ),
     };
     if (_aziendaAttiva != null) payload['azienda_id'] = _aziendaAttiva;
     return payload;
@@ -1082,7 +1135,9 @@ class SpService {
     final task = snap.docs
         .map((d) => TaskItem.fromMap(d.data(), id: d.id))
         .toList();
-    return ordinaTask(filtraTask(task, soloAperti: soloAperti, operatoreId: operatoreId));
+    return ordinaTask(
+      filtraTask(task, soloAperti: soloAperti, operatoreId: operatoreId),
+    );
   }
 
   /// Crea un task nell'azienda attiva.
@@ -1184,14 +1239,11 @@ class SpService {
   /// `azienda_id` e `updated_at`. Richiede un'azienda attiva.
   Future<void> salvaImpostazioniAgenda(Map<String, dynamic> dati) async {
     _richiediAzienda();
-    await _firestore
-        .collection('impostazioni_agenda')
-        .doc(_aziendaAttiva)
-        .set({
-          ...dati,
-          'azienda_id': _aziendaAttiva,
-          'updated_at': _now(),
-        }, SetOptions(merge: true));
+    await _firestore.collection('impostazioni_agenda').doc(_aziendaAttiva).set({
+      ...dati,
+      'azienda_id': _aziendaAttiva,
+      'updated_at': _now(),
+    }, SetOptions(merge: true));
   }
 
   // ---------- integrazioni calendario ----------
@@ -1227,14 +1279,11 @@ class SpService {
   ) async {
     _richiediAzienda();
     final aziendaId = _aziendaAttiva!;
-    await _firestore
-        .collection('integrazioni_azienda')
-        .doc(aziendaId)
-        .set({
-          ...integrazione.toMap(),
-          'azienda_id': aziendaId,
-          'updated_at': _now(),
-        }, SetOptions(merge: true));
+    await _firestore.collection('integrazioni_azienda').doc(aziendaId).set({
+      ...integrazione.toMap(),
+      'azienda_id': aziendaId,
+      'updated_at': _now(),
+    }, SetOptions(merge: true));
   }
 
   /// Elenco delle condivisioni di calendario create dall'utente corrente
@@ -1320,13 +1369,13 @@ class SpService {
     final ref = _firestore.collection('condivisioni_calendario').doc(id);
     final snap = await ref.get();
     if (snap.exists && snap.data() != null) {
-      final esistente =
-          CondivisioneCalendario.fromMap(snap.data()!, id: snap.id);
+      final esistente = CondivisioneCalendario.fromMap(
+        snap.data()!,
+        id: snap.id,
+      );
       if (esistente.attiva) {
         if (esistente.livello == livello) return;
-        throw StateError(
-          'Revoca la condivisione prima di cambiare livello.',
-        );
+        throw StateError('Revoca la condivisione prima di cambiare livello.');
       }
       await ref.delete();
     }
@@ -1421,25 +1470,22 @@ class SpService {
     // su un documento inesistente `resource` è null e la lettura sarebbe
     // negata anche al primo preventivo. Creiamo (o aggiorniamo) il documento
     // con l'azienda prima della transazione, così la lettura è consentita.
-    await ref.set(
-      {'azienda_id': _aziendaAttiva, 'updated_at': _now()},
-      SetOptions(merge: true),
-    );
+    await ref.set({
+      'azienda_id': _aziendaAttiva,
+      'updated_at': _now(),
+    }, SetOptions(merge: true));
     var n = 1;
     await _firestore.runTransaction((tx) async {
       final snap = await tx.get(ref);
-      final valore =
-          snap.exists ? (snap.data()?['valore'] as num? ?? 0).toInt() : 0;
+      final valore = snap.exists
+          ? (snap.data()?['valore'] as num? ?? 0).toInt()
+          : 0;
       n = valore + 1;
-      tx.set(
-        ref,
-        {
-          'azienda_id': _aziendaAttiva,
-          'valore': n,
-          'updated_at': _now(),
-        },
-        SetOptions(merge: true),
-      );
+      tx.set(ref, {
+        'azienda_id': _aziendaAttiva,
+        'valore': n,
+        'updated_at': _now(),
+      }, SetOptions(merge: true));
     });
     return formatoNumeroPreventivo(n);
   }
@@ -1509,8 +1555,9 @@ class SpService {
 
     final baseNum = numeroBasePreventivo(vecchio.numero ?? '');
     final nuovaRev = vecchio.revisione + 1;
-    final nuovoNumero =
-        baseNum.isEmpty ? null : numeroRevisione(baseNum, nuovaRev);
+    final nuovoNumero = baseNum.isEmpty
+        ? null
+        : numeroRevisione(baseNum, nuovaRev);
 
     final payload = <String, dynamic>{
       'azienda_id': _aziendaAttiva ?? vecchio.aziendaId,
@@ -1767,12 +1814,12 @@ class SpService {
         .where('utente_uid', isEqualTo: uid)
         .snapshots()
         .map((snap) {
-      var notifiche = snap.docs
-          .map((d) => Notifica.fromMap(d.data(), id: d.id))
-          .toList();
-      if (soloNonLette) notifiche = filtraNotificheNonLette(notifiche);
-      return ordinaNotifiche(notifiche);
-    });
+          var notifiche = snap.docs
+              .map((d) => Notifica.fromMap(d.data(), id: d.id))
+              .toList();
+          if (soloNonLette) notifiche = filtraNotificheNonLette(notifiche);
+          return ordinaNotifiche(notifiche);
+        });
   }
 
   /// Segna la notifica [id] come letta (imposta `letta_at` ISO).
@@ -1792,10 +1839,9 @@ class SpService {
     for (final blocco in aBlocchi(lista, 400)) {
       final batch = _firestore.batch();
       for (final id in blocco) {
-        batch.update(
-          _firestore.collection('notifiche').doc(id),
-          {'letta_at': ora},
-        );
+        batch.update(_firestore.collection('notifiche').doc(id), {
+          'letta_at': ora,
+        });
       }
       await batch.commit();
     }
@@ -1913,11 +1959,13 @@ class SpService {
         .where('azienda_id', isEqualTo: aziendaId)
         .where('partecipanti_uids', arrayContains: uid)
         .snapshots()
-        .map((snap) => ordinaStanzeChat(
-              snap.docs
-                  .map((d) => StanzaChat.fromMap(d.data(), id: d.id))
-                  .toList(),
-            ));
+        .map(
+          (snap) => ordinaStanzeChat(
+            snap.docs
+                .map((d) => StanzaChat.fromMap(d.data(), id: d.id))
+                .toList(),
+          ),
+        );
   }
 
   /// Crea (o restituisce, se già esiste) la stanza diretta tra l'utente
@@ -1997,12 +2045,14 @@ class SpService {
         .collection('messaggi')
         .snapshots()
         .map((snap) {
-      final messaggi = snap.docs
-          .map((d) => MessaggioChat.fromMap(d.data(), id: d.id))
-          .toList();
-      messaggi.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
-      return messaggi;
-    });
+          final messaggi = snap.docs
+              .map((d) => MessaggioChat.fromMap(d.data(), id: d.id))
+              .toList();
+          messaggi.sort(
+            (a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''),
+          );
+          return messaggi;
+        });
   }
 
   /// Invia un messaggio nella stanza [stanzaId].
@@ -2037,7 +2087,8 @@ class SpService {
       'image_key': img,
       'created_at': ora,
       'eliminato': false,
-      'idempotenza_key': '$stanzaId:$uid:${DateTime.now().microsecondsSinceEpoch}',
+      'idempotenza_key':
+          '$stanzaId:$uid:${DateTime.now().microsecondsSinceEpoch}',
     };
     final ref = await _firestore
         .collection('chat_stanze')
@@ -2060,11 +2111,7 @@ class SpService {
         .doc(stanzaId)
         .collection('messaggi')
         .doc(messaggioId)
-        .update({
-          'eliminato': true,
-          'testo': '',
-          'image_key': null,
-        });
+        .update({'eliminato': true, 'testo': '', 'image_key': null});
   }
 
   /// Segna la stanza [stanzaId] come letta dall'utente corrente.
@@ -2112,7 +2159,10 @@ class SpService {
   /// `figli_a_zero` (bool); se le chiavi mancano i campi non vengono aggiunti,
   /// così un aggiornamento parziale non cancella i figli esistenti.
   /// `azienda_id` è incluso solo se è impostata un'azienda attiva.
-  Map<String, dynamic> _prodottoPayload(Map<String, dynamic> dati, {String? id}) {
+  Map<String, dynamic> _prodottoPayload(
+    Map<String, dynamic> dati, {
+    String? id,
+  }) {
     final payload = <String, dynamic>{
       'nome': _stringa(dati['nome']),
       'codice': _stringa(dati['codice']),

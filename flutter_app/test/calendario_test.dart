@@ -18,6 +18,9 @@ void main() {
     String? clienteNome,
     String stato = 'da_fare',
     int durataMin = 60,
+    List<String> invitatiUids = const [],
+    Map<String, dynamic> conferme = const {},
+    String statoCondivisione = statoCondivisioneNonCondiviso,
   }) {
     return Appuntamento(
       id: id,
@@ -28,6 +31,9 @@ void main() {
       clienteNome: clienteNome,
       stato: stato,
       durataMin: durataMin,
+      invitatiUids: invitatiUids,
+      conferme: conferme,
+      statoCondivisione: statoCondivisione,
     );
   }
 
@@ -215,6 +221,31 @@ void main() {
         'ACME Srl · Mario Rossi',
       );
       expect(dettaglioElemento(elemento, const {}), 'ACME Srl');
+    });
+
+    test('la condivisione mostra un badge solo quando è attiva', () {
+      final nonCondiviso = elementiDaAppuntamenti([appuntamento()]).single;
+      final inAttesa = elementiDaAppuntamenti([
+        appuntamento(
+          invitatiUids: const ['u1'],
+          statoCondivisione: statoCondivisioneInAttesa,
+        ),
+      ]).single;
+      final confermato = elementiDaAppuntamenti([
+        appuntamento(
+          invitatiUids: const ['u1'],
+          conferme: const {
+            'u1': {'stato': 'confermato'},
+          },
+          statoCondivisione: statoCondivisioneConfermato,
+        ),
+      ]).single;
+
+      expect(etichettaCondivisioneElemento(nonCondiviso), isNull);
+      expect(etichettaCondivisioneElemento(inAttesa), 'In attesa di conferma');
+      expect(etichettaCondivisioneElemento(confermato), 'Confermato');
+      expect(coloreCondivisioneElemento(inAttesa), AppColors.attesa);
+      expect(coloreCondivisioneElemento(confermato), AppColors.accettato);
     });
   });
 

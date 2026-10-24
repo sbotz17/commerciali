@@ -80,7 +80,10 @@ String? rottaNotifica(Notifica notifica) {
   for (final tipo in [notifica.tipo, notifica.targetTipo]) {
     switch (tipo?.trim().toLowerCase()) {
       case 'appuntamento':
-        return '/calendario';
+        final id = notifica.targetId?.trim() ?? '';
+        return id.isEmpty
+            ? '/calendario'
+            : '/calendario?appuntamento=${Uri.encodeQueryComponent(id)}';
       case 'task':
         return '/task';
       case 'chat':

@@ -84,7 +84,9 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Integrazioni aziendali | `flutter_app/lib/features/impostazioni/impostazioni_integrazioni_screen.dart`, `data/models/integrazione_azienda.dart` | Card Google/Microsoft/SMTP/WhatsApp/R2/Push, modalità app Closer/app propria, nessun secret in Firestore |
 | Condivisione calendario | `flutter_app/lib/features/impostazioni/condivisione_calendario_screen.dart`, `data/models/condivisione_calendario.dart` | Condivisione con colleghi, livelli, revoca, “Condivisi con me” |
 | Call manuale | `flutter_app/lib/features/calendario/appuntamento_form_screen.dart` | Provider Meet/Teams/altro, link, copia, apertura, validazione |
-| Report integrazioni/calendario | `docs/progetto/test/2026-10-24-integrazioni-calendario.md` | O01–O04, E2E regole, 778 test verdi |
+| Condivisione appuntamento | `flutter_app/lib/features/calendario/dialogo_condivisione_appuntamento.dart`, `appuntamento_form_screen.dart` | Invito di colleghi/gruppi, stato condivisione, rimozione partecipanti |
+| Pulizia dati test | `scripts/pulisci-dati-test.py` | Rimuove utenti `@commerciali.test`/`e2e-`, membership e account Auth |
+| Report integrazioni/calendario | `docs/progetto/test/2026-10-24-integrazioni-calendario.md` | O01–O04, E2E regole, 806 test verdi |
 | Report amministrazione/bandi | `docs/progetto/test/2026-10-22-amministrazione-bandi.md` | E2E ruoli, utenti, azienda, import e ATECO |
 
 ## Collezioni Firestore

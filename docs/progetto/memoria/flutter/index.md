@@ -37,6 +37,8 @@ flutter_app/lib/
   (`calendario_logica.dart` + `viste_calendario.dart`).
 - Integrazioni aziendali e condivisione calendario: O01–O04 fatti; O10 parziale; call manuale O11.
 - Menu desktop: `NavigationRail` con tutte le pagine e rotella Impostazioni in fondo; telefono con `NavigationBar` + drawer “Altro”.
+- Form appuntamento: sezione Partecipanti per invitare colleghi/gruppi; etichette visibili “Utente/Utenti” (campo dati `operatore_id` invariato).
+- Pulizia dati test: `scripts/pulisci-dati-test.py`.
 - Prossimo: Worker OAuth (O06/O07), connessioni utente (O08), vista calendario condiviso (O09), call automatica (O11), E2E browser (O12).
 
 ## Punti fermi

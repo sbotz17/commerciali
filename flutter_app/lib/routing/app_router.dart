@@ -81,9 +81,8 @@ GoRouter creaAppRouter({String? initialLocation}) {
           // (con numero e revisione) arriva in F12b-2.
           GoRoute(
             path: '/preventivi/:id',
-            builder: (context, state) => PreventivoEditScreen(
-              preventivoId: state.pathParameters['id'],
-            ),
+            builder: (context, state) =>
+                PreventivoEditScreen(preventivoId: state.pathParameters['id']),
           ),
           GoRoute(
             path: '/visite',
@@ -91,7 +90,9 @@ GoRouter creaAppRouter({String? initialLocation}) {
           ),
           GoRoute(
             path: '/calendario',
-            builder: (context, state) => const CalendarioScreen(),
+            builder: (context, state) => CalendarioScreen(
+              appuntamentoId: state.uri.queryParameters['appuntamento'],
+            ),
           ),
           GoRoute(
             path: '/task',
