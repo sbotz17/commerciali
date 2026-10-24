@@ -17,6 +17,13 @@ import '../../data/services/sp_service.dart';
 import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
 
+/// Legge l'API key dalla risposta del Worker.
+///
+/// Il Worker usa `apiKey`; `api_key` resta come compatibilità con eventuali
+/// risposte vecchie o importazioni.
+String apiKeyConfigWhatsapp(Map<String, dynamic>? config) =>
+    (config?['apiKey'] ?? config?['api_key'] ?? '').toString();
+
 /// Schermata Super Admin → Server WhatsApp.
 class WhatsappServerScreen extends ConsumerStatefulWidget {
   const WhatsappServerScreen({super.key});
@@ -60,7 +67,7 @@ class _WhatsappServerScreenState extends ConsumerState<WhatsappServerScreen> {
       if (!mounted) return;
       setState(() {
         _url.text = (config?['url'] ?? '').toString();
-        _apiKey.text = (config?['api_key'] ?? '').toString();
+        _apiKey.text = apiKeyConfigWhatsapp(config);
         _caricamento = false;
       });
     } catch (errore) {

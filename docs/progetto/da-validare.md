@@ -44,8 +44,8 @@ impediscono il funzionamento della versione precedente.
 
 - La conferma di un invitato ora genera una notifica In-App per chi ha creato l'appuntamento e per
   l'operatore assegnato; è stata recuperata anche la conferma già presente di Simone.
-- L'invio WhatsApp è implementato con rubrica aziendale e consenso, ma **non è attivo** finché non vengono
-  configurati URL/API key nel Worker e il numero/consenso dell'utente.
+- L'invio WhatsApp è configurato sul Worker e il server è connesso; serve solo che ogni utente imposti
+  numero e consenso in Impostazioni → Notifiche.
 - I test sono della squadra: analyze, 856 test, E2E regole reali e Worker. Andrea deve solo validare l'esperienza.
 
 ### Aggiornamento — configurazione WhatsApp dal pannello Super Admin
@@ -61,12 +61,12 @@ impediscono il funzionamento della versione precedente.
 - **Ripeti** (giorno, settimana, due settimane, mese, anno, personalizzato con giorni e intervallo).
 - **Notifica** (all'ora, 5/10/15/30 minuti prima, personalizzata).
 - **Appuntamento privato** con mascheramento di titolo/luogo/dettagli per chi non è creatore o operatore.
-- **Allegati**: non ancora disponibili perché Cloudflare R2 non è attivo; nessun pulsante finto.
+- **Allegati**: disponibili su KV Worker (max 10 MB); R2 resta il target definitivo.
 
 ### Aggiornamento — allegati, promemoria e privacy
 
 - **Allegati** nel form (immagini, video, PDF, email), max 10 MB, salvati nel KV del Worker.
 - **Promemoria WhatsApp** programmati dal campo Notifica e inviati dal Cron del Worker.
 - **Appuntamento privato**: dettagli in sotto-collezione protetta; gli altri vedono solo la fascia occupata.
-- R2 e Cloud Functions/Blaze non sono attivi: la soluzione attuale usa KV e Worker. I test sono della
-  squadra (analyze, test, E2E Worker); Andrea deve solo provare l'esperienza.
+- R2 e Cloud Functions/Blaze non sono attivi: la soluzione attuale usa KV e Worker. I promemoria partono
+  via WhatsApp dal Cron; il push/in-App programmato richiede Blaze. I test sono della squadra.
