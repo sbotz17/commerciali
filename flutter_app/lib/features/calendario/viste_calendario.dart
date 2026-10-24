@@ -16,6 +16,7 @@ class VistaMeseCalendario extends StatelessWidget {
     super.key,
     required this.mese,
     required this.elementi,
+    this.uidCorrente,
     this.onTapVoce,
     this.onTapGiorno,
   });
@@ -26,6 +27,9 @@ class VistaMeseCalendario extends StatelessWidget {
   /// Voci dell'agenda; quelle di altri mesi restano visibili nelle celle
   /// iniziali e finali, in tono attenuato.
   final List<ElementoAgenda> elementi;
+
+  /// Uid dell'utente corrente, per mascherare gli appuntamenti privati.
+  final String? uidCorrente;
 
   /// Apertura del dettaglio di una voce.
   final ValueChanged<ElementoAgenda>? onTapVoce;
@@ -73,6 +77,7 @@ class VistaMeseCalendario extends StatelessWidget {
                                 const <ElementoAgenda>[],
                             compatto: compatto,
                             massimoVoci: massimoVoci,
+                            uidCorrente: uidCorrente,
                             onTapVoce: onTapVoce,
                             onTapGiorno: onTapGiorno,
                           ),
@@ -130,6 +135,7 @@ class _CellaMese extends StatelessWidget {
     required this.voci,
     required this.compatto,
     required this.massimoVoci,
+    this.uidCorrente,
     this.onTapVoce,
     this.onTapGiorno,
   });
@@ -139,6 +145,7 @@ class _CellaMese extends StatelessWidget {
   final List<ElementoAgenda> voci;
   final bool compatto;
   final int massimoVoci;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTapVoce;
   final ValueChanged<DateTime>? onTapGiorno;
 
@@ -243,9 +250,14 @@ class _CellaMese extends StatelessWidget {
 
 /// Piccola voce nella cella del mese: ora e titolo.
 class _ChipMese extends StatelessWidget {
-  const _ChipMese({required this.elemento, this.onTap});
+  const _ChipMese({
+    required this.elemento,
+    this.uidCorrente,
+    this.onTap,
+  });
 
   final ElementoAgenda elemento;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTap;
 
   @override
@@ -286,7 +298,7 @@ class _ChipMese extends StatelessWidget {
                 ],
                 Expanded(
                   child: Text(
-                    elemento.titolo,
+                    titoloVisibileElemento(elemento, uidCorrente),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: tema.textTheme.labelSmall?.copyWith(
@@ -312,6 +324,7 @@ class VistaGrigliaOraria extends StatelessWidget {
     required this.giorni,
     required this.elementi,
     this.nomiOperatori = const {},
+    this.uidCorrente,
     this.onTapVoce,
     this.onTapVuoto,
     this.onTapGiorno,
@@ -325,6 +338,9 @@ class VistaGrigliaOraria extends StatelessWidget {
 
   /// Nomi degli operatori per il dettaglio delle card.
   final Map<String, String> nomiOperatori;
+
+  /// Uid dell'utente corrente, per mascherare gli appuntamenti privati.
+  final String? uidCorrente;
 
   /// Apertura del dettaglio di una voce.
   final ValueChanged<ElementoAgenda>? onTapVoce;
@@ -372,6 +388,7 @@ class VistaGrigliaOraria extends StatelessWidget {
               larghezzaOra: larghezzaOra,
               larghezzaGiorno: larghezzaGiorno,
               nomiOperatori: nomiOperatori,
+              uidCorrente: uidCorrente,
               onTapVoce: onTapVoce,
               onTapVuoto: onTapVuoto,
             ),
@@ -396,7 +413,11 @@ class VistaGrigliaOraria extends StatelessWidget {
               else
                 corpo,
               if (senzaOrario.isNotEmpty)
-                _BarraSenzaOrario(voci: senzaOrario, onTapVoce: onTapVoce),
+                _BarraSenzaOrario(
+                  voci: senzaOrario,
+                  uidCorrente: uidCorrente,
+                  onTapVoce: onTapVoce,
+                ),
             ],
           ),
         );
@@ -527,6 +548,7 @@ class _GrigliaOraria extends StatelessWidget {
     required this.larghezzaOra,
     required this.larghezzaGiorno,
     required this.nomiOperatori,
+    this.uidCorrente,
     this.onTapVoce,
     this.onTapVuoto,
   });
@@ -538,6 +560,7 @@ class _GrigliaOraria extends StatelessWidget {
   final double larghezzaOra;
   final double larghezzaGiorno;
   final Map<String, String> nomiOperatori;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTapVoce;
   final void Function(DateTime giorno, String ora)? onTapVuoto;
 
@@ -669,6 +692,7 @@ class _GrigliaOraria extends StatelessWidget {
               child: _EventoGriglia(
                 voce: voce,
                 nomiOperatori: nomiOperatori,
+                uidCorrente: uidCorrente,
                 onTap: onTapVoce,
               ),
             ),
@@ -682,18 +706,24 @@ class _EventoGriglia extends StatelessWidget {
   const _EventoGriglia({
     required this.voce,
     required this.nomiOperatori,
+    this.uidCorrente,
     this.onTap,
   });
 
   final VocePosizionata voce;
   final Map<String, String> nomiOperatori;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTap;
 
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
     final colore = coloreStatoElemento(voce.elemento);
-    final dettaglio = dettaglioElemento(voce.elemento, nomiOperatori);
+    final dettaglio = dettaglioVisibileElemento(
+      voce.elemento,
+      nomiOperatori,
+      uidCorrente,
+    );
 
     return Material(
       color: colore.withValues(alpha: 0.12),
@@ -747,7 +777,7 @@ class _EventoGriglia extends StatelessWidget {
                     ),
                   if (altezza >= 32)
                     Text(
-                      voce.elemento.titolo,
+                      titoloVisibileElemento(voce.elemento, uidCorrente),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: tema.textTheme.labelMedium?.copyWith(
@@ -777,9 +807,14 @@ class _EventoGriglia extends StatelessWidget {
 
 /// Barra in fondo con le voci che non hanno un orario.
 class _BarraSenzaOrario extends StatelessWidget {
-  const _BarraSenzaOrario({required this.voci, this.onTapVoce});
+  const _BarraSenzaOrario({
+    required this.voci,
+    this.uidCorrente,
+    this.onTapVoce,
+  });
 
   final List<ElementoAgenda> voci;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTapVoce;
 
   @override
@@ -811,7 +846,11 @@ class _BarraSenzaOrario extends StatelessWidget {
               child: Row(
                 children: [
                   for (final voce in voci) ...[
-                    _ChipSenzaOrario(elemento: voce, onTap: onTapVoce),
+                    _ChipSenzaOrario(
+                      elemento: voce,
+                      uidCorrente: uidCorrente,
+                      onTap: onTapVoce,
+                    ),
                     const SizedBox(width: AppSpazi.xs),
                   ],
                 ],
@@ -826,9 +865,14 @@ class _BarraSenzaOrario extends StatelessWidget {
 
 /// Chip di una voce senza orario.
 class _ChipSenzaOrario extends StatelessWidget {
-  const _ChipSenzaOrario({required this.elemento, this.onTap});
+  const _ChipSenzaOrario({
+    required this.elemento,
+    this.uidCorrente,
+    this.onTap,
+  });
 
   final ElementoAgenda elemento;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTap;
 
   @override
@@ -856,7 +900,7 @@ class _ChipSenzaOrario extends StatelessWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                elemento.titolo,
+                titoloVisibileElemento(elemento, uidCorrente),
                 style: tema.textTheme.labelMedium?.copyWith(color: colore),
               ),
             ],

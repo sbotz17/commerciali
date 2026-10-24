@@ -24,7 +24,13 @@ class Appuntamento {
     this.tipo = 'appuntamento',
     this.data,
     this.ora,
+    this.dataFine,
+    this.oraFine,
+    this.tuttoIlGiorno = false,
     this.durataMin = 60,
+    this.ripetizione = const {'tipo': 'mai'},
+    this.notificaMin,
+    this.privato = false,
     this.clienteId,
     this.clienteNome,
     this.operatoreId,
@@ -55,7 +61,13 @@ class Appuntamento {
       tipo: (map['tipo'] as String?) ?? 'appuntamento',
       data: map['data'] as String?,
       ora: map['ora'] as String?,
+      dataFine: map['data_fine'] as String?,
+      oraFine: map['ora_fine'] as String?,
+      tuttoIlGiorno: map['tutto_il_giorno'] == true,
       durataMin: (map['durata_min'] as num?)?.toInt() ?? 60,
+      ripetizione: _mappaRipetizione(map['ripetizione']),
+      notificaMin: (map['notifica_min'] as num?)?.toInt(),
+      privato: map['privato'] == true,
       clienteId: map['cliente_id'] as String?,
       clienteNome: map['cliente_nome'] as String?,
       operatoreId: map['operatore_id'] as String?,
@@ -99,8 +111,31 @@ class Appuntamento {
   /// Ora dell'appuntamento `HH:MM` (campo `ora`).
   final String? ora;
 
-  /// Durata in minuti (campo `durata_min`), default 60.
+  /// Data di fine (campo `data_fine`), `YYYY-MM-DD`.
+  final String? dataFine;
+
+  /// Ora di fine (campo `ora_fine`), `HH:MM`.
+  final String? oraFine;
+
+  /// `true` per un appuntamento che dura tutto il giorno (campo
+  /// `tutto_il_giorno`).
+  final bool tuttoIlGiorno;
+
+  /// Durata in minuti (campo `durata_min`), default 60. Per gli appuntamenti
+  /// con inizio e fine viene ricalcolata al salvataggio.
   final int durataMin;
+
+  /// Regola di ripetizione (campo `ripetizione`).
+  final Map<String, dynamic> ripetizione;
+
+  /// Minuti prima dell'inizio per la notifica (campo `notifica_min`).
+  ///
+  /// `0` = all'ora dell'evento, `null` = nessuna notifica.
+  final int? notificaMin;
+
+  /// `true` se titolo, luogo e dettagli sono visibili solo a creatore e
+  /// operatore (campo `privato`).
+  final bool privato;
 
   /// Id del cliente collegato (campo `cliente_id`).
   final String? clienteId;
@@ -175,7 +210,13 @@ class Appuntamento {
     'tipo': tipo,
     'data': data,
     'ora': ora,
+    'data_fine': dataFine,
+    'ora_fine': oraFine,
+    'tutto_il_giorno': tuttoIlGiorno,
     'durata_min': durataMin,
+    'ripetizione': ripetizione,
+    'notifica_min': notificaMin,
+    'privato': privato,
     'cliente_id': clienteId,
     'cliente_nome': clienteNome,
     'operatore_id': operatoreId,
@@ -203,6 +244,256 @@ class Appuntamento {
 /// Ritorna `null` se una delle due è assente, non rispetta il formato o
 /// rappresenta una data/ora non valida (es. `2026-02-30` o `25:00`).
 DateTime? dataOraAppuntamento(Appuntamento a) => _combinaDataOra(a.data, a.ora);
+
+/// Tipi di ripetizione accettati.
+const String ripetizioneMai = 'mai';
+const String ripetizioneGiornaliera = 'giornaliera';
+const String ripetizioneSettimanale = 'settimanale';
+const String ripetizioneBisettimanale = 'bisettimanale';
+const String ripetizioneMensile = 'mensile';
+const String ripetizioneAnnuale = 'annuale';
+const String ripetizionePersonalizzata = 'personalizzata';
+
+const List<String> nomiGiorniRipetizione = [
+  'Lunedì',
+  'Martedì',
+  'Mercoledì',
+  'Giovedì',
+  'Venerdì',
+  'Sabato',
+  'Domenica',
+];
+
+/// `true` se l'appuntamento ha una regola di ripetizione attiva.
+bool appuntamentoRicorrente(Appuntamento a) {
+  final tipo = (a.ripetizione['tipo'] ?? ripetizioneMai).toString();
+  return tipo != ripetizioneMai;
+}
+
+/// Etichetta italiana della regola di ripetizione.
+String etichettaRipetizione(Map<String, dynamic>? regola) {
+  final tipo = (regola?['tipo'] ?? ripetizioneMai).toString();
+  switch (tipo) {
+    case ripetizioneGiornaliera:
+      return 'Ogni giorno';
+    case ripetizioneSettimanale:
+      return 'Ogni settimana';
+    case ripetizioneBisettimanale:
+      return 'Ogni due settimane';
+    case ripetizioneMensile:
+      return 'Ogni mese';
+    case ripetizioneAnnuale:
+      return 'Ogni anno';
+    case ripetizionePersonalizzata:
+      final intervallo =
+          int.tryParse(regola?['intervallo_settimane']?.toString() ?? '') ?? 1;
+      return intervallo <= 1
+          ? 'Personalizzata'
+          : 'Ogni $intervallo settimane';
+    default:
+      return 'Mai';
+  }
+}
+
+/// Giorni della settimana selezionati (1 = lunedì … 7 = domenica).
+List<int> giorniRipetizione(Map<String, dynamic>? regola) {
+  final valori = regola?['giorni_settimana'];
+  if (valori is! List) return const [];
+  final giorni = <int>{};
+  for (final valore in valori) {
+    final giorno = valore is int ? valore : int.tryParse(valore.toString());
+    if (giorno == null || giorno < 1 || giorno > 7) continue;
+    giorni.add(giorno);
+  }
+  final ordinati = giorni.toList()..sort();
+  return ordinati;
+}
+
+/// Inizio dell'appuntamento: data + ora, oppure mezzanotte se dura tutto il
+/// giorno.
+DateTime? inizioAppuntamento(Appuntamento a) {
+  final data = _dataDaStringa(a.data);
+  if (data == null) return null;
+  if (a.tuttoIlGiorno) return data;
+  return _combinaDataOra(a.data, a.ora) ?? data;
+}
+
+/// Fine dell'appuntamento: data/ora di fine, oppure inizio + durata.
+DateTime? fineAppuntamento(Appuntamento a) {
+  final inizio = inizioAppuntamento(a);
+  if (inizio == null) return null;
+  if (a.tuttoIlGiorno) {
+    final fine = _dataDaStringa(a.dataFine) ?? _dataDaStringa(a.data);
+    return fine == null ? inizio : DateTime(fine.year, fine.month, fine.day + 1);
+  }
+  final fineEsplicita = _combinaDataOra(a.dataFine, a.oraFine);
+  if (fineEsplicita != null && fineEsplicita.isAfter(inizio)) {
+    return fineEsplicita;
+  }
+  return inizio.add(Duration(minutes: a.durataMin <= 0 ? 30 : a.durataMin));
+}
+
+/// Durata effettiva in minuti, ricavata da inizio e fine.
+int durataEffettivaAppuntamento(Appuntamento a) {
+  if (a.tuttoIlGiorno) return 24 * 60;
+  final inizio = inizioAppuntamento(a);
+  final fine = fineAppuntamento(a);
+  if (inizio == null || fine == null) return a.durataMin <= 0 ? 30 : a.durataMin;
+  final minuti = fine.difference(inizio).inMinutes;
+  return minuti <= 0 ? 30 : minuti;
+}
+
+/// `true` se [uid] può vedere titolo, luogo e dettagli dell'appuntamento.
+///
+/// Gli appuntamenti privati sono visibili per intero solo al creatore e
+/// all'utente assegnato; gli altri vedono solo l'occupazione della fascia.
+bool puoVedereDettagliAppuntamento(Appuntamento? appuntamento, String? uid) {
+  if (appuntamento == null || !appuntamento.privato) return true;
+  if (uid == null || uid.isEmpty) return false;
+  return appuntamento.createdBy == uid || appuntamento.operatoreId == uid;
+}
+
+/// Date delle occorrenze dell'appuntamento comprese tra [dal] e [al].
+///
+/// Per gli appuntamenti non ricorrenti restituisce la sola data di inizio se
+/// cade nell'intervallo. Le date sono normalizzate a mezzanotte.
+List<DateTime> occorrenzeAppuntamento(
+  Appuntamento a, {
+  required DateTime dal,
+  required DateTime al,
+}) {
+  final inizio = _dataDaStringa(a.data);
+  if (inizio == null) return const [];
+  final da = _dataDaStringa(dal.toIso8601String());
+  final a2 = _dataDaStringa(al.toIso8601String());
+  if (da == null || a2 == null || a2.isBefore(da)) return const [];
+
+  final regola = a.ripetizione;
+  final tipo = (regola['tipo'] ?? ripetizioneMai).toString();
+  final giorni = giorniRipetizione(regola);
+  final giorniEffettivi = giorni.isEmpty ? [inizio.weekday] : giorni;
+  final intervallo = (int.tryParse(
+            regola['intervallo_settimane']?.toString() ?? '',
+          ) ??
+          1)
+      .clamp(1, 52);
+
+  bool dentro(DateTime data) =>
+      !data.isBefore(inizio) && !data.isBefore(da) && !data.isAfter(a2);
+
+  final risultato = <DateTime>[];
+  void aggiungi(DateTime data) {
+    final giorno = DateTime(data.year, data.month, data.day);
+    if (!dentro(giorno)) return;
+    if (!risultato.contains(giorno)) risultato.add(giorno);
+  }
+
+  if (tipo == ripetizioneMai) {
+    aggiungi(inizio);
+    return risultato;
+  }
+
+  if (tipo == ripetizioneGiornaliera) {
+    var data = inizio.isBefore(da) ? da : inizio;
+    while (!data.isAfter(a2) && risultato.length < 1500) {
+      aggiungi(data);
+      data = DateTime(data.year, data.month, data.day + 1);
+    }
+    risultato.sort();
+    return risultato;
+  }
+
+  if (tipo == ripetizioneSettimanale ||
+      tipo == ripetizioneBisettimanale ||
+      tipo == ripetizionePersonalizzata) {
+    final passo = tipo == ripetizioneBisettimanale
+        ? 2
+        : tipo == ripetizionePersonalizzata
+        ? intervallo
+        : 1;
+    final lunedi = DateTime(
+      inizio.year,
+      inizio.month,
+      inizio.day - (inizio.weekday - 1),
+    );
+    var settimana = 0;
+    while (risultato.length < 1500) {
+      final base = DateTime(
+        lunedi.year,
+        lunedi.month,
+        lunedi.day + settimana * 7 * passo,
+      );
+      if (base.isAfter(a2)) break;
+      for (final giorno in giorniEffettivi) {
+        aggiungi(DateTime(base.year, base.month, base.day + giorno - 1));
+      }
+      settimana++;
+    }
+    risultato.sort();
+    return risultato;
+  }
+
+  if (tipo == ripetizioneMensile) {
+    var anno = inizio.year;
+    var mese = inizio.month;
+    while (risultato.length < 1500) {
+      final data = DateTime(anno, mese, inizio.day);
+      if (data.isAfter(a2) && (anno > a2.year || mese > a2.month)) break;
+      if (data.month == mese) aggiungi(data);
+      mese++;
+      if (mese > 12) {
+        mese = 1;
+        anno++;
+      }
+      if (anno > a2.year + 1) break;
+    }
+    risultato.sort();
+    return risultato;
+  }
+
+  if (tipo == ripetizioneAnnuale) {
+    for (var anno = inizio.year; anno <= a2.year && risultato.length < 1500; anno++) {
+      final data = DateTime(anno, inizio.month, inizio.day);
+      if (data.month == inizio.month) aggiungi(data);
+    }
+    risultato.sort();
+    return risultato;
+  }
+
+  aggiungi(inizio);
+  return risultato;
+}
+
+DateTime? _dataDaStringa(String? valore) {
+  final testo = valore?.trim() ?? '';
+  if (testo.isEmpty) return null;
+  final data = DateTime.tryParse(testo);
+  if (data == null) return null;
+  return DateTime(data.year, data.month, data.day);
+}
+
+Map<String, dynamic> _mappaRipetizione(dynamic valore) {
+  if (valore is! Map) return const {'tipo': ripetizioneMai};
+  final tipoGrezzo = (valore['tipo'] ?? ripetizioneMai).toString();
+  const tipi = {
+    ripetizioneMai,
+    ripetizioneGiornaliera,
+    ripetizioneSettimanale,
+    ripetizioneBisettimanale,
+    ripetizioneMensile,
+    ripetizioneAnnuale,
+    ripetizionePersonalizzata,
+  };
+  final tipo = tipi.contains(tipoGrezzo) ? tipoGrezzo : ripetizioneMai;
+  final giorni = giorniRipetizione(Map<String, dynamic>.from(valore));
+  final intervallo =
+      int.tryParse(valore['intervallo_settimane']?.toString() ?? '') ?? 1;
+  return {
+    'tipo': tipo,
+    'giorni_settimana': giorni,
+    'intervallo_settimane': intervallo.clamp(1, 52),
+  };
+}
 
 /// Etichetta leggibile per lo stato di un appuntamento, con fallback.
 String etichettaStatoAppuntamento(String? stato) {

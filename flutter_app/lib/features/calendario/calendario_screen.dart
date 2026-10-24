@@ -196,7 +196,25 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
     final task = operatore.isEmpty
         ? _task
         : _task.where((voce) => voce.operatoreId == operatore).toList();
-    return [...elementiDaAppuntamenti(appuntamenti), ...elementiDaTask(task)];
+    final (dal, al) = _intervalloPeriodo();
+    return [
+      ...elementiDaAppuntamenti(appuntamenti, dal: dal, al: al),
+      ...elementiDaTask(task),
+    ];
+  }
+
+  /// Primo e ultimo giorno del periodo mostrato, per espandere le ripetizioni.
+  (DateTime, DateTime) _intervalloPeriodo() {
+    switch (_vista) {
+      case VistaAgenda.giorno:
+        return (_giorno, _giorno);
+      case VistaAgenda.settimana:
+        final giorni = giorniSettimana(_giorno);
+        return (giorni.first, giorni.last);
+      case VistaAgenda.mese:
+        final giorni = giorniGrigliaMese(_giorno);
+        return (giorni.first, giorni.last);
+    }
   }
 
   void _sposta(int verso) {
@@ -408,6 +426,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
                   caricamento: _caricamento,
                   errore: _errore,
                   nomiOperatori: _nomiOperatori,
+                  uidCorrente: _uidCorrente,
                   onRiprova: _carica,
                   onTapVoce: _apriDettaglio,
                   onTapGiorno: _apriGiorno,
@@ -633,6 +652,7 @@ class CorpoCalendario extends StatelessWidget {
     required this.onRiprova,
     this.errore,
     this.nomiOperatori = const {},
+    this.uidCorrente,
     this.onTapVoce,
     this.onTapGiorno,
     this.onTapVuoto,
@@ -641,6 +661,7 @@ class CorpoCalendario extends StatelessWidget {
   final List<ElementoAgenda> elementi;
   final DateTime giorno;
   final VistaAgenda vista;
+  final String? uidCorrente;
 
   /// `true` per l'elenco a card, `false` per il calendario classico.
   final bool aCard;
@@ -699,18 +720,21 @@ class CorpoCalendario extends StatelessWidget {
           elementi: voci,
           giorno: giorno,
           nomiOperatori: nomiOperatori,
+          uidCorrente: uidCorrente,
           onTapVoce: onTapVoce,
         ),
         VistaAgenda.settimana => _VistaSettimanaCard(
           elementi: voci,
           giorno: giorno,
           nomiOperatori: nomiOperatori,
+          uidCorrente: uidCorrente,
           onTapVoce: onTapVoce,
         ),
         VistaAgenda.mese => _VistaMeseCard(
           elementi: voci,
           mese: giorno,
           nomiOperatori: nomiOperatori,
+          uidCorrente: uidCorrente,
           onTapVoce: onTapVoce,
         ),
       };
@@ -721,6 +745,7 @@ class CorpoCalendario extends StatelessWidget {
         giorni: [giorno],
         elementi: elementi,
         nomiOperatori: nomiOperatori,
+        uidCorrente: uidCorrente,
         onTapVoce: onTapVoce,
         onTapVuoto: onTapVuoto,
         onTapGiorno: onTapGiorno,
@@ -729,6 +754,7 @@ class CorpoCalendario extends StatelessWidget {
         giorni: giorniSettimana(giorno),
         elementi: elementi,
         nomiOperatori: nomiOperatori,
+        uidCorrente: uidCorrente,
         onTapVoce: onTapVoce,
         onTapVuoto: onTapVuoto,
         onTapGiorno: onTapGiorno,
@@ -736,6 +762,7 @@ class CorpoCalendario extends StatelessWidget {
       VistaAgenda.mese => VistaMeseCalendario(
         mese: giorno,
         elementi: elementi,
+        uidCorrente: uidCorrente,
         onTapVoce: onTapVoce,
         onTapGiorno: onTapGiorno,
       ),
@@ -749,12 +776,14 @@ class _VistaGiornoCard extends StatelessWidget {
     required this.elementi,
     required this.giorno,
     required this.nomiOperatori,
+    this.uidCorrente,
     this.onTapVoce,
   });
 
   final List<ElementoAgenda> elementi;
   final DateTime giorno;
   final Map<String, String> nomiOperatori;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTapVoce;
 
   @override
@@ -771,6 +800,7 @@ class _VistaGiornoCard extends StatelessWidget {
       itemBuilder: (context, indice) => _CardElemento(
         elemento: voci[indice],
         nomiOperatori: nomiOperatori,
+        uidCorrente: uidCorrente,
         onTap: onTapVoce,
       ),
     );
@@ -783,12 +813,14 @@ class _VistaSettimanaCard extends StatelessWidget {
     required this.elementi,
     required this.giorno,
     required this.nomiOperatori,
+    this.uidCorrente,
     this.onTapVoce,
   });
 
   final List<ElementoAgenda> elementi;
   final DateTime giorno;
   final Map<String, String> nomiOperatori;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTapVoce;
 
   @override
@@ -847,6 +879,7 @@ class _VistaSettimanaCard extends StatelessWidget {
           _CardElemento(
             elemento: voce,
             nomiOperatori: nomiOperatori,
+            uidCorrente: uidCorrente,
             onTap: onTapVoce,
           ),
           const SizedBox(height: AppSpazi.xs),
@@ -863,12 +896,14 @@ class _VistaMeseCard extends StatelessWidget {
     required this.elementi,
     required this.mese,
     required this.nomiOperatori,
+    this.uidCorrente,
     this.onTapVoce,
   });
 
   final List<ElementoAgenda> elementi;
   final DateTime mese;
   final Map<String, String> nomiOperatori;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTapVoce;
 
   @override
@@ -904,6 +939,7 @@ class _VistaMeseCard extends StatelessWidget {
             _CardElemento(
               elemento: voce,
               nomiOperatori: nomiOperatori,
+              uidCorrente: uidCorrente,
               onTap: onTapVoce,
             ),
             const SizedBox(height: AppSpazi.xs),
@@ -927,11 +963,13 @@ class _CardElemento extends StatelessWidget {
   const _CardElemento({
     required this.elemento,
     required this.nomiOperatori,
+    this.uidCorrente,
     this.onTap,
   });
 
   final ElementoAgenda elemento;
   final Map<String, String> nomiOperatori;
+  final String? uidCorrente;
   final ValueChanged<ElementoAgenda>? onTap;
 
   @override
@@ -948,10 +986,15 @@ class _CardElemento extends StatelessWidget {
           child: Row(
             children: [
               SizedBox(
-                width: 52,
+                width: 64,
                 child: Text(
-                  elemento.ora ?? '—',
-                  style: tema.textTheme.titleSmall,
+                  etichettaOrarioElemento(elemento),
+                  maxLines: 2,
+                  style: elemento.appuntamento?.tuttoIlGiorno == true
+                      ? tema.textTheme.bodySmall?.copyWith(
+                          color: tema.colorScheme.onSurfaceVariant,
+                        )
+                      : tema.textTheme.titleSmall,
                 ),
               ),
               Icon(
@@ -967,14 +1010,18 @@ class _CardElemento extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      elemento.titolo,
+                      titoloVisibileElemento(elemento, uidCorrente),
                       style: tema.textTheme.titleSmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: AppSpazi.xxs),
                     Text(
-                      dettaglioElemento(elemento, nomiOperatori),
+                      dettaglioVisibileElemento(
+                        elemento,
+                        nomiOperatori,
+                        uidCorrente,
+                      ),
                       style: tema.textTheme.bodySmall?.copyWith(
                         color: tema.colorScheme.onSurfaceVariant,
                       ),
@@ -1077,13 +1124,25 @@ class _DialogoElemento extends StatelessWidget {
   Widget build(BuildContext context) {
     final appuntamento = elemento.appuntamento;
     final task = elemento.task;
+    final dettagliVisibili = puoVedereDettagliAppuntamento(
+      appuntamento,
+      uidCorrente,
+    );
 
-    final indirizzo = appuntamento?.indirizzo?.trim() ?? '';
+    final indirizzo = dettagliVisibili
+        ? (appuntamento?.indirizzo?.trim() ?? '')
+        : '';
     final maps = indirizzo.isEmpty ? null : uriMapsIndirizzo(indirizzo);
-    final callUrl = appuntamento?.callUrl?.trim() ?? '';
-    final luogo = appuntamento?.luogo?.trim() ?? '';
-    final descrizione = task?.descrizione?.trim() ?? '';
-    final note = (appuntamento?.note ?? task?.note ?? '').trim();
+    final callUrl = dettagliVisibili
+        ? (appuntamento?.callUrl?.trim() ?? '')
+        : '';
+    final luogo = dettagliVisibili ? (appuntamento?.luogo?.trim() ?? '') : '';
+    final descrizione = dettagliVisibili
+        ? (task?.descrizione?.trim() ?? '')
+        : '';
+    final note = dettagliVisibili
+        ? (appuntamento?.note ?? task?.note ?? '').trim()
+        : '';
 
     final invitati = appuntamento?.invitatiUids ?? const <String>[];
     final condivisione =
@@ -1097,7 +1156,9 @@ class _DialogoElemento extends StatelessWidget {
 
     return AlertDialog(
       key: const Key('calendario-dettaglio'),
-      title: Text(elemento.titolo),
+      title: Text(
+        dettagliVisibili ? elemento.titolo : 'Impegno privato',
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1111,11 +1172,19 @@ class _DialogoElemento extends StatelessWidget {
               etichetta: 'Stato',
               valore: etichettaStatoElemento(elemento),
             ),
-            _RigaDettaglio(
-              etichetta: 'Cliente e utente',
-              valore: dettaglioElemento(elemento, nomiOperatori),
-            ),
-            if (invitati.isNotEmpty) ...[
+            if (appuntamento?.privato == true)
+              _RigaDettaglio(
+                etichetta: 'Privacy',
+                valore: dettagliVisibili
+                    ? 'Appuntamento privato'
+                    : 'Dettagli visibili solo al creatore e all\'utente assegnato',
+              ),
+            if (dettagliVisibili)
+              _RigaDettaglio(
+                etichetta: 'Cliente e utente',
+                valore: dettaglioElemento(elemento, nomiOperatori),
+              ),
+            if (dettagliVisibili && invitati.isNotEmpty) ...[
               _RigaDettaglio(
                 etichetta: 'Condivisione',
                 valore: etichettaStatoCondivisione(condivisione),
@@ -1134,14 +1203,14 @@ class _DialogoElemento extends StatelessWidget {
         ),
       ),
       actions: [
-        if (maps != null)
+        if (dettagliVisibili && maps != null)
           TextButton.icon(
             key: const Key('calendario-maps'),
             onPressed: () => _apriLink(context, maps, 'Google Maps'),
             icon: const Icon(Icons.directions_outlined),
             label: const Text('Apri in Google Maps'),
           ),
-        if (callUrl.isNotEmpty)
+        if (dettagliVisibili && callUrl.isNotEmpty)
           TextButton.icon(
             key: const Key('calendario-call'),
             onPressed: () =>
@@ -1167,7 +1236,7 @@ class _DialogoElemento extends StatelessWidget {
             label: const Text('Non disponibile'),
           ),
         ],
-        if (elemento.isAppuntamento) ...[
+        if (dettagliVisibili && elemento.isAppuntamento) ...[
           OutlinedButton(
             key: const Key('calendario-modifica'),
             onPressed: () => Navigator.of(context).pop(azioneModificaVoce),
@@ -1181,7 +1250,7 @@ class _DialogoElemento extends StatelessWidget {
             onPressed: () => Navigator.of(context).pop(azioneEliminaVoce),
             child: const Text('Elimina'),
           ),
-        ] else
+        ] else if (dettagliVisibili)
           FilledButton.tonalIcon(
             key: const Key('calendario-apri-task'),
             onPressed: () => Navigator.of(context).pop(azioneApriTaskVoce),

@@ -164,6 +164,9 @@ void main() {
       await tester.pumpWidget(_Harness(onSalva: () {}));
       await tester.pumpAndSettle();
 
+      expect(find.text('Notifiche sul dispositivo'), findsOneWidget);
+      expect(find.byKey(const Key('notifiche-push-attiva')), findsOneWidget);
+      expect(find.byKey(const Key('notifiche-push-disattiva')), findsOneWidget);
       expect(find.text('Canali'), findsOneWidget);
       expect(find.text('WhatsApp'), findsWidgets);
       expect(find.text('Orari di silenzio'), findsOneWidget);
@@ -262,6 +265,9 @@ void main() {
       await tester.pumpAndSettle();
       expect(ultime?.numeroWhatsapp, '+39 333 1234567');
 
+      await tester.ensureVisible(
+        find.byKey(const Key('notifiche-consenso-whatsapp')),
+      );
       await tester.tap(find.byKey(const Key('notifiche-consenso-whatsapp')));
       await tester.pumpAndSettle();
       expect(ultime?.consensoWhatsapp, isTrue);

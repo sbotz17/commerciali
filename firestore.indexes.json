@@ -72,6 +72,14 @@
         { "fieldPath": "proprietario_uid", "order": "ASCENDING" },
         { "fieldPath": "stato", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "dispositivi",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "utente_uid", "order": "ASCENDING" },
+        { "fieldPath": "attivo", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

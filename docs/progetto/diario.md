@@ -501,3 +501,13 @@
 - Aggiunto `scripts/e2e-whatsapp-worker.py`: PASS su autenticazione, salvataggio/lettura/cancellazione KV,
   rifiuto senza token e server finto non raggiungibile.
 - `flutter analyze` 0; `flutter test` 833 verdi; `scripts/e2e-agenda.py` PASS; Worker e regole pubblicati.
+
+## 2026-10-24 — Notifiche Web Push
+
+- Aggiunto client Web Push e service worker con scope `/push/`, separato dal service worker Flutter.
+- Aggiunta sezione “Notifiche sul dispositivo” nelle preferenze, con attivazione/disattivazione e messaggi di errore.
+- Aggiunto salvataggio delle sottoscrizioni in `dispositivi`.
+- Creata e pubblicata la Cloud Function `inviaPushNotifica` in produzione, con VAPID in `functions/.env` (non committato).
+- Trigger provato con sottoscrizione finta: funzione attiva e gestione errore corretta; dati di prova rimossi.
+- Service worker e client verificati nel browser di produzione; manca la prova di consegna reale con permesso notifiche.
+- `flutter analyze` 0; `flutter test` 833 verdi.

@@ -107,15 +107,43 @@ String _titoloElemento(String? titolo, String fallback) {
 ///
 /// Gli appuntamenti senza `data` non possono essere collocati in un giorno e
 /// vengono scartati; l'ordine di partenza è quello del servizio.
-List<ElementoAgenda> elementiDaAppuntamenti(List<Appuntamento> appuntamenti) {
+List<ElementoAgenda> elementiDaAppuntamenti(
+  List<Appuntamento> appuntamenti, {
+  DateTime? dal,
+  DateTime? al,
+}) {
   final elementi = <ElementoAgenda>[];
   for (final appuntamento in appuntamenti) {
     final data = appuntamento.data?.trim() ?? '';
     if (data.isEmpty) continue;
+
+    if (dal != null && al != null) {
+      for (final giorno in occorrenzeAppuntamento(
+        appuntamento,
+        dal: dal,
+        al: al,
+      )) {
+        elementi.add(
+          ElementoAgenda(
+            data: dataIsoVisita(giorno),
+            ora: appuntamento.tuttoIlGiorno
+                ? null
+                : _oraElemento(appuntamento.ora),
+            titolo: _titoloElemento(appuntamento.titolo, 'Appuntamento'),
+            tipo: tipoAppuntamento,
+            appuntamento: appuntamento,
+          ),
+        );
+      }
+      continue;
+    }
+
     elementi.add(
       ElementoAgenda(
         data: data,
-        ora: _oraElemento(appuntamento.ora),
+        ora: appuntamento.tuttoIlGiorno
+            ? null
+            : _oraElemento(appuntamento.ora),
         titolo: _titoloElemento(appuntamento.titolo, 'Appuntamento'),
         tipo: tipoAppuntamento,
         appuntamento: appuntamento,
@@ -348,8 +376,12 @@ int? minutiDaOra(String? ora) {
 /// Durata in minuti di una voce: quella dell'appuntamento (default 60) oppure
 /// 30 minuti per i task e per le durate non valide.
 int durataMinutiElemento(ElementoAgenda elemento) {
-  final durata = elemento.appuntamento?.durataMin ?? 30;
-  return durata > 0 ? durata : 30;
+  final appuntamento = elemento.appuntamento;
+  if (appuntamento != null) {
+    final durata = durataEffettivaAppuntamento(appuntamento);
+    return durata > 0 ? durata : 30;
+  }
+  return 30;
 }
 
 /// Voce con orario e posizione calcolata nella griglia di un giorno.
@@ -568,6 +600,37 @@ String dettaglioElemento(
   return parti.isEmpty ? '—' : parti.join(' · ');
 }
 
+/// Titolo visibile della voce: per un appuntamento privato non visibile a
+/// [uid] diventa "Impegno privato".
+String titoloVisibileElemento(ElementoAgenda elemento, String? uid) {
+  final appuntamento = elemento.appuntamento;
+  if (appuntamento == null) return elemento.titolo;
+  return puoVedereDettagliAppuntamento(appuntamento, uid)
+      ? elemento.titolo
+      : 'Impegno privato';
+}
+
+/// Dettaglio visibile della voce: vuoto per gli appuntamenti privati non
+/// visibili a [uid].
+String dettaglioVisibileElemento(
+  ElementoAgenda elemento,
+  Map<String, String> nomiOperatori,
+  String? uid,
+) {
+  final appuntamento = elemento.appuntamento;
+  if (appuntamento != null && !puoVedereDettagliAppuntamento(appuntamento, uid)) {
+    return '—';
+  }
+  return dettaglioElemento(elemento, nomiOperatori);
+}
+
+/// Etichetta dell'orario della voce, con "Tutto il giorno" per gli
+/// appuntamenti senza orario.
+String etichettaOrarioElemento(ElementoAgenda elemento) {
+  if (elemento.appuntamento?.tuttoIlGiorno == true) return 'Tutto il giorno';
+  return elemento.ora ?? '—';
+}
+
 /// Data e ora della voce in formato italiano: `gg/mm/aaaa · HH:MM`.
 ///
 /// Se l'ora manca resta la sola data; se la data non è interpretabile si
@@ -576,8 +639,15 @@ String etichettaDataOraElemento(ElementoAgenda elemento) {
   final grezza = elemento.data.trim();
   final iso = DateTime.tryParse(grezza);
   final data = iso == null ? grezza : formattaDataVisita(iso);
+  final appuntamento = elemento.appuntamento;
+  if (appuntamento?.tuttoIlGiorno == true) {
+    return '$data · Tutto il giorno';
+  }
   final ora = elemento.ora;
-  return ora == null ? data : '$data · $ora';
+  if (ora == null) return data;
+  final oraFine = appuntamento?.oraFine?.trim() ?? '';
+  if (oraFine.isNotEmpty) return '$data · $ora–$oraFine';
+  return '$data · $ora';
 }
 
 /// Azioni restituite dal dialogo di dettaglio della voce.

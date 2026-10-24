@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/stato_centrato.dart';
+import '../../data/services/web_push_service.dart';
 import '../../state/azienda_providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -242,6 +243,8 @@ class _NotifichePreferenzeScreenState
   PreferenzeNotifiche _preferenze = PreferenzeNotifiche.predefinite;
   bool _caricamento = true;
   bool _salvataggio = false;
+  bool _pushInCorso = false;
+  String? _messaggioPush;
   Object? _errore;
 
   @override
@@ -306,6 +309,77 @@ class _NotifichePreferenzeScreenState
     }
   }
 
+  /// Chiede il permesso al browser, registra il service worker e salva la
+  /// sottoscrizione in `dispositivi`.
+  Future<void> _attivaPush() async {
+    setState(() {
+      _pushInCorso = true;
+      _messaggioPush = null;
+    });
+    final esito = await const WebPushService().iscrivi();
+    if (!mounted) return;
+    if (!esito.completa) {
+      setState(() {
+        _pushInCorso = false;
+        _messaggioPush = esito.messaggio;
+      });
+      _avviso(esito.messaggio);
+      return;
+    }
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      await servizio.salvaDispositivoWeb(
+        endpoint: esito.endpoint!,
+        p256dh: esito.p256dh!,
+        auth: esito.auth!,
+        userAgent: esito.userAgent,
+      );
+      if (!mounted) return;
+      setState(() {
+        _pushInCorso = false;
+        _messaggioPush = 'Notifiche attive su questo dispositivo.';
+      });
+      _avviso('Notifiche push attivate');
+    } catch (errore) {
+      if (!mounted) return;
+      final messaggio = messaggioErrorePreferenzeNotifiche(errore);
+      setState(() {
+        _pushInCorso = false;
+        _messaggioPush = messaggio;
+      });
+      _avviso(messaggio);
+    }
+  }
+
+  /// Revoca la sottoscrizione del browser e disattiva il dispositivo.
+  Future<void> _disattivaPush() async {
+    setState(() {
+      _pushInCorso = true;
+      _messaggioPush = null;
+    });
+    try {
+      await const WebPushService().annulla();
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      await servizio.disattivaDispositivoWeb();
+      if (!mounted) return;
+      setState(() {
+        _pushInCorso = false;
+        _messaggioPush = 'Notifiche disattivate su questo dispositivo.';
+      });
+      _avviso('Notifiche push disattivate');
+    } catch (errore) {
+      if (!mounted) return;
+      final messaggio = messaggioErrorePreferenzeNotifiche(errore);
+      setState(() {
+        _pushInCorso = false;
+        _messaggioPush = messaggio;
+      });
+      _avviso(messaggio);
+    }
+  }
+
   void _avviso(String testo) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(testo)));
   }
@@ -333,6 +407,12 @@ class _NotifichePreferenzeScreenState
                 setState(() => _preferenze = preferenze),
             onRiprova: _carica,
             onSalva: _salva,
+            pushSupportato:
+                pushDisponibileAmbiente && const WebPushService().supportato,
+            pushInCorso: _pushInCorso,
+            messaggioPush: _messaggioPush,
+            onAttivaPush: _attivaPush,
+            onDisattivaPush: _disattivaPush,
           ),
         );
       },
@@ -355,6 +435,11 @@ class CorpoNotifichePreferenze extends StatefulWidget {
     this.caricamento = false,
     this.salvataggio = false,
     this.errore,
+    this.pushSupportato = false,
+    this.pushInCorso = false,
+    this.messaggioPush,
+    this.onAttivaPush,
+    this.onDisattivaPush,
   });
 
   final PreferenzeNotifiche preferenze;
@@ -364,6 +449,11 @@ class CorpoNotifichePreferenze extends StatefulWidget {
   final bool caricamento;
   final bool salvataggio;
   final Object? errore;
+  final bool pushSupportato;
+  final bool pushInCorso;
+  final String? messaggioPush;
+  final VoidCallback? onAttivaPush;
+  final VoidCallback? onDisattivaPush;
 
   @override
   State<CorpoNotifichePreferenze> createState() =>
@@ -472,6 +562,79 @@ class _CorpoNotifichePreferenzeState extends State<CorpoNotifichePreferenze> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              _SezioneCard(
+                chiave: const Key('notifiche-sezione-dispositivo'),
+                titolo: 'Notifiche sul dispositivo',
+                icona: Icons.phone_iphone,
+                figli: [
+                  Text(
+                    widget.pushSupportato
+                        ? 'Attiva le notifiche per ricevere avvisi anche '
+                            'quando Closer è chiuso.'
+                        : 'Le notifiche push sono disponibili solo '
+                            'nell\'ambiente di produzione.',
+                    style: tema.textTheme.bodyMedium?.copyWith(
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpazi.s),
+                  Wrap(
+                    spacing: AppSpazi.xs,
+                    runSpacing: AppSpazi.xs,
+                    children: [
+                      FilledButton.icon(
+                        key: const Key('notifiche-push-attiva'),
+                        onPressed: (!widget.pushSupportato ||
+                                widget.pushInCorso ||
+                                widget.onAttivaPush == null)
+                            ? null
+                            : widget.onAttivaPush,
+                        icon: widget.pushInCorso
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.notifications_active_outlined),
+                        label: Text(
+                          widget.pushInCorso
+                              ? 'Attivazione…'
+                              : 'Attiva su questo dispositivo',
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        key: const Key('notifiche-push-disattiva'),
+                        onPressed: widget.pushInCorso
+                            ? null
+                            : widget.onDisattivaPush,
+                        icon: const Icon(Icons.notifications_off_outlined),
+                        label: const Text('Disattiva'),
+                      ),
+                    ],
+                  ),
+                  if (widget.messaggioPush != null) ...[
+                    const SizedBox(height: AppSpazi.xs),
+                    Text(
+                      widget.messaggioPush!,
+                      key: const Key('notifiche-push-esito'),
+                      style: tema.textTheme.bodySmall?.copyWith(
+                        color: tema.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: AppSpazi.xs),
+                  Text(
+                    'Su iPhone le notifiche funzionano solo aggiungendo Closer '
+                    'alla schermata Home.',
+                    style: tema.textTheme.bodySmall?.copyWith(
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpazi.gapCard),
               _SezioneCard(
                 chiave: const Key('notifiche-sezione-canali'),
                 titolo: 'Canali',

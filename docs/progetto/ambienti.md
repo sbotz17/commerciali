@@ -29,6 +29,11 @@
 La produzione ha un progetto Firebase separato, quindi **non condivide dati, utenti o regole con lo staging**.
 L’app è pubblicata con `--dart-define=APP_ENV=prod` e `firebase_options_prod.dart`.
 
+Le notifiche Web Push sono attive solo in produzione: service worker `/push/push-sw.js`, VAPID e Cloud Function
+`inviaPushNotifica` (region `europe-west1`, trigger Firestore `notifiche/{id}`). Le chiavi VAPID stanno in
+`functions/.env` (ignorato da git), non nel repository. In staging il pulsante push resta disattivato perché
+non esiste la funzione server.
+
 **Nota di processo**: `main` non contiene ancora l’app Flutter. La prima pubblicazione è stata fatta dal ramo
 corrente per rendere operativo l’ambiente; prima del rilascio ufficiale il codice va portato su `main` con
 tester, validatore ed E2E. Google Sign-In in produzione va configurato prima di abilitarlo nell’interfaccia.
@@ -40,7 +45,10 @@ cd flutter_app
 flutter build web --release --dart-define=APP_ENV=prod
 cd ..
 firebase deploy --only hosting:app,firestore:rules,firestore:indexes --project prod
+firebase deploy --only functions --project prod
 ```
+
+La build di produzione include `--dart-define=APP_ENV=prod`; lo staging resta senza questa define.
 
 ## Pubblicazione staging
 

@@ -1165,7 +1165,15 @@ class SpService {
       'tipo': _stringa(dati['tipo'], fallback: 'appuntamento'),
       'data': _stringaNull(dati['data']),
       'ora': _stringaNull(dati['ora']),
+      'data_fine': _stringaNull(dati['data_fine']),
+      'ora_fine': _stringaNull(dati['ora_fine']),
+      'tutto_il_giorno': dati['tutto_il_giorno'] == true,
       'durata_min': _intero(dati['durata_min'], fallback: 60),
+      'ripetizione': dati['ripetizione'] is Map
+          ? Map<String, dynamic>.from(dati['ripetizione'] as Map)
+          : const {'tipo': 'mai'},
+      'notifica_min': _interoNull(dati['notifica_min']),
+      'privato': dati['privato'] == true,
       'cliente_id': _stringaNull(dati['cliente_id']),
       'cliente_nome': _stringa(dati['cliente_nome']),
       'operatore_id': _stringaNull(dati['operatore_id']),

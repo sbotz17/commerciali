@@ -58,3 +58,14 @@ il default senza `APP_ENV`.
 
 È stata inviata un’email a `bottiandrea83@gmail.com` per impostare la password. In alternativa usare
 “Password dimenticata” dalla schermata di login di produzione.
+
+
+## Web Push (24/10/2026)
+
+- Client: `web/push/push-client.js` + service worker `/push/push-sw.js` con scope separato da Flutter.
+- UI: `Impostazioni → Notifiche → Notifiche sul dispositivo` con attiva/disattiva.
+- Sottoscrizioni in `dispositivi`; chiavi VAPID in `functions/.env` (non nel repository).
+- Cloud Function `inviaPushNotifica` pubblicata in produzione: trigger su `notifiche/{id}`, invio a tutti i dispositivi attivi dell’utente, disattivazione automatica degli endpoint 404/410.
+- Test trigger con sottoscrizione finta: funzione eseguita, notifica passata a `fallita` con `push: 1 errori` (atteso: endpoint finto), dati di prova rimossi.
+- Service worker verificato sul browser: registrazione attiva con scope `/push/`; `CloserPush.supportato` = true; senza permesso notifiche il client restituisce “Permesso notifiche negato”.
+- Residuo: la consegna reale al dispositivo richiede un browser con permesso notifiche; va provata dal tester su Chrome/Android e iPhone con PWA installata.
