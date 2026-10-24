@@ -4,7 +4,7 @@
 Serve quando `firebase deploy` non riesce a rinnovare le credenziali CLI.
 Usa il refresh token già presente nella configurazione di firebase-tools.
 
-Uso: python3 scripts/deploy_hosting_rest.py
+Uso: python3 scripts/deploy_hosting_rest.py [commerciali-app]
 """
 import gzip
 import hashlib
@@ -18,7 +18,10 @@ import urllib.parse
 import urllib.request
 
 PROJECT = "commerciali-app"
-SITE = sys.argv[1] if len(sys.argv) > 1 else "commerciali-flutter"
+SITE = sys.argv[1] if len(sys.argv) > 1 else "commerciali-app"
+if SITE == "commerciali-flutter":
+    print("commerciali-flutter è solo un alias di redirect: usa commerciali-app")
+    sys.exit(1)
 API = "https://firebasehosting.googleapis.com/v1beta1"
 PUBLIC = pathlib.Path("flutter_app/build/web")
 
@@ -26,9 +29,11 @@ PUBLIC = pathlib.Path("flutter_app/build/web")
 def access_token():
     path = os.path.expanduser("~/.config/configstore/firebase-tools.json")
     tokens = json.load(open(path))["tokens"]
+    if not os.environ.get("FIREBASE_CLI_CLIENT_SECRET"):
+        raise RuntimeError("Imposta FIREBASE_CLI_CLIENT_SECRET per rinnovare il token Firebase CLI")
     body = urllib.parse.urlencode({
         "client_id": "563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com",
-        "client_secret": "j9iVZfS8kkCEFUPaAeJV0sAi",
+        "client_secret": os.environ.get("FIREBASE_CLI_CLIENT_SECRET", ""),
         "refresh_token": tokens["refresh_token"],
         "grant_type": "refresh_token",
     }).encode()

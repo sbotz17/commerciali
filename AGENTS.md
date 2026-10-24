@@ -69,6 +69,17 @@ Nessun task o milestone è concluso senza `docs/progetto/definition-of-done.md`:
 prova E2E reale su staging (login, azienda attiva, CRUD cliente e preventivo, nessun permission-denied)
 e nessuna pagina segnaposto nel perimetro. Tester e validatore devono verificare le prove, non solo il codice.
 
+### Test: li esegue la squadra, non Andrea
+
+- Ogni sviluppo o correzione include i test automatici scritti e mantenuti dalla squadra (unit, widget,
+  E2E). Se il test manca, il task non è `FATTO`.
+- Il **tester** esegue `flutter analyze`, `flutter test`, gli script E2E e la prova su staging; allega il
+  report in `docs/progetto/test/`.
+- **Non si chiede ad Andrea di eseguire unit test, script o prove tecniche.** A lui si chiede solo la
+  validazione funzionale/UX dopo che la squadra ha già verificato tutto.
+- Se un comportamento richiesto non è coperto da un test, il tester lo segnala e il task torna in sviluppo:
+  non si "passa la verifica" ad Andrea.
+
 ### Task piccoli (obbligatorio)
 
 Nessun lavoro si assegna "tutto insieme". Ogni richiesta si spezza in task da **un solo obiettivo
@@ -101,6 +112,36 @@ tutto il repository a ogni richiesta.
   bug e produzione.
 - Riusa i documenti in `docs/progetto/` invece di far rileggere tutto il repository.
 - Controlla i consumi con `opencode stats --cost` e correggi la politica se un ruolo costa troppo.
+
+### Test e servizi esterni
+
+- I test (unit, widget, E2E) li scrive ed esegue la squadra, non Andrea.
+- Per ogni schermata che usa un servizio esterno il tester prova il flusso completo nella UI, non solo
+  l'endpoint con `curl`.
+- Se la UI non è provabile, il task è **BLOCCATO**, non “SUPERATO con residuo”.
+
+### Audit bloccanti prima di nuovi sviluppi
+
+- Prima di nuovi sviluppi chiudere, con prova reale nella UI, l'audit **Google login produzione** e
+  l'audit **notifiche push sul dispositivo**.
+- Fino ad allora sono ammessi solo correzioni, audit e test.
+- Un audit senza prova reale è **BLOCCATO**, non “SUPERATO con residuo”.
+
+### Produzione: zero bug noti
+
+- In produzione non entra codice con bug noti aperti.
+- Ogni rilascio richiede E2E reale su staging, smoke test in produzione e rollback pronto.
+- Un bug in produzione: rollback immediato, correzione su staging, test che lo riproduce, tester, validatore e
+  nuovo rilascio. Mai correzione diretta in produzione.
+- Staging può contenere bug e dati di test; la produzione no.
+- Non si dichiara “nessun bug”: si dichiara “nessun bug noto, prove eseguite, residui elencati”.
+
+### Sincronizzazione delle regole
+
+- La fonte globale delle regole è il repository `sbotz17/squadraalphalab` (`CLAUDE.md`).
+- Ogni modifica a una regola o configurazione della squadra in questo progetto va replicata subito anche lì,
+  nello stesso giro, e viceversa.
+- Un task che cambia regole non è concluso finché entrambi i repository sono aggiornati e pushati.
 
 ### Comandi
 

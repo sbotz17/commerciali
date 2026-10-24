@@ -114,14 +114,184 @@ service cloud.firestore {
       allow update, delete: if isSuper();
     }
 
+    // ---------- agenda, notifiche e chat ----------
+    function partecipanteStanza(stanzaId) {
+      return memberOf(get(/databases/$(database)/documents/chat_stanze/$(stanzaId)).data.azienda_id)
+        && uid() in get(/databases/$(database)/documents/chat_stanze/$(stanzaId)).data.partecipanti_uids;
+    }
+
+    match /appuntamenti/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id) || isSuper();
+      allow update: if memberOf(resource.data.azienda_id) && (
+        resource.data.privato != true
+        || resource.data.created_by == uid()
+        || resource.data.operatore_id == uid()
+        || (
+          resource.data.invitati_uids is list
+          && uid() in resource.data.invitati_uids
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['conferme', 'stato_condivisione', 'updated_at'])
+        )
+      ) || isSuper();
+      allow delete: if memberOf(resource.data.azienda_id) && (
+        resource.data.privato != true
+        || resource.data.created_by == uid()
+        || resource.data.operatore_id == uid()
+      ) || isSuper();
+
+      // Dettagli riservati degli appuntamenti privati: solo creatore,
+      // operatore e super admin. Gli altri membri vedono solo la fascia
+      // occupata nel documento principale redatto.
+      match /privato/{doc} {
+        allow read, write: if signedIn()
+          && memberOf(get(/databases/$(database)/documents/appuntamenti/$(id)).data.azienda_id)
+          && (
+            get(/databases/$(database)/documents/appuntamenti/$(id)).data.created_by == uid()
+            || get(/databases/$(database)/documents/appuntamenti/$(id)).data.operatore_id == uid()
+            || isSuper()
+          );
+      }
+    }
+    match /task/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id) || isSuper();
+      allow update: if memberOf(resource.data.azienda_id) || isSuper();
+      allow delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /promemoria/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id) || isSuper();
+      allow update: if memberOf(resource.data.azienda_id) || isSuper();
+      allow delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+
+    match /notifiche/{id} {
+      allow read, delete: if signedIn() && resource.data.utente_uid == uid();
+      allow create: if memberOf(request.resource.data.azienda_id)
+        && request.resource.data.mittente_uid == uid()
+        && exists(/databases/$(database)/documents/membri/$(request.resource.data.azienda_id + "_" + request.resource.data.utente_uid));
+      allow update: if signedIn()
+        && resource.data.utente_uid == uid()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['letta_at']);
+    }
+    match /dispositivi/{id} {
+      allow read, delete: if signedIn() && resource.data.utente_uid == uid();
+      allow create: if signedIn() && request.resource.data.utente_uid == uid();
+      allow update: if signedIn()
+        && resource.data.utente_uid == uid()
+        && request.resource.data.utente_uid == uid();
+    }
+    match /impostazioni_notifiche/{id} {
+      allow read: if signedIn() && (resource.data.utente_uid == uid() || isSuper());
+      allow create: if signedIn() && request.resource.data.utente_uid == uid();
+      allow update: if signedIn() && resource.data.utente_uid == uid();
+      allow delete: if signedIn() && resource.data.utente_uid == uid();
+    }
+
+    // Rubrica aziendale dei recapiti per le notifiche WhatsApp. Contiene solo
+    // numero e consenso, mai token o segreti; è leggibile dai membri
+    // dell'azienda per inviare avvisi ai colleghi.
+    match /contatti_notifiche/{id} {
+      allow read: if signedIn() && memberOf(resource.data.azienda_id);
+      allow create: if signedIn()
+        && request.resource.data.azienda_id is string
+        && request.resource.data.utente_uid == uid()
+        && memberOf(request.resource.data.azienda_id);
+      allow update: if signedIn()
+        && resource.data.utente_uid == uid()
+        && request.resource.data.utente_uid == uid()
+        && request.resource.data.azienda_id == resource.data.azienda_id
+        && memberOf(resource.data.azienda_id);
+      allow delete: if signedIn() && resource.data.utente_uid == uid();
+    }
+
+    match /allegati/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id) || isSuper();
+      allow update: if memberOf(resource.data.azienda_id) || isSuper();
+      allow delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /impostazioni_agenda/{az} {
+      allow read: if memberOf(az) || isSuper();
+      allow create, update, delete: if isAdminOf(az) || isSuper();
+    }
+    match /integrazioni_azienda/{az} {
+      allow read: if isAdminOf(az) || isSuper();
+      allow create, update: if (isAdminOf(az) || isSuper())
+        && request.resource.data.azienda_id == az
+        && !request.resource.data.keys().hasAny(['client_secret', 'token', 'refresh_token', 'password']);
+      allow delete: if isAdminOf(az) || isSuper();
+    }
+    match /condivisioni_calendario/{id} {
+      allow read: if signedIn()
+        && memberOf(resource.data.azienda_id)
+        && (resource.data.proprietario_uid == uid()
+            || (resource.data.destinatario_uid == uid()
+                && resource.data.stato == 'attiva')
+            || isAdminOf(resource.data.azienda_id)
+            || isSuper());
+      allow create: if signedIn()
+        && memberOf(request.resource.data.azienda_id)
+        && request.resource.data.proprietario_uid == uid()
+        && request.resource.data.destinatario_uid != uid()
+        && request.resource.data.livello in ['libero_occupato', 'dettagli', 'modifica']
+        && request.resource.data.stato == 'attiva'
+        && exists(/databases/$(database)/documents/membri/$(request.resource.data.azienda_id + "_" + request.resource.data.destinatario_uid))
+        && id == request.resource.data.azienda_id + "_" + request.resource.data.proprietario_uid + "_" + request.resource.data.destinatario_uid;
+      allow update: if signedIn()
+        && (resource.data.proprietario_uid == uid()
+            || isAdminOf(resource.data.azienda_id)
+            || isSuper())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stato', 'revoked_at', 'revoked_by', 'updated_at']);
+      allow delete: if signedIn()
+        && (resource.data.proprietario_uid == uid()
+            || isAdminOf(resource.data.azienda_id)
+            || isSuper());
+    }
+    match /integrazioni/{id} {
+      allow read: if signedIn() && (resource.data.utente_uid == uid() || isSuper());
+      allow write: if false;
+    }
+    match /slot/{token} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id) || isSuper();
+      allow update, delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /prenotazioni/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow create: if memberOf(request.resource.data.azienda_id) || isSuper();
+      allow update, delete: if memberOf(resource.data.azienda_id) || isSuper();
+    }
+    match /cache_eventi_esterni/{id} {
+      allow read: if memberOf(resource.data.azienda_id) || isSuper();
+      allow write: if false;
+    }
+    match /chat_stanze/{stanzaId} {
+      allow read, update: if memberOf(resource.data.azienda_id)
+        && uid() in resource.data.partecipanti_uids;
+      allow create: if memberOf(request.resource.data.azienda_id)
+        && uid() in request.resource.data.partecipanti_uids;
+      allow delete: if signedIn() && (resource.data.creatore_uid == uid() || isSuper());
+    }
+    match /chat_stanze/{stanzaId}/messaggi/{msgId} {
+      allow read: if partecipanteStanza(stanzaId);
+      allow create: if partecipanteStanza(stanzaId)
+        && request.resource.data.mittente_uid == uid();
+      allow update, delete: if signedIn() && (resource.data.mittente_uid == uid() || isSuper());
+    }
+    match /chat_stanze/{stanzaId}/letture/{utenteId} {
+      allow read, write: if partecipanteStanza(stanzaId)
+        && (utenteId == uid() || isSuper());
+    }
+
     // ---------- configurazioni di piattaforma ----------
     match /piani_config/{id} {
       allow read: if signedIn();
       allow write: if isSuper();
     }
     match /whatsapp_config/{id} {
-      allow read: if signedIn();
-      allow write: if isSuper();
+      allow read, write: if isSuper();
     }
     // I bandi sono dati pubblici: la lettura non richiede login.
     match /bandi_fonti/{id} {

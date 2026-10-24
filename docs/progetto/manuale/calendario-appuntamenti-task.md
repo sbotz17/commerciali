@@ -16,24 +16,47 @@ L'obiettivo è che un utente non debba cercare in tre schermate diverse.
 ## Calendario
 
 1. Apri **Calendario** dal menu.
-2. Scegli la vista **Giorno** o **Settimana**.
-3. Usa **Oggi** per tornare alla data corrente.
-4. Filtra per **operatore**, **tipo** e **stato**.
+2. Il calendario si apre sulla **vista mensile**. Scegli **Giorno**, **Settimana** o **Mese** per il periodo e **Calendario** o **Card** per lo stile.
+3. Usa **Oggi** per tornare alla data corrente e le frecce per spostarti.
+4. Filtra per **operatore**.
 5. Tocca un elemento per aprire il dettaglio.
-6. Tocca uno spazio vuoto per creare un appuntamento con data e ora già impostate.
+6. Tocca uno spazio vuoto nella vista giorno o settimana per creare un appuntamento con data e ora già impostate.
+7. Dalla vista mese, tocca un giorno per aprirlo nella vista giornaliera.
 
 Gli elementi senza orario compaiono in **Senza orario**.
 
 ## Creare un appuntamento
 
-1. Premi **Nuovo appuntamento**.
+1. Premi **+** accanto a **Card** nella barra del calendario.
 2. Inserisci il **titolo** (obbligatorio).
-3. Scegli data, ora e durata.
-4. Collega un cliente, se serve.
-5. Assegna un **operatore**.
-6. Inserisci luogo e indirizzo.
-7. Aggiungi note e, se serve, foto o immagini.
-8. Salva.
+3. Scegli **data e ora di inizio** e **data e ora di fine**. Il flag **Tutto il giorno** accanto alla data
+   disattiva gli orari.
+4. Se serve, imposta **Ripeti**: mai, ogni giorno, ogni settimana, ogni due settimane, ogni mese, ogni anno
+   o personalizza scegliendo i giorni della settimana e ogni quante settimane.
+5. Scegli la **notifica**: all'ora dell'evento, 5/10/15/30 minuti prima oppure personalizzata.
+6. Collega un cliente, se serve. Con il **+** accanto al campo Cliente puoi crearne uno nuovo e selezionarlo subito.
+7. Assegna un **operatore**.
+8. Inserisci luogo e indirizzo.
+9. In **Condivisione** scegli una o più persone oppure un gruppo: ricevono una notifica e devono confermare.
+10. Attiva **Appuntamento privato** se titolo, luogo e dettagli devono essere visibili solo a te e
+    all'utente assegnato.
+11. Aggiungi note.
+12. In **Allegati** puoi caricare immagini, video, PDF o file email (max 10 MB per file).
+13. Salva.
+
+L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invitato non conferma la
+disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
+**Confermo** e **Non disponibile**.
+
+Quando un invitato risponde, chi ha creato l'appuntamento e l'utente assegnato ricevono una **notifica
+In-App**. Se hanno attivato WhatsApp nelle proprie preferenze, ricevono anche un messaggio WhatsApp.
+Per attivarlo: **Impostazioni → Notifiche → WhatsApp**, inserisci il numero e attiva il consenso.
+
+La scelta **Notifica** nel form programma un promemoria WhatsApp: il Worker lo invia ogni minuto quando
+scade, se il server WhatsApp è configurato. Non è ancora un push/notifica In-App programmata.
+
+Gli **allegati** sono nel KV del Worker (non in Firestore) e si aprono con un link temporaneo di un'ora.
+Sono una soluzione temporanea finché R2 non viene attivato.
 
 ### Icona auto
 

@@ -56,3 +56,46 @@ automatizzato). Google resta attivo per gli altri utenti. Stato: attivo.
 - Call: creazione automatica di Google Meet/Teams; licenze e configurazioni Azure/Google da verificare.
 - Chat interna: dirette 1-a-1 + gruppi, testo e immagini, letture, ricerca, soft delete, notifiche in-app/push; WhatsApp non usato per la chat.
 - Stato: requisiti e architettura pronti; implementazione a micro-task, prima DBA poi modelli/UI, integrazioni all'arrivo delle credenziali.
+
+## 2026-10-24 — Calendario classico predefinito
+
+Richiesta di Andrea: nell'app l'agenda deve aprirsi con la classica vista a calendario, non con l'elenco a
+card. Periodi disponibili: **giorno**, **settimana**, **mese**; lo stile **Card** esistente resta
+selezionabile per tutti e tre i periodi. Scelta di partenza: calendario **mensile**, perché dà subito la
+visione d'insieme; il periodo scelto dall'utente vale solo per la sessione. Nessuna nuova collezione, regola
+o dipendenza: solo UI e funzioni pure, coperte da test.
+
+## 2026-10-24 — Inviti appuntamento con conferma disponibilità
+
+Richiesta di Andrea: condividere un appuntamento con un collega o un gruppo, inviare una notifica e
+lasciare l'appuntamento **provvisorio** fino alla conferma. Scelte:
+
+- nessuna nuova collezione: `invitati_uids`, `conferme` e `stato_condivisione` su `appuntamenti`;
+- i gruppi sono le stanze chat di tipo `gruppo` già esistenti, selezionabili insieme alle singole persone;
+- l'invitato conferma dal dettaglio aperto dalla notifica (`/calendario?appuntamento=…`); la risposta è
+  registrata in transazione per non perdere conferme simultanee;
+- la prima conferma porta lo stato a `confermato`; tutti i rifiuti a `rifiutato`; altrimenti `in_attesa`.
+  Lo stato `stato` dell'appuntamento (da fare/fatto/annullato) resta separato.
+
+## 2026-10-24 — Allegati e promemoria senza R2/Blaze
+
+Cloudflare R2 non è abilitato sull’account e Firebase non è sul piano Blaze: non è possibile usare R2 né
+Cloud Functions. Per non lasciare le funzioni incompiute:
+
+- **Allegati**: file (immagini, video, PDF, email) nel KV del Worker `ALLEGATI`, max 10 MB per file;
+  metadati in `allegati`. È una soluzione temporanea, da migrare a R2 quando sarà attivo.
+- **Promemoria**: code nel KV `PROMEMORIA`, Cron del Worker ogni minuto; l’invio avviene via WhatsApp
+  usando la configurazione del server. Non c’è ancora push/In-App programmato: per quello serve Blaze.
+- **Privacy**: i dettagli degli appuntamenti privati sono in `appuntamenti/{id}/privato/dettagli`,
+  leggibili solo da creatore, operatore e super admin; il documento principale resta redatto.
+
+## 2026-10-24 — Audit completo e blocco nuove funzioni
+
+**Decisione**: dopo i bug sfuggiti su WhatsApp, push e accesso, le nuove funzioni sono congelate. La squadra
+esegue un audit per aree (`docs/progetto/test/audit-completa.md`) con test automatici, prova E2E reale nella
+UI pubblicata, report tester e validazione. Un'area senza prova UI è `BLOCCATA`, non “SUPERATA con residuo”.
+
+**Motivo**: i test precedenti coprivano pezzi isolati e non il flusso usato dall'utente. La fiducia si
+ricostruisce con prove ripetibili, non con nuove funzioni.
+
+**Effetto**: nessun rilascio e nessuna nuova funzione fino alla chiusura delle aree AU01–AU15.

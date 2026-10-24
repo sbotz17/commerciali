@@ -10,16 +10,47 @@
 | Firestore | database `(default)`, regione `europe-west8` |
 | Auth | email/password + Google |
 | Proxy VIES | https://commerciali-vies.bottiandrea83.workers.dev |
+| Proxy WhatsApp | Worker staging `commerciali-vies`; produzione `commerciali-vies-prod` |
+| Server WhatsApp | VM Google Cloud `whatsapp-server`, HTTPS `https://35.188.136.131.sslip.io`, numero `393516722792` |
+| Config WhatsApp | KV `WHATSAPP_CONFIG`, chiave `server` (URL + API key); API key anche in `.env` della VM |
 | Vecchio backend | Supabase `segbfdfoqxrnitboeyof` — dismesso |
 
-## Produzione (da creare)
+## Produzione (attiva)
 
-Non esiste ancora. Quando servirà:
+| Cosa | Dove |
+|---|---|
+| Ramo previsto | `main` (da aggiornare; oggi la produzione è stata pubblicata dal ramo Flutter corrente) |
+| Hosting | https://commerciali-prod.web.app |
+| Progetto Firebase | `commerciali-prod` |
+| Firestore | database `(default)`, regione `europe-west8` |
+| Auth | email/password attivo; Google non ancora configurato |
+| Admin | `bottiandrea83@gmail.com` (super admin) |
+| Azienda | `Closer`, id `closer-prod` |
+| Fatturazione | account “Il mio account di fatturazione” |
 
-1. Creare un **progetto Firebase separato** (es. `commerciali-prod`), con Firestore, Auth e Hosting propri.
-2. Aggiungere il dominio di produzione ai domini autorizzati Auth.
-3. Promuovere `staging` → `main` e pubblicare da `main`.
-4. Le credenziali di produzione non vanno mai nel repository né nelle sessioni degli agenti.
+La produzione ha un progetto Firebase separato, quindi **non condivide dati, utenti o regole con lo staging**.
+L’app è pubblicata con `--dart-define=APP_ENV=prod` e `firebase_options_prod.dart`.
+
+Le notifiche Web Push sono attive solo in produzione: service worker `/push/push-sw.js`, VAPID e Cloud Function
+`inviaPushNotifica` (region `europe-west1`, trigger Firestore `notifiche/{id}`). Le chiavi VAPID stanno in
+`functions/.env` (ignorato da git), non nel repository. In staging il pulsante push resta disattivato perché
+non esiste la funzione server.
+
+**Nota di processo**: `main` non contiene ancora l’app Flutter. La prima pubblicazione è stata fatta dal ramo
+corrente per rendere operativo l’ambiente; prima del rilascio ufficiale il codice va portato su `main` con
+tester, validatore ed E2E. Google Sign-In in produzione va configurato prima di abilitarlo nell’interfaccia.
+
+## Pubblicazione produzione
+
+```sh
+cd flutter_app
+flutter build web --release --dart-define=APP_ENV=prod
+cd ..
+firebase deploy --only hosting:app,firestore:rules,firestore:indexes --project prod
+firebase deploy --only functions --project prod
+```
+
+La build di produzione include `--dart-define=APP_ENV=prod`; lo staging resta senza questa define.
 
 ## Pubblicazione staging
 
@@ -32,3 +63,6 @@ Worker VIES:
 ```sh
 cd worker && npx wrangler deploy
 ```
+
+
+**Alias**: `commerciali-flutter.web.app` non è un secondo ambiente; reindirizza con 301 a `commerciali-app.web.app`. Non usarlo per test o login.
