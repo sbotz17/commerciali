@@ -104,3 +104,16 @@ il default senza `APP_ENV`.
 **NON SUPERATO**
 
 Motivi: la fetta Web Push non presenta difetti (punti 4-9 tutti conformi), ma il gate della Definition of Done non è verde: al commit della fetta `flutter analyze` restituisce 1 warning (atteso 0) e l'albero di lavoro attuale non supera `flutter test` per la fetta calendario in corso. Da ripetere `flutter analyze` e `flutter test` a fetta calendario chiusa e committata, prima di qualsiasi validazione.
+
+## Aggiornamento verifica Web Push — albero pulito
+
+Dopo la chiusura e il commit della fetta calendario/ricorrenza, l’albero è pulito.
+
+| Controllo | Esito |
+|---|---|
+| `flutter analyze` | 0 problemi |
+| `flutter test` | **848 verdi** |
+| Commit | `f8dd54c` |
+| Indice | INDICE OK |
+
+Il precedente verdetto `NON SUPERATO` era dovuto a modifiche non committate di un’altra fetta. Sulla fetta Web Push chiusa il gate tecnico è verde. Resta obbligatoria la prova di consegna reale su un dispositivo con permesso notifiche (Chrome/Android e iPhone con PWA installata): non è una prova da chiedere ad Andrea, la esegue la squadra.

@@ -511,3 +511,17 @@
 - Trigger provato con sottoscrizione finta: funzione attiva e gestione errore corretta; dati di prova rimossi.
 - Service worker e client verificati nel browser di produzione; manca la prova di consegna reale con permesso notifiche.
 - `flutter analyze` 0; `flutter test` 833 verdi.
+
+## 2026-10-24 — Form appuntamento: intervallo, ripetizione, notifica e privacy
+
+- Sostituiti **Ora** e **Durata** con **Ora inizio** e **Ora fine**; aggiunte **Data fine** e **Ora fine**,
+  con fine calcolata e validata dopo l’inizio.
+- Flag **Tutto il giorno** accanto alla data di inizio.
+- **Ripeti**: mai, ogni giorno, ogni settimana, ogni due settimane, ogni mese, ogni anno, personalizzata
+  (giorni della settimana + ogni N settimane). Le occorrenze sono espanse dal client nel periodo visibile,
+  senza duplicare documenti.
+- **Notifica**: all’ora, 5/10/15/30 minuti prima o personalizzata; salvata in `notifica_min`.
+- **Appuntamento privato**: titolo, luogo e dettagli mascherati nella UI per chi non è creatore o operatore;
+  gli invitati possono comunque confermare la disponibilità.
+- Allegati immagini/video: **non implementati** perché Cloudflare R2 non è attivo; nessun pulsante finto.
+- `flutter analyze` 0; `flutter test` 848 verdi; regole/Worker già pubblicati.

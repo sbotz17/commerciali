@@ -114,6 +114,7 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 | H04b | UI | Calendario classico giorno/settimana/mese e stile card | vista predefinita calendario; selettori periodo e stile; griglia ore, mese, “Senza orario”, creazione con ora; test | sviluppatore-frontend | FATTO |
 | H04c | UI | Nuovo cliente dal form appuntamento e condivisione con colleghi/gruppi | pulsante `+` accanto al cliente; inviti con notifica; conferma disponibilità; stato provvisorio visibile; test | sviluppatore-frontend | FATTO |
 | H04d | Notifiche | Risposta invito a creatore/operatore con In-App e WhatsApp | notifica di conferma a chi ha creato o gestisce l'appuntamento; recapito WhatsApp aziendale con consenso; test e E2E; nessun test richiesto ad Andrea | sviluppatore-backend | FATTO |
+| H04e | UI | Form appuntamento: inizio/fine, tutto il giorno, ripetizione, notifica, privato | campi data/ora inizio e fine, flag tutto il giorno, ricorrenze con giorni, notifica configurabile, mascheramento privacy; test | sviluppatore-frontend | FATTO |
 | H05 | UI | Form appuntamento | titolo/data, cliente, operatore, luogo, Maps, call, promemoria | sviluppatore-frontend | FATTO |
 | H06 | UI | Pagina Task | lista per scadenza, filtri, completa/riapri, test | sviluppatore-frontend | FATTO |
 | H07 | UI | Form task | scadenza, operatore, priorità, cliente/appuntamento, note | sviluppatore-frontend | FATTO |
