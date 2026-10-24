@@ -113,6 +113,20 @@ tutto il repository a ogni richiesta.
 - Riusa i documenti in `docs/progetto/` invece di far rileggere tutto il repository.
 - Controlla i consumi con `opencode stats --cost` e correggi la politica se un ruolo costa troppo.
 
+### Test e servizi esterni
+
+- I test (unit, widget, E2E) li scrive ed esegue la squadra, non Andrea.
+- Per ogni schermata che usa un servizio esterno il tester prova il flusso completo nella UI, non solo
+  l'endpoint con `curl`.
+- Se la UI non è provabile, il task è **BLOCCATO**, non “SUPERATO con residuo”.
+
+### Sincronizzazione delle regole
+
+- La fonte globale delle regole è il repository `sbotz17/squadraalphalab` (`CLAUDE.md`).
+- Ogni modifica a una regola o configurazione della squadra in questo progetto va replicata subito anche lì,
+  nello stesso giro, e viceversa.
+- Un task che cambia regole non è concluso finché entrambi i repository sono aggiornati e pushati.
+
 ### Comandi
 
 `/sviluppo`, `/ritorno`, `/stato`, `/catalogo`, `/indice`, `/hotfix`, `/rilascio`.
