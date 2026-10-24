@@ -1,7 +1,7 @@
 # Audit completo dell'applicazione — piano di verifica
 
 **Data**: 24/10/2026
-**Stato**: in corso
+**Stato**: in corso — due audit bloccanti aperti
 **Regola**: nessuna nuova funzione e nessun rilascio finché un'area non ha report tester + validatore.
 **Responsabilità**: la squadra esegue i test; Andrea riceve solo la validazione finale.
 
@@ -41,6 +41,13 @@ Se manca una prova, l'area è **BLOCCATA**, non “SUPERATA con residuo”.
 | AU13 | Integrazioni | server WhatsApp, SMTP, push VAPID/FCM, Google/Microsoft, R2, errori e retry | P1 |
 | AU14 | Trasversale | permessi, multi-azienda, errori rete, mobile/desktop, reload, cache, nessun segnaposto | P0 |
 | AU15 | Produzione | progetto separato, Auth, DB, regole, hosting, dati vuoti, accesso admin | P0 |
+
+## Audit bloccanti (prima di nuovi sviluppi)
+
+1. `audit-google-produzione.md` — **BLOCCATO**: manca client OAuth produzione.
+2. `audit-push-dispositivo.md` — **BLOCCATO**: manca prova di consegna con permesso reale.
+
+Nessuna nuova funzione può partire finché questi due audit non sono chiusi con prova UI.
 
 ## Ordine di esecuzione
 

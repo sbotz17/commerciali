@@ -56,6 +56,27 @@ String messaggioErroreAccesso(Object errore) {
   return 'Accesso non riuscito. Controlla la connessione e riprova.';
 }
 
+/// Messaggio in italiano per gli errori di registrazione.
+String messaggioErroreRegistrazione(Object errore) {
+  if (errore is FirebaseAuthException) {
+    switch (errore.code) {
+      case 'email-already-in-use':
+        return 'Questa email è già registrata. Accedi con la password.';
+      case 'invalid-email':
+        return 'L\'indirizzo email non è valido.';
+      case 'weak-password':
+        return 'La password è troppo debole: usa almeno 6 caratteri.';
+      case 'network-request-failed':
+        return 'Connessione assente. Controlla la rete e riprova.';
+      case 'operation-not-allowed':
+        return 'La registrazione è temporaneamente disattivata.';
+      default:
+        return 'Registrazione non riuscita. Riprova.';
+    }
+  }
+  return 'Registrazione non riuscita. Controlla la connessione e riprova.';
+}
+
 /// Schermata di accesso con email e password.
 ///
 /// Non legge provider Firebase durante il build: `AuthService` viene risolto
@@ -136,6 +157,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       setState(() => _errore = messaggioErroreGoogle(errore));
     } finally {
       if (mounted) setState(() => _inCorsoGoogle = false);
+    }
+  }
+
+  /// Apre la registrazione email/password. Dopo la creazione dell'account
+  /// `AuthGate` porta all'onboarding per creare l'azienda.
+  Future<void> _apriRegistrazione() async {
+    final creato = await showDialog<bool>(
+      context: context,
+      builder: (context) => const _DialogoRegistrazione(),
+    );
+    if (creato == true && mounted) {
+      context.go('/');
     }
   }
 
@@ -286,25 +319,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     ),
                             ),
                             const SizedBox(height: AppSpazi.l),
-                            Text.rich(
-                              TextSpan(
-                                style: tema.textTheme.bodySmall?.copyWith(
-                                  color: tema.colorScheme.onSurfaceVariant,
-                                ),
-                                children: [
-                                  const TextSpan(
-                                    text: 'Non hai un account? ',
-                                  ),
-                                  TextSpan(
-                                    text: 'Registra la tua azienda',
-                                    style: TextStyle(
-                                      color: tema.colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            Text(
+                              'Non hai un account?',
                               textAlign: TextAlign.center,
+                              style: tema.textTheme.bodySmall?.copyWith(
+                                color: tema.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            TextButton(
+                              key: const Key('registrati-azienda'),
+                              onPressed: (_inCorso || _inCorsoGoogle)
+                                  ? null
+                                  : _apriRegistrazione,
+                              child: const Text('Registra la tua azienda'),
                             ),
                           ],
                         ),
@@ -401,6 +428,147 @@ class _MessaggioErrore extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Dialogo di registrazione email/password per un nuovo titolare.
+///
+/// Crea solo l'account Auth: dopo il login `AuthGate` mostra l'onboarding per
+/// creare profilo, azienda, membership e seed.
+class _DialogoRegistrazione extends ConsumerStatefulWidget {
+  const _DialogoRegistrazione();
+
+  @override
+  ConsumerState<_DialogoRegistrazione> createState() =>
+      _DialogoRegistrazioneState();
+}
+
+class _DialogoRegistrazioneState extends ConsumerState<_DialogoRegistrazione> {
+  final _modulo = GlobalKey<FormState>();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  final _conferma = TextEditingController();
+  bool _inCorso = false;
+  String? _errore;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    _conferma.dispose();
+    super.dispose();
+  }
+
+  Future<void> _registra() async {
+    FocusScope.of(context).unfocus();
+    setState(() => _errore = null);
+    if (!(_modulo.currentState?.validate() ?? false)) return;
+    setState(() => _inCorso = true);
+    try {
+      await ref
+          .read(authServiceProvider)
+          .registraConEmail(_email.text, _password.text);
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } on FirebaseAuthException catch (errore) {
+      if (!mounted) return;
+      setState(() => _errore = messaggioErroreRegistrazione(errore));
+    } catch (errore) {
+      if (!mounted) return;
+      setState(() => _errore = messaggioErroreRegistrazione(errore));
+    } finally {
+      if (mounted) setState(() => _inCorso = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      key: const Key('dialogo-registrazione'),
+      title: const Text('Registra la tua azienda'),
+      content: SingleChildScrollView(
+        child: Form(
+          key: _modulo,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                key: const Key('registrazione-email'),
+                controller: _email,
+                enabled: !_inCorso,
+                keyboardType: TextInputType.emailAddress,
+                autofillHints: const [AutofillHints.email],
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: Icon(Icons.email_outlined),
+                ),
+                validator: validaEmail,
+              ),
+              const SizedBox(height: AppSpazi.s),
+              TextFormField(
+                key: const Key('registrazione-password'),
+                controller: _password,
+                enabled: !_inCorso,
+                obscureText: true,
+                autofillHints: const [AutofillHints.newPassword],
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  helperText: 'Almeno 6 caratteri',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                validator: (valore) {
+                  final testo = valore ?? '';
+                  if (testo.length < 6) {
+                    return 'La password deve avere almeno 6 caratteri';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppSpazi.s),
+              TextFormField(
+                key: const Key('registrazione-conferma'),
+                controller: _conferma,
+                enabled: !_inCorso,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Conferma password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                validator: (valore) => valore == _password.text
+                    ? null
+                    : 'Le password non coincidono',
+              ),
+              if (_errore != null) ...[
+                const SizedBox(height: AppSpazi.s),
+                Text(
+                  _errore!,
+                  key: const Key('registrazione-errore'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          key: const Key('registrazione-annulla'),
+          onPressed: _inCorso ? null : () => Navigator.of(context).pop(false),
+          child: const Text('Annulla'),
+        ),
+        FilledButton(
+          key: const Key('registrazione-conferma-pulsante'),
+          onPressed: _inCorso ? null : _registra,
+          child: _inCorso
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Crea account'),
+        ),
+      ],
     );
   }
 }

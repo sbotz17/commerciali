@@ -568,3 +568,9 @@
 - Creato `docs/progetto/test/audit-completa.md` con 15 aree e criteri di prova UI reale.
 - Nuove funzioni congelate fino alla chiusura dell’audit; ogni area richiede tester e validatore.
 - I bug noti restano elencati nell’audit e vanno chiusi con prova nella schermata, non solo con endpoint.
+
+## 2026-10-25 — Due audit bloccanti
+
+- Google login produzione: BLOCCATO, manca client OAuth dedicato; lo staging non è riutilizzabile (redirect mismatch).
+- Push dispositivo: BLOCCATO, manca la prova di consegna con permesso notifiche reale; codice e service worker verificati.
+- Regola globale: nessun nuovo sviluppo finché entrambi gli audit non sono chiusi con prova UI, tester e validatore.

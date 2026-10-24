@@ -120,6 +120,13 @@ tutto il repository a ogni richiesta.
   l'endpoint con `curl`.
 - Se la UI non è provabile, il task è **BLOCCATO**, non “SUPERATO con residuo”.
 
+### Audit bloccanti prima di nuovi sviluppi
+
+- Prima di nuovi sviluppi chiudere, con prova reale nella UI, l'audit **Google login produzione** e
+  l'audit **notifiche push sul dispositivo**.
+- Fino ad allora sono ammessi solo correzioni, audit e test.
+- Un audit senza prova reale è **BLOCCATO**, non “SUPERATO con residuo”.
+
 ### Produzione: zero bug noti
 
 - In produzione non entra codice con bug noti aperti.

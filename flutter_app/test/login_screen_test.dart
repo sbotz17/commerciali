@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:commerciali_app/app.dart';
+import 'package:commerciali_app/features/auth/login_screen.dart';
 
 /// Test della schermata di accesso senza Firebase.
 ///
@@ -18,6 +20,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  test('messaggioErroreRegistrazione distingue i casi', () {
+    expect(
+      messaggioErroreRegistrazione(
+        FirebaseAuthException(code: 'email-already-in-use'),
+      ),
+      contains('già registrata'),
+    );
+    expect(
+      messaggioErroreRegistrazione(
+        FirebaseAuthException(code: 'weak-password'),
+      ),
+      contains('almeno 6'),
+    );
+  });
+
   testWidgets('mostra i testi e i collegamenti del login', (tester) async {
     await apriLogin(tester);
 
@@ -26,6 +43,46 @@ void main() {
     expect(find.text('Accedi'), findsOneWidget);
     expect(find.text('Password dimenticata?'), findsOneWidget);
     expect(find.textContaining('Registra la tua azienda'), findsOneWidget);
+  });
+
+  testWidgets('"Registra la tua azienda" apre il dialogo di registrazione',
+      (tester) async {
+    await apriLogin(tester);
+
+    await tester.ensureVisible(find.byKey(const Key('registrati-azienda')));
+    await tester.tap(find.byKey(const Key('registrati-azienda')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('dialogo-registrazione')), findsOneWidget);
+    expect(find.byKey(const Key('registrazione-email')), findsOneWidget);
+    expect(find.byKey(const Key('registrazione-password')), findsOneWidget);
+    expect(find.byKey(const Key('registrazione-conferma')), findsOneWidget);
+  });
+
+  testWidgets('la registrazione rifiuta password diverse', (tester) async {
+    await apriLogin(tester);
+
+    await tester.ensureVisible(find.byKey(const Key('registrati-azienda')));
+    await tester.tap(find.byKey(const Key('registrati-azienda')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('registrazione-email')),
+      'nuovo@example.it',
+    );
+    await tester.enterText(
+      find.byKey(const Key('registrazione-password')),
+      'segreta1',
+    );
+    await tester.enterText(
+      find.byKey(const Key('registrazione-conferma')),
+      'diversa1',
+    );
+    await tester.tap(
+      find.byKey(const Key('registrazione-conferma-pulsante')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Le password non coincidono'), findsOneWidget);
   });
 
   testWidgets('la password è oscurata', (tester) async {

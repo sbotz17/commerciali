@@ -168,7 +168,7 @@ automatici, prova E2E reale nella UI, report tester e validazione. Piano: `docs/
 
 | ID | Area | Criterio | Agente | Stato |
 |---|---|---|---|---|
-| AU01 | Auth e onboarding | login/reset/Google/onboarding/ruoli provati nella UI | tester | DA FARE |
+| AU01 | Auth e onboarding | login/reset/Google/onboarding/ruoli provati nella UI | tester | BLOCCATO (Google OAuth) |
 | AU02 | Dashboard | conteggi e dati corretti per azienda | tester | DA FARE |
 | AU03 | Clienti | CRUD, VIES, duplicati, persistenza | tester | DA FARE |
 | AU04 | Catalogo | prodotti, categorie, panieri, immagini | tester | DA FARE |
@@ -176,7 +176,7 @@ automatici, prova E2E reale nella UI, report tester e validazione. Piano: `docs/
 | AU06 | Visite | CRUD, riordino, stati, calendario | tester | DA FARE |
 | AU07 | Calendario | viste, ricorrenza, privato, partecipanti, call, allegati | tester | DA FARE |
 | AU08 | Task | CRUD, scadenze, completamento, filtri | tester | DA FARE |
-| AU09 | Notifiche | centro, preferenze, push, WhatsApp, silenzio | tester | DA FARE |
+| AU09 | Notifiche | centro, preferenze, push, WhatsApp, silenzio | tester | BLOCCATO (prova dispositivo) |
 | AU10 | Chat | dirette, gruppi, letture, immagini, notifiche | tester | DA FARE |
 | AU11 | Bandi | lista, filtri, dettaglio, import | tester | DA FARE |
 | AU12 | Impostazioni | profilo, utenti, ruoli, licenze, superadmin, integrazioni | tester | DA FARE |
