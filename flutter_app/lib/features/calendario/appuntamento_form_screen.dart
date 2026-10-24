@@ -340,6 +340,18 @@ class _AppuntamentoFormScreenState
         appuntamento?.oraFine ??
         _aggiungiMinutiAllOra(oraIniziale, minutiFine <= 0 ? 60 : minutiFine);
     _oraFine = TextEditingController(text: _tuttoIlGiorno ? '' : oraFine);
+    if (!_tuttoIlGiorno &&
+        appuntamento?.dataFine == null &&
+        appuntamento?.oraFine == null &&
+        oraFine.isNotEmpty &&
+        oraIniziale.isNotEmpty &&
+        oraFine.compareTo(oraIniziale) <= 0) {
+      _dataFineScelta = DateTime(
+        _dataScelta.year,
+        _dataScelta.month,
+        _dataScelta.day + 1,
+      );
+    }
     _dataFine = TextEditingController(
       text: formattaDataVisita(_dataFineScelta),
     );
@@ -632,7 +644,16 @@ class _AppuntamentoFormScreenState
       _ora.text = ora;
       final fine = normalizzaOraVisita(_oraFine.text);
       if (fine == null || fine.compareTo(ora) <= 0) {
-        _oraFine.text = _aggiungiMinutiAllOra(ora, 60);
+        final nuovaFine = _aggiungiMinutiAllOra(ora, 60);
+        _oraFine.text = nuovaFine;
+        if (nuovaFine.isNotEmpty && nuovaFine.compareTo(ora) <= 0) {
+          _dataFineScelta = DateTime(
+            _dataScelta.year,
+            _dataScelta.month,
+            _dataScelta.day + 1,
+          );
+          _dataFine.text = formattaDataVisita(_dataFineScelta);
+        }
       }
     });
   }
