@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:commerciali_app/core/theme/app_theme.dart';
 import 'package:commerciali_app/data/models/appuntamento.dart';
+import 'package:commerciali_app/data/services/sp_service.dart';
 import 'package:commerciali_app/features/calendario/calendario_screen.dart';
 
 void main() {
@@ -212,6 +213,32 @@ void main() {
       expect(titoloVisibileElemento(elemento, 'altro'), 'Impegno privato');
       expect(titoloVisibileElemento(elemento, 'andrea'), 'Visita');
       expect(dettaglioVisibileElemento(elemento, const {}, 'altro'), '—');
+    });
+  });
+
+  group('redazione privacy', () {
+    test('il documento principale non contiene i dettagli', () {
+      final payload = {
+        'titolo': 'Visita riservata',
+        'cliente_nome': 'ACME',
+        'luogo': 'Sede',
+        'indirizzo': 'Via Roma 1',
+        'note': 'Segreto',
+        'call_url': 'https://meet.example.com/abc',
+        'data': '2026-10-05',
+        'privato': true,
+      };
+      final principale = redigiAppuntamentoPrivato(payload);
+      final dettagli = dettagliPrivatiAppuntamento(payload);
+
+      expect(principale['titolo'], 'Impegno privato');
+      expect(principale['luogo'], isNull);
+      expect(principale['indirizzo'], isNull);
+      expect(principale['note'], isNull);
+      expect(principale['call_url'], isNull);
+      expect(dettagli['titolo'], 'Visita riservata');
+      expect(dettagli['luogo'], 'Sede');
+      expect(dettagli['note'], 'Segreto');
     });
   });
 

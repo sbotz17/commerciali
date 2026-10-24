@@ -199,3 +199,13 @@ Le **password e i token** non vanno mai incollati in chat, in Firestore o nel co
 - token OAuth e SMTP solo lato server;
 - redirect OAuth limitati ai domini Closer;
 - log senza password, token o contenuto sensibile.
+
+## Server WhatsApp di piattaforma
+
+Il server è una VM Google Cloud (`whatsapp-server`) con reverse proxy HTTPS Caddy su
+`https://35.188.136.131.sslip.io`. È collegato al numero `393516722792`.
+
+- La API key è nel KV Cloudflare `WHATSAPP_CONFIG` e nel `.env` della VM, non nel repository.
+- Staging usa il Worker `commerciali-vies`; produzione usa `commerciali-vies-prod`.
+- Il QR e lo stato si gestiscono da Super Admin → WhatsApp.
+- Il server usa Baileys (WhatsApp Web non ufficiale): per uso intensivo valutare la WhatsApp Business Cloud API.

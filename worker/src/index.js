@@ -23,7 +23,8 @@ const CONFIG_KEY = "server";
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Access-Control-Allow-Headers":
+    "Content-Type, Authorization, x-azienda-id, x-elemento-id, x-elemento-tipo, x-nome, x-mime",
 };
 
 function json(obj, status = 200) {
@@ -98,6 +99,72 @@ async function leggiDocumento(env, percorso, token) {
   );
   if (!risposta.ok) return null;
   return risposta.json();
+}
+
+async function creaDocumento(env, collection, id, fields, token) {
+  const risposta = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents/${collection}?documentId=${encodeURIComponent(id)}`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+      signal: AbortSignal.timeout(10000),
+    },
+  );
+  if (!risposta.ok) {
+    throw new Error(`Firestore HTTP ${risposta.status}`);
+  }
+  return risposta.json();
+}
+
+async function eliminaDocumento(env, percorso, token) {
+  const risposta = await fetch(
+    `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT}/databases/(default)/documents/${percorso}`,
+    {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(10000),
+    },
+  );
+  return risposta.ok;
+}
+
+async function isMembro(env, aziendaId, utente) {
+  const doc = await leggiDocumento(
+    env,
+    `membri/${aziendaId}_${utente.uid}`,
+    utente.token,
+  );
+  return !!doc;
+}
+
+async function firma(env, testo) {
+  const chiave = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(env.ALLEGATI_SECRET || ""),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const firma = await crypto.subtle.sign(
+    "HMAC",
+    chiave,
+    new TextEncoder().encode(testo),
+  );
+  return [...new Uint8Array(firma)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+function stringa(v) {
+  return { stringValue: v == null ? "" : String(v) };
+}
+
+function intero(v) {
+  return { integerValue: String(v) };
 }
 
 async function isSuperAdmin(utente, env) {
@@ -226,6 +293,232 @@ async function gestisciWhatsapp(request, env, url) {
   return json({ error: "Endpoint non trovato" }, 404);
 }
 
+async function gestisciPromemoria(request, env, url) {
+  const utente = await utenteFirebase(request, env);
+  if (!utente) return json({ error: "Non autenticato" }, 401);
+
+  if (url.pathname === "/promemoria/annulla" && request.method === "POST") {
+    const body = await corpoJson(request);
+    const aziendaId = String(body.aziendaId || "").trim();
+    const appuntamentoId = String(body.appuntamentoId || "").trim();
+    if (!aziendaId || !appuntamentoId) {
+      return json({ error: "Parametri mancanti" }, 400);
+    }
+    if (!(await isMembro(env, aziendaId, utente))) {
+      return json({ error: "Non appartieni all'azienda" }, 403);
+    }
+    await annullaPromemoria(env, appuntamentoId);
+    return json({ ok: true });
+  }
+
+  if (url.pathname === "/promemoria" && request.method === "POST") {
+    const body = await corpoJson(request);
+    const aziendaId = String(body.aziendaId || "").trim();
+    const appuntamentoId = String(body.appuntamentoId || "").trim();
+    const utenti = Array.isArray(body.utenteUids)
+      ? body.utenteUids.map((u) => String(u || "").trim()).filter(Boolean)
+      : [];
+    const occorrenze = Array.isArray(body.occorrenze) ? body.occorrenze : [];
+    if (!aziendaId || !appuntamentoId || !utenti.length || !occorrenze.length) {
+      return json({ error: "Parametri mancanti" }, 400);
+    }
+    if (!(await isMembro(env, aziendaId, utente))) {
+      return json({ error: "Non appartieni all'azienda" }, 403);
+    }
+    if (!env.PROMEMORIA) return json({ error: "KV promemoria assente" }, 500);
+    await annullaPromemoria(env, appuntamentoId);
+
+    let creati = 0;
+    for (const uid of utenti) {
+      const contatto = await leggiDocumento(
+        env,
+        `contatti_notifiche/${aziendaId}_${uid}`,
+        utente.token,
+      );
+      if (!contatto) continue;
+      if (contatto.fields?.consenso_whatsapp?.booleanValue !== true) continue;
+      const numero = contatto.fields?.numero_whatsapp?.stringValue || "";
+      if (!numero) continue;
+      for (const occorrenza of occorrenze.slice(0, 30)) {
+        const due = Date.parse(occorrenza.dueAt || "");
+        const testo = String(occorrenza.testo || "").trim();
+        if (!Number.isFinite(due) || !testo) continue;
+        const key = `promemoria:${appuntamentoId}:${crypto.randomUUID()}`;
+        await env.PROMEMORIA.put(
+          key,
+          JSON.stringify({
+            due,
+            numero,
+            testo,
+            appuntamentoId,
+            utenteUid: uid,
+          }),
+        );
+        creati++;
+      }
+    }
+    return json({ ok: true, creati });
+  }
+
+  return json({ error: "Endpoint non trovato" }, 404);
+}
+
+async function annullaPromemoria(env, appuntamentoId) {
+  if (!env.PROMEMORIA) return;
+  const prefisso = `promemoria:${appuntamentoId}:`;
+  const elenco = await env.PROMEMORIA.list({ prefix: prefisso });
+  await Promise.all(elenco.keys.map((voce) => env.PROMEMORIA.delete(voce.name)));
+}
+
+async function inviaPromemoriaScaduti(env) {
+  if (!env.PROMEMORIA) return;
+  const config = await leggiConfig(env);
+  if (!config) return;
+  const elenco = await env.PROMEMORIA.list({ prefix: "promemoria:" });
+  const adesso = Date.now();
+  for (const voce of elenco.keys) {
+    const raw = await env.PROMEMORIA.get(voce.name);
+    if (!raw) continue;
+    let dato;
+    try {
+      dato = JSON.parse(raw);
+    } catch (_) {
+      await env.PROMEMORIA.delete(voce.name);
+      continue;
+    }
+    if (Number(dato.due) > adesso) continue;
+    try {
+      await inoltraAlServer(config, "/send", {
+        method: "POST",
+        body: { to: dato.numero, message: dato.testo },
+      });
+      await env.PROMEMORIA.delete(voce.name);
+    } catch (_) {
+      // Se il server è irraggiungibile riprova; dopo 24h scarta.
+      if (adesso - Number(dato.due) > 24 * 60 * 60 * 1000) {
+        await env.PROMEMORIA.delete(voce.name);
+      }
+    }
+  }
+}
+
+async function gestisciAllegati(request, env, url) {
+  const percorso = url.pathname;
+  if (percorso === "/allegati/object" && request.method === "GET") {
+    const key = url.searchParams.get("key") || "";
+    const exp = Number(url.searchParams.get("exp") || 0);
+    const sig = url.searchParams.get("sig") || "";
+    if (!key || !sig || exp < Math.floor(Date.now() / 1000)) {
+      return json({ error: "Link scaduto" }, 403);
+    }
+    const attesa = await firma(env, `${key}|${exp}`);
+    if (attesa !== sig) return json({ error: "Firma non valida" }, 403);
+    const oggetto = await env.ALLEGATI.getWithMetadata(key, {
+      type: "arrayBuffer",
+    });
+    if (!oggetto || !oggetto.value) return json({ error: "File non trovato" }, 404);
+    const mime = oggetto.metadata?.mime || "application/octet-stream";
+    const nome = oggetto.metadata?.nome || "allegato";
+    return new Response(oggetto.value, {
+      headers: {
+        ...CORS,
+        "Content-Type": mime,
+        "Content-Disposition": `inline; filename="${String(nome).replace(/"/g, "")}"`,
+      },
+    });
+  }
+
+  const utente = await utenteFirebase(request, env);
+  if (!utente) return json({ error: "Non autenticato" }, 401);
+
+  if (percorso === "/allegati/upload" && request.method === "POST") {
+    const aziendaId = String(request.headers.get("x-azienda-id") || "").trim();
+    const elementoId = String(request.headers.get("x-elemento-id") || "").trim();
+    const elementoTipo = String(request.headers.get("x-elemento-tipo") || "appuntamento").trim();
+    const nome = decodeURIComponent(request.headers.get("x-nome") || "allegato");
+    const mime = String(request.headers.get("x-mime") || "application/octet-stream");
+    if (!aziendaId || !elementoId) return json({ error: "Parametri mancanti" }, 400);
+    if (!(await isMembro(env, aziendaId, utente))) {
+      return json({ error: "Non appartieni all'azienda" }, 403);
+    }
+    const bytes = await request.arrayBuffer();
+    if (!bytes.byteLength) return json({ error: "File vuoto" }, 400);
+    if (bytes.byteLength > 10 * 1024 * 1024) {
+      return json({ error: "File troppo grande (max 10 MB)" }, 413);
+    }
+    const key = `${aziendaId}/${elementoId}/${crypto.randomUUID()}`;
+    await env.ALLEGATI.put(key, bytes, { metadata: { mime, nome } });
+    const id = crypto.randomUUID();
+    const adesso = new Date().toISOString();
+    try {
+      await creaDocumento(
+        env,
+        "allegati",
+        id,
+        {
+          azienda_id: stringa(aziendaId),
+          elemento_tipo: stringa(elementoTipo),
+          elemento_id: stringa(elementoId),
+          nome: stringa(nome),
+          tipo_mime: stringa(mime),
+          dimensione: intero(bytes.byteLength),
+          object_key: stringa(key),
+          created_by: stringa(utente.uid),
+          created_at: stringa(adesso),
+        },
+        utente.token,
+      );
+    } catch (e) {
+      await env.ALLEGATI.delete(key);
+      return json({ error: String(e.message || e) }, 500);
+    }
+    return json({
+      id,
+      aziendaId,
+      elementoId,
+      elementoTipo,
+      nome,
+      mime,
+      dimensione: bytes.byteLength,
+      objectKey: key,
+      createdAt: adesso,
+    });
+  }
+
+  if (percorso === "/allegati/link" && request.method === "POST") {
+    const body = await corpoJson(request);
+    const aziendaId = String(body.aziendaId || "").trim();
+    const key = String(body.key || "").trim();
+    if (!aziendaId || !key) return json({ error: "Parametri mancanti" }, 400);
+    if (!(await isMembro(env, aziendaId, utente))) {
+      return json({ error: "Non appartieni all'azienda" }, 403);
+    }
+    if (!key.startsWith(`${aziendaId}/`)) return json({ error: "Chiave non valida" }, 403);
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    const sig = await firma(env, `${key}|${exp}`);
+    return json({
+      url: `${url.origin}/allegati/object?key=${encodeURIComponent(key)}&exp=${exp}&sig=${sig}`,
+    });
+  }
+
+  if (percorso === "/allegati" && request.method === "DELETE") {
+    const body = await corpoJson(request);
+    const aziendaId = String(body.aziendaId || "").trim();
+    const id = String(body.id || "").trim();
+    const key = String(body.key || "").trim();
+    if (!aziendaId || !id || !key) return json({ error: "Parametri mancanti" }, 400);
+    if (!(await isMembro(env, aziendaId, utente))) {
+      return json({ error: "Non appartieni all'azienda" }, 403);
+    }
+    if (!key.startsWith(`${aziendaId}/`)) return json({ error: "Chiave non valida" }, 403);
+    await env.ALLEGATI.delete(key);
+    await eliminaDocumento(env, `allegati/${id}`, utente.token);
+    return json({ ok: true });
+  }
+
+  return json({ error: "Endpoint non trovato" }, 404);
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === "OPTIONS") {
@@ -233,6 +526,22 @@ export default {
     }
 
     const url = new URL(request.url);
+    if (url.pathname === "/promemoria" || url.pathname === "/promemoria/annulla") {
+      try {
+        return await gestisciPromemoria(request, env, url);
+      } catch (e) {
+        return json({ error: String(e.message || e) }, 500);
+      }
+    }
+
+    if (url.pathname.startsWith("/allegati/") || url.pathname === "/allegati") {
+      try {
+        return await gestisciAllegati(request, env, url);
+      } catch (e) {
+        return json({ error: String(e.message || e) }, 500);
+      }
+    }
+
     if (url.pathname.startsWith("/whatsapp/")) {
       try {
         return await gestisciWhatsapp(request, env, url);
@@ -277,5 +586,9 @@ export default {
     } catch (e) {
       return json({ ok: false, error: "VIES non raggiungibile: " + e.message }, 502);
     }
+  },
+
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(inviaPromemoriaScaduti(env));
   },
 };

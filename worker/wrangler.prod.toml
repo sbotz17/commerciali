@@ -1,0 +1,11 @@
+name = "commerciali-vies-prod"
+main = "src/index.js"
+compatibility_date = "2026-10-21"
+
+[vars]
+FIREBASE_PROJECT = "commerciali-prod"
+FIREBASE_API_KEY = "AIzaSyBGoqyO_SgJeIUoE3YALsNmuBe4i1JIZ4A"
+
+[[kv_namespaces]]
+binding = "WHATSAPP_CONFIG"
+id = "b496969fab494fa48c8b3ba960e40dbd"

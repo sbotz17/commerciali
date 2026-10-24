@@ -352,6 +352,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       final servizio = ref.read(spServiceProvider);
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
       await servizio.eliminaAppuntamento(appuntamento.id);
+      await servizio.annullaPromemoria(appuntamento.id);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,

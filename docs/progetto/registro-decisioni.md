@@ -76,3 +76,15 @@ lasciare l'appuntamento **provvisorio** fino alla conferma. Scelte:
   registrata in transazione per non perdere conferme simultanee;
 - la prima conferma porta lo stato a `confermato`; tutti i rifiuti a `rifiutato`; altrimenti `in_attesa`.
   Lo stato `stato` dell'appuntamento (da fare/fatto/annullato) resta separato.
+
+## 2026-10-24 — Allegati e promemoria senza R2/Blaze
+
+Cloudflare R2 non è abilitato sull’account e Firebase non è sul piano Blaze: non è possibile usare R2 né
+Cloud Functions. Per non lasciare le funzioni incompiute:
+
+- **Allegati**: file (immagini, video, PDF, email) nel KV del Worker `ALLEGATI`, max 10 MB per file;
+  metadati in `allegati`. È una soluzione temporanea, da migrare a R2 quando sarà attivo.
+- **Promemoria**: code nel KV `PROMEMORIA`, Cron del Worker ogni minuto; l’invio avviene via WhatsApp
+  usando la configurazione del server. Non c’è ancora push/In-App programmato: per quello serve Blaze.
+- **Privacy**: i dettagli degli appuntamenti privati sono in `appuntamenti/{id}/privato/dettagli`,
+  leggibili solo da creatore, operatore e super admin; il documento principale resta redatto.

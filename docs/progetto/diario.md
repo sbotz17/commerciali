@@ -532,3 +532,27 @@
 - Il ruolo commerciale vede e gestisce le proprie notifiche, push e condivisione calendario.
 - Le voci Calendario e agenda, Integrazioni, Utenti, Ruoli e Licenze restano all’admin.
 - Aggiunto test widget per il ruolo commerciale; `flutter analyze` 0; suite completa aggiornata.
+
+## 2026-10-24 — Server WhatsApp recuperato e configurato
+
+- Trovata la VM Google Cloud `whatsapp-server` (progetto `project-54593866-4927-4312-88d`, zona `us-central1-a`, IP `35.188.136.131`).
+- Server già connesso al numero `393516722792`; API key recuperata dalla VM e poi ruotata per sicurezza.
+- Aggiunto reverse proxy HTTPS con Caddy su `https://35.188.136.131.sslip.io` e regola firewall 80/443.
+- Config salvata nel KV Cloudflare `WHATSAPP_CONFIG` (chiave `server`).
+- Creato il Worker di produzione `commerciali-vies-prod` con progetto Firebase `commerciali-prod`; staging usa `commerciali-vies`.
+- Verificati `/whatsapp/config` e `/whatsapp/status` su entrambi i Worker: server connesso, numero corretto.
+- L’app sceglie il Worker in base ad `APP_ENV=prod`; l’API key non è nel repository.
+
+## 2026-10-24 — Integrati allegati, promemoria e privacy reale
+
+- **Allegati**: form appuntamento con selezione file, upload nel KV Worker `ALLEGATI`, metadati in
+  `allegati`, link firmato di 1 ora, eliminazione. Max 10 MB per file (immagini, video, PDF, email).
+- **Promemoria**: le occorrenze degli appuntamenti (max 30 nei prossimi 90 giorni) vengono registrate nel
+  KV `PROMEMORIA`; un Cron del Worker ogni minuto invia il promemoria via WhatsApp agli utenti con consenso.
+  Annullamento su modifica/eliminazione.
+- **Privacy reale**: per gli appuntamenti privati il documento principale è redatto e i dettagli veri
+  stanno in `appuntamenti/{id}/privato/dettagli`, leggibili solo a creatore, operatore e super admin;
+  l’invitato può comunque aggiornare solo la propria conferma.
+- R2 e Blaze non sono disponibili: allegati su KV e promemoria su WhatsApp sono la soluzione temporanea,
+  registrata nel registro decisioni.
+- `flutter analyze` 0; `flutter test` 856 verdi; Worker, regole e Cron pubblicati; E2E Worker PASS.

@@ -46,7 +46,7 @@ impediscono il funzionamento della versione precedente.
   l'operatore assegnato; è stata recuperata anche la conferma già presente di Simone.
 - L'invio WhatsApp è implementato con rubrica aziendale e consenso, ma **non è attivo** finché non vengono
   configurati URL/API key nel Worker e il numero/consenso dell'utente.
-- I test sono della squadra: analyze, 849 test, E2E regole reali e Worker. Andrea deve solo validare l'esperienza.
+- I test sono della squadra: analyze, 856 test, E2E regole reali e Worker. Andrea deve solo validare l'esperienza.
 
 ### Aggiornamento — configurazione WhatsApp dal pannello Super Admin
 
@@ -62,3 +62,11 @@ impediscono il funzionamento della versione precedente.
 - **Notifica** (all'ora, 5/10/15/30 minuti prima, personalizzata).
 - **Appuntamento privato** con mascheramento di titolo/luogo/dettagli per chi non è creatore o operatore.
 - **Allegati**: non ancora disponibili perché Cloudflare R2 non è attivo; nessun pulsante finto.
+
+### Aggiornamento — allegati, promemoria e privacy
+
+- **Allegati** nel form (immagini, video, PDF, email), max 10 MB, salvati nel KV del Worker.
+- **Promemoria WhatsApp** programmati dal campo Notifica e inviati dal Cron del Worker.
+- **Appuntamento privato**: dettagli in sotto-collezione protetta; gli altri vedono solo la fascia occupata.
+- R2 e Cloud Functions/Blaze non sono attivi: la soluzione attuale usa KV e Worker. I test sono della
+  squadra (analyze, test, E2E Worker); Andrea deve solo provare l'esperienza.

@@ -11,6 +11,26 @@ void main() {
     });
   });
 
+  group('workerWhatsappBasePerAmbiente', () {
+    test('staging usa il Worker di staging', () {
+      expect(
+        workerWhatsappBasePerAmbiente('staging'),
+        'https://commerciali-vies.bottiandrea83.workers.dev',
+      );
+      expect(
+        workerWhatsappBasePerAmbiente(''),
+        'https://commerciali-vies.bottiandrea83.workers.dev',
+      );
+    });
+
+    test('produzione usa il Worker di produzione', () {
+      expect(
+        workerWhatsappBasePerAmbiente('prod'),
+        'https://commerciali-vies-prod.bottiandrea83.workers.dev',
+      );
+    });
+  });
+
   group('uriInvioWhatsapp', () {
     test('aggiunge /send e toglie le barre finali', () {
       expect(

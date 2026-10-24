@@ -123,8 +123,35 @@ service cloud.firestore {
     match /appuntamenti/{id} {
       allow read: if memberOf(resource.data.azienda_id) || isSuper();
       allow create: if memberOf(request.resource.data.azienda_id) || isSuper();
-      allow update: if memberOf(resource.data.azienda_id) || isSuper();
-      allow delete: if memberOf(resource.data.azienda_id) || isSuper();
+      allow update: if memberOf(resource.data.azienda_id) && (
+        resource.data.privato != true
+        || resource.data.created_by == uid()
+        || resource.data.operatore_id == uid()
+        || (
+          resource.data.invitati_uids is list
+          && uid() in resource.data.invitati_uids
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['conferme', 'stato_condivisione', 'updated_at'])
+        )
+      ) || isSuper();
+      allow delete: if memberOf(resource.data.azienda_id) && (
+        resource.data.privato != true
+        || resource.data.created_by == uid()
+        || resource.data.operatore_id == uid()
+      ) || isSuper();
+
+      // Dettagli riservati degli appuntamenti privati: solo creatore,
+      // operatore e super admin. Gli altri membri vedono solo la fascia
+      // occupata nel documento principale redatto.
+      match /privato/{doc} {
+        allow read, write: if signedIn()
+          && memberOf(get(/databases/$(database)/documents/appuntamenti/$(id)).data.azienda_id)
+          && (
+            get(/databases/$(database)/documents/appuntamenti/$(id)).data.created_by == uid()
+            || get(/databases/$(database)/documents/appuntamenti/$(id)).data.operatore_id == uid()
+            || isSuper()
+          );
+      }
     }
     match /task/{id} {
       allow read: if memberOf(resource.data.azienda_id) || isSuper();

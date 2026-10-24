@@ -10,7 +10,9 @@
 | Firestore | database `(default)`, regione `europe-west8` |
 | Auth | email/password + Google |
 | Proxy VIES | https://commerciali-vies.bottiandrea83.workers.dev |
-| Proxy WhatsApp | stesso Worker, endpoint `/whatsapp/*`; URL/API key nel KV `WHATSAPP_CONFIG` |
+| Proxy WhatsApp | Worker staging `commerciali-vies`; produzione `commerciali-vies-prod` |
+| Server WhatsApp | VM Google Cloud `whatsapp-server`, HTTPS `https://35.188.136.131.sslip.io`, numero `393516722792` |
+| Config WhatsApp | KV `WHATSAPP_CONFIG`, chiave `server` (URL + API key); API key anche in `.env` della VM |
 | Vecchio backend | Supabase `segbfdfoqxrnitboeyof` — dismesso |
 
 ## Produzione (attiva)

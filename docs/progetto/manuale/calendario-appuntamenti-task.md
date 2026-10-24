@@ -41,7 +41,8 @@ Gli elementi senza orario compaiono in **Senza orario**.
 10. Attiva **Appuntamento privato** se titolo, luogo e dettagli devono essere visibili solo a te e
     all'utente assegnato.
 11. Aggiungi note.
-12. Salva.
+12. In **Allegati** puoi caricare immagini, video, PDF o file email (max 10 MB per file).
+13. Salva.
 
 L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invitato non conferma la
 disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
@@ -50,6 +51,12 @@ disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli i
 Quando un invitato risponde, chi ha creato l'appuntamento e l'utente assegnato ricevono una **notifica
 In-App**. Se hanno attivato WhatsApp nelle proprie preferenze, ricevono anche un messaggio WhatsApp.
 Per attivarlo: **Impostazioni → Notifiche → WhatsApp**, inserisci il numero e attiva il consenso.
+
+La scelta **Notifica** nel form programma un promemoria WhatsApp: il Worker lo invia ogni minuto quando
+scade, se il server WhatsApp è configurato. Non è ancora un push/notifica In-App programmata.
+
+Gli **allegati** sono nel KV del Worker (non in Firestore) e si aprono con un link temporaneo di un'ora.
+Sono una soluzione temporanea finché R2 non viene attivato.
 
 ### Icona auto
 

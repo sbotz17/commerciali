@@ -40,7 +40,8 @@ flutter_app/lib/
 - WhatsApp: schermata Super Admin → Server WhatsApp; URL/API key nel KV del Worker, non in Firestore;
   invio tramite `/whatsapp/send` autenticato e rubrica `contatti_notifiche`.
 - Form appuntamento: inizio/fine con data e ora, tutto il giorno, ripetizione (anche personalizzata),
-  notifica configurabile e flag privato con mascheramento UI. Allegati R2 ancora non attivi.
+  notifica configurabile e flag privato. Dettagli privati in sotto-collezione protetta.
+- Allegati nel KV Worker `ALLEGATI` (max 10 MB); promemoria nel KV `PROMEMORIA` con Cron Worker e invio WhatsApp.
 - Integrazioni aziendali e condivisione calendario: O01–O04 fatti; O10 parziale; call manuale O11.
 - Menu desktop: `NavigationRail` con tutte le pagine e rotella Impostazioni in fondo; telefono con `NavigationBar` + drawer “Altro”.
 - Form appuntamento: sezione Partecipanti per invitare colleghi/gruppi; etichette visibili “Utente/Utenti” (campo dati `operatore_id` invariato).

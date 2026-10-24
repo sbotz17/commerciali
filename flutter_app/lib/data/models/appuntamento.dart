@@ -202,6 +202,56 @@ class Appuntamento {
   /// Timestamp di ultima modifica ISO-8601 (campo `updated_at`).
   final String? updatedAt;
 
+  /// Copia con i dettagli riservati letti dalla sotto-collezione privata.
+  ///
+  /// Per i documenti privati il documento principale contiene solo i dati di
+  /// occupazione; titolo, luogo, indirizzo, note e cliente arrivano da
+  /// `appuntamenti/{id}/privato/dettagli`, leggibile solo a creatore,
+  /// operatore e super admin.
+  Appuntamento conDettagliPrivati(Map<String, dynamic> dettagli) {
+    String? testo(String chiave, String? attuale) {
+      final valore = dettagli[chiave];
+      if (valore == null) return attuale;
+      final pulito = valore.toString().trim();
+      return pulito.isEmpty ? null : pulito;
+    }
+
+    return Appuntamento(
+      id: id,
+      aziendaId: aziendaId,
+      titolo: testo('titolo', titolo),
+      tipo: tipo,
+      data: data,
+      ora: ora,
+      dataFine: dataFine,
+      oraFine: oraFine,
+      tuttoIlGiorno: tuttoIlGiorno,
+      durataMin: durataMin,
+      ripetizione: ripetizione,
+      notificaMin: notificaMin,
+      privato: privato,
+      clienteId: testo('cliente_id', clienteId),
+      clienteNome: testo('cliente_nome', clienteNome),
+      operatoreId: operatoreId,
+      luogo: testo('luogo', luogo),
+      indirizzo: testo('indirizzo', indirizzo),
+      note: testo('note', note),
+      stato: stato,
+      visitaId: visitaId,
+      callProvider: testo('call_provider', callProvider),
+      callUrl: testo('call_url', callUrl),
+      meetingId: meetingId,
+      googleEventId: googleEventId,
+      outlookEventId: outlookEventId,
+      invitatiUids: invitatiUids,
+      conferme: conferme,
+      statoCondivisione: statoCondivisione,
+      createdBy: createdBy,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+
   /// Serializza verso i campi Firestore (snake_case), escluso [id] che è la
   /// chiave documento.
   Map<String, dynamic> toMap() => {

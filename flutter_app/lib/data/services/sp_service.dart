@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
+import '../models/allegato.dart';
 import '../models/appuntamento.dart';
 import '../models/azienda.dart';
 import '../models/bando.dart';
@@ -323,6 +325,50 @@ Uri? uriInvioWhatsapp(String? indirizzo) {
 /// WhatsApp (la API key resta nel KV del Worker).
 const String workerWhatsappBase =
     'https://commerciali-vies.bottiandrea83.workers.dev';
+
+/// Worker Cloudflare di produzione, con il progetto Firebase di produzione.
+const String workerWhatsappBaseProd =
+    'https://commerciali-vies-prod.bottiandrea83.workers.dev';
+
+/// Sceglie il Worker dell'ambiente: staging è il default, `APP_ENV=prod`
+/// usa il Worker collegato a `commerciali-prod`.
+String workerWhatsappBasePerAmbiente(String ambiente) =>
+    ambiente == 'prod' ? workerWhatsappBaseProd : workerWhatsappBase;
+
+String get _workerWhatsappBase => workerWhatsappBasePerAmbiente(
+  const String.fromEnvironment('APP_ENV', defaultValue: 'staging'),
+);
+
+/// Dati non riservati di un appuntamento privato, salvati nel documento
+/// principale leggibile dall'azienda.
+Map<String, dynamic> redigiAppuntamentoPrivato(Map<String, dynamic> payload) {
+  return {
+    ...payload,
+    'titolo': 'Impegno privato',
+    'cliente_id': null,
+    'cliente_nome': '',
+    'luogo': null,
+    'indirizzo': null,
+    'note': null,
+    'call_provider': null,
+    'call_url': null,
+  };
+}
+
+/// Dettagli riservati di un appuntamento privato, salvati nella sotto-collezione
+/// `appuntamenti/{id}/privato/dettagli`.
+Map<String, dynamic> dettagliPrivatiAppuntamento(Map<String, dynamic> payload) {
+  return {
+    'titolo': payload['titolo'],
+    'cliente_id': payload['cliente_id'],
+    'cliente_nome': payload['cliente_nome'],
+    'luogo': payload['luogo'],
+    'indirizzo': payload['indirizzo'],
+    'note': payload['note'],
+    'call_provider': payload['call_provider'],
+    'call_url': payload['call_url'],
+  };
+}
 
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
 /// vecchia app (sottoinsieme aziende/membri/profilo).
@@ -1002,12 +1048,41 @@ class SpService {
         .collection('appuntamenti')
         .where('azienda_id', isEqualTo: aziendaId)
         .get();
-    final appuntamenti = filtraAppuntamenti(
-      snap.docs.map((d) => Appuntamento.fromMap(d.data(), id: d.id)).toList(),
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final appuntamenti = <Appuntamento>[];
+    for (final documento in snap.docs) {
+      var appuntamento = Appuntamento.fromMap(
+        documento.data(),
+        id: documento.id,
+      );
+      if (appuntamento.privato &&
+          (appuntamento.createdBy == uid || appuntamento.operatoreId == uid)) {
+        try {
+          final dettagli = await _firestore
+              .collection('appuntamenti')
+              .doc(documento.id)
+              .collection('privato')
+              .doc('dettagli')
+              .get();
+          final dati = dettagli.data();
+          if (dettagli.exists && dati != null) {
+            appuntamento = appuntamento.conDettagliPrivati(dati);
+          }
+        } catch (_) {
+          // Senza dettagli riservati resta il documento principale redatto.
+        }
+      }
+      appuntamenti.add(appuntamento);
+    }
+    final filtrati = filtraAppuntamenti(
+      appuntamenti,
       dal: dal,
       al: al,
       operatoreId: operatoreId,
     );
+    appuntamenti
+      ..clear()
+      ..addAll(filtrati);
     appuntamenti.sort((a, b) {
       final cmpData = (a.data ?? '').compareTo(b.data ?? '');
       if (cmpData != 0) return cmpData;
@@ -1029,7 +1104,18 @@ class SpService {
     payload['created_by'] = FirebaseAuth.instance.currentUser?.uid;
     payload['created_at'] = _now();
     payload['updated_at'] = _now();
-    final ref = await _firestore.collection('appuntamenti').add(payload);
+    final ref = _firestore.collection('appuntamenti').doc();
+    final batch = _firestore.batch();
+    if (payload['privato'] == true) {
+      batch.set(ref, redigiAppuntamentoPrivato(payload));
+      batch.set(
+        ref.collection('privato').doc('dettagli'),
+        dettagliPrivatiAppuntamento(payload),
+      );
+    } else {
+      batch.set(ref, payload);
+    }
+    await batch.commit();
     return {'id': ref.id, ...payload};
   }
 
@@ -1044,7 +1130,26 @@ class SpService {
     final patch = _appuntamentoPayload(dati);
     patch.remove('azienda_id');
     patch['updated_at'] = _now();
-    await _firestore.collection('appuntamenti').doc(id).update(patch);
+    final ref = _firestore.collection('appuntamenti').doc(id);
+    final batch = _firestore.batch();
+    if (patch['privato'] == true) {
+      batch.update(ref, redigiAppuntamentoPrivato(patch));
+      batch.set(
+        ref.collection('privato').doc('dettagli'),
+        dettagliPrivatiAppuntamento(patch),
+        SetOptions(merge: true),
+      );
+    } else {
+      batch.update(ref, patch);
+    }
+    await batch.commit();
+    if (patch['privato'] != true) {
+      try {
+        await ref.collection('privato').doc('dettagli').delete();
+      } catch (_) {
+        // Nessun dettaglio privato da rimuovere.
+      }
+    }
     return {'id': id, ...patch};
   }
 
@@ -2120,7 +2225,7 @@ class SpService {
     Map<String, dynamic>? corpo,
   }) async {
     final token = await _tokenFirebase();
-    final uri = Uri.parse('$workerWhatsappBase$percorso');
+    final uri = Uri.parse('$_workerWhatsappBase$percorso');
     final intestazioni = {
       'Authorization': 'Bearer $token',
       if (corpo != null) 'Content-Type': 'application/json',
@@ -2215,6 +2320,163 @@ class SpService {
     final dati = await _chiamaWorker('/whatsapp/qr');
     final qr = dati['qr']?.toString().trim() ?? '';
     return qr.isEmpty ? null : qr;
+  }
+
+  // ---------- allegati ----------
+
+  /// Metadati degli allegati di un appuntamento/task nell'azienda attiva.
+  Future<List<Allegato>> getAllegati(String elementoId) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null || elementoId.trim().isEmpty) return [];
+    final snap = await _firestore
+        .collection('allegati')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .get();
+    final allegati = [
+      for (final doc in snap.docs)
+        if ((doc.data()['elemento_id'] ?? '').toString() == elementoId)
+          Allegato.fromMap(doc.data(), id: doc.id),
+    ];
+    allegati.sort((a, b) => (a.createdAt ?? '').compareTo(b.createdAt ?? ''));
+    return allegati;
+  }
+
+  /// Carica un file nel KV del Worker e crea il documento `allegati`.
+  Future<Allegato> caricaAllegato({
+    required String elementoId,
+    required Uint8List bytes,
+    required String nome,
+    required String mime,
+    String elementoTipo = 'appuntamento',
+  }) async {
+    _richiediAzienda();
+    final token = await _tokenFirebase();
+    final uri = Uri.parse('$_workerWhatsappBase/allegati/upload');
+    final risposta = await http
+        .post(
+          uri,
+          headers: {
+            'Authorization': 'Bearer $token',
+            'x-azienda-id': _aziendaAttiva!,
+            'x-elemento-id': elementoId,
+            'x-elemento-tipo': elementoTipo,
+            'x-nome': Uri.encodeComponent(nome),
+            'x-mime': mime,
+          },
+          body: bytes,
+        )
+        .timeout(const Duration(seconds: 60));
+    final corpo = _jsonRisposta(risposta.body);
+    if (risposta.statusCode < 200 || risposta.statusCode >= 300) {
+      throw StateError(
+        corpo['error']?.toString() ?? 'Caricamento non riuscito.',
+      );
+    }
+    return Allegato(
+      id: corpo['id']?.toString() ?? '',
+      aziendaId: _aziendaAttiva,
+      elementoTipo: elementoTipo,
+      elementoId: elementoId,
+      nome: corpo['nome']?.toString() ?? nome,
+      mime: corpo['mime']?.toString() ?? mime,
+      dimensione: (corpo['dimensione'] as num?)?.toInt() ?? bytes.length,
+      objectKey: corpo['objectKey']?.toString(),
+      createdAt: corpo['createdAt']?.toString(),
+    );
+  }
+
+  /// Link temporaneo (1 ora) per aprire o mostrare un allegato.
+  Future<String?> linkAllegato(Allegato allegato) async {
+    final aziendaId = _aziendaAttiva;
+    final key = allegato.objectKey?.trim() ?? '';
+    if (aziendaId == null || key.isEmpty) return null;
+    final dati = await _chiamaWorker(
+      '/allegati/link',
+      metodo: 'POST',
+      corpo: {'aziendaId': aziendaId, 'key': key},
+    );
+    final url = dati['url']?.toString().trim() ?? '';
+    return url.isEmpty ? null : url;
+  }
+
+  /// Elimina file e metadati di un allegato.
+  Future<void> eliminaAllegato(Allegato allegato) async {
+    _richiediAzienda();
+    final key = allegato.objectKey?.trim() ?? '';
+    if (key.isEmpty) return;
+    final token = await _tokenFirebase();
+    final richiesta =
+        http.Request('DELETE', Uri.parse('$_workerWhatsappBase/allegati'))
+          ..headers.addAll({
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          })
+          ..body = jsonEncode({
+            'aziendaId': _aziendaAttiva,
+            'id': allegato.id,
+            'key': key,
+          });
+    final risposta = await richiesta.send().timeout(
+      const Duration(seconds: 20),
+    );
+    if (risposta.statusCode < 200 || risposta.statusCode >= 300) {
+      throw StateError('Eliminazione non riuscita.');
+    }
+  }
+
+  Map<String, dynamic> _jsonRisposta(String testo) {
+    if (testo.trim().isEmpty) return const {};
+    try {
+      final decodificato = jsonDecode(testo);
+      return decodificato is Map
+          ? Map<String, dynamic>.from(decodificato)
+          : const {};
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// Registra i promemoria WhatsApp di un appuntamento nel Worker.
+  ///
+  /// Le occorrenze sono già calcolate dal chiamante (data/ora ISO e testo).
+  /// Il Worker risolve i numeri dalla rubrica aziendale e li invia al server
+  /// WhatsApp alla scadenza.
+  Future<void> registraPromemoria({
+    required String appuntamentoId,
+    required List<({String dueAt, String testo})> occorrenze,
+    required List<String> utenteUids,
+  }) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null || appuntamentoId.trim().isEmpty) return;
+    if (occorrenze.isEmpty || utenteUids.isEmpty) return;
+    await _chiamaWorker(
+      '/promemoria',
+      metodo: 'POST',
+      corpo: {
+        'aziendaId': aziendaId,
+        'appuntamentoId': appuntamentoId,
+        'utenteUids': utenteUids,
+        'occorrenze': [
+          for (final occorrenza in occorrenze)
+            {'dueAt': occorrenza.dueAt, 'testo': occorrenza.testo},
+        ],
+      },
+    );
+  }
+
+  /// Annulla i promemoria WhatsApp di un appuntamento.
+  Future<void> annullaPromemoria(String appuntamentoId) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null || appuntamentoId.trim().isEmpty) return;
+    try {
+      await _chiamaWorker(
+        '/promemoria/annulla',
+        metodo: 'POST',
+        corpo: {'aziendaId': aziendaId, 'appuntamentoId': appuntamentoId},
+      );
+    } catch (_) {
+      // Best-effort: il Worker scarta comunque i promemoria vecchi.
+    }
   }
 
   // ---------- chat ----------

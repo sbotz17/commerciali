@@ -218,6 +218,88 @@ def main():
         if stato != 200 or dati.get("url") not in ("", None):
             errori.append(f"config non cancellata: {stato} {dati}")
 
+        # Allegati: upload autenticato nel KV, link firmato, download e delete.
+        contenuto = b"allegato-e2e"
+        richiesta = urllib.request.Request(
+            f"{WORKER}/allegati/upload",
+            data=contenuto,
+            method="POST",
+            headers={
+                "Authorization": "Bearer " + token,
+                "User-Agent": "Closer-E2E/1.0",
+                "x-azienda-id": azienda,
+                "x-elemento-id": "appuntamento-e2e",
+                "x-elemento-tipo": "appuntamento",
+                "x-nome": urllib.parse.quote("prova.txt"),
+                "x-mime": "text/plain",
+            },
+        )
+        try:
+            with urllib.request.urlopen(richiesta, timeout=30) as r:
+                caricato = json.loads(r.read().decode())
+            if not caricato.get("id") or not caricato.get("objectKey"):
+                errori.append(f"upload allegato incompleto: {caricato}")
+            else:
+                stato, link = call(
+                    "POST",
+                    f"{WORKER}/allegati/link",
+                    {"aziendaId": azienda, "key": caricato["objectKey"]},
+                    token,
+                )
+                if stato != 200 or not link.get("url"):
+                    errori.append(f"link allegato: {stato} {link}")
+                else:
+                    req = urllib.request.Request(
+                        link["url"], headers={"User-Agent": "Closer-E2E/1.0"}
+                    )
+                    with urllib.request.urlopen(req, timeout=20) as r:
+                        if r.read() != contenuto:
+                            errori.append("contenuto allegato diverso")
+                stato, _ = call(
+                    "DELETE",
+                    f"{WORKER}/allegati",
+                    {
+                        "aziendaId": azienda,
+                        "id": caricato["id"],
+                        "key": caricato["objectKey"],
+                    },
+                    token,
+                )
+                if stato != 200:
+                    errori.append(f"delete allegato: {stato}")
+        except Exception as e:
+            errori.append(f"allegato E2E: {e}")
+
+        # Promemoria: registrazione e annullamento nel KV.
+        stato, dati = call(
+            "POST",
+            f"{WORKER}/promemoria",
+            {
+                "aziendaId": azienda,
+                "appuntamentoId": "app-e2e-promemoria",
+                "utenteUids": [uid],
+                "occorrenze": [
+                    {
+                        "dueAt": time.strftime(
+                            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 3600)
+                        ),
+                        "testo": "Promemoria E2E",
+                    }
+                ],
+            },
+            token,
+        )
+        if stato != 200 or dati.get("creati", 0) < 1:
+            errori.append(f"registrazione promemoria: {stato} {dati}")
+        stato, _ = call(
+            "POST",
+            f"{WORKER}/promemoria/annulla",
+            {"aziendaId": azienda, "appuntamentoId": "app-e2e-promemoria"},
+            token,
+        )
+        if stato != 200:
+            errori.append(f"annullamento promemoria: {stato}")
+
         if errori:
             print("FAIL E2E Worker WhatsApp:")
             for errore in errori:

@@ -158,6 +158,46 @@ def main():
                 if st != 200 or "stato_condivisione" not in d.get("fields", {}):
                     errori.append("A non vede la conferma di B sull'appuntamento")
 
+        # appuntamento privato: il documento principale è redatto, i dettagli
+        # riservati stanno nella sotto-collezione leggibile solo a creatore/operatore.
+        priv_id = f"e2e-priv-{suffix}"
+        st, d = crea(f"appuntamenti/{priv_id}", {
+            "azienda_id": s(az), "titolo": s("Impegno privato"),
+            "data": s("2026-12-02"), "ora": s("15:00"),
+            "created_by": s(users[0]["uid"]), "operatore_id": s(users[0]["uid"]),
+            "privato": b(True), "invitati_uids": arr([users[1]["uid"]]),
+            "conferme": m({}), "stato_condivisione": s("in_attesa"),
+        }, token_a)
+        if st != 200:
+            errori.append(f"create appuntamento privato: {st} {d}")
+        else:
+            st, d = crea(f"appuntamenti/{priv_id}/privato/dettagli", {
+                "titolo": s("Visita riservata"), "luogo": s("Sede segreta"),
+                "note": s("Note riservate"), "cliente_nome": s("Cliente"),
+            }, token_a)
+            if st != 200:
+                errori.append(f"create dettagli privati: {st} {d}")
+            st, _ = call("GET", percorso(f"appuntamenti/{priv_id}/privato/dettagli"), token=token_b)
+            if st == 200:
+                errori.append("B ha letto i dettagli privati di A")
+            st, _ = call("GET", percorso(f"appuntamenti/{priv_id}/privato/dettagli"), token=token_a)
+            if st != 200:
+                errori.append(f"A non legge i propri dettagli privati: {st}")
+            st, _ = call("PATCH", percorso(f"appuntamenti/{priv_id}?updateMask.fieldPaths=titolo"),
+                         {"fields": {"titolo": s("Titolo manomesso")}}, token_b)
+            if st == 200:
+                errori.append("B ha modificato il titolo di un appuntamento privato")
+            st, _ = call(
+                "PATCH",
+                percorso(f"appuntamenti/{priv_id}?updateMask.fieldPaths=conferme&updateMask.fieldPaths=stato_condivisione&updateMask.fieldPaths=updated_at"),
+                {"fields": {
+                    "conferme": m({users[1]["uid"]: m({"stato": s("confermato"), "at": s(now)})}),
+                    "stato_condivisione": s("confermato"),
+                    "updated_at": s(now),
+                }}, token_b)
+            if st != 200:
+                errori.append(f"B non può confermare l'invito privato: {st}")
+
         # task
         task_id = f"e2e-task-{suffix}"
         st, d = crea(f"task/{task_id}", {

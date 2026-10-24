@@ -77,6 +77,9 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Condivisione appuntamento | `flutter_app/lib/features/calendario/dialogo_condivisione_appuntamento.dart` | Dialogo persone/gruppi chat, inviti e conferma disponibilità |
 | Inviti appuntamento — dati | `flutter_app/lib/data/models/appuntamento.dart`, `sp_service.dart` | `invitati_uids`, `conferme`, `stato_condivisione`; `rispondiInvitoAppuntamento` transazionale; `data_fine`/`ora_fine`, `tutto_il_giorno`, `ripetizione`, `notifica_min`, `privato` |
 | Ricorrenze appuntamento | `flutter_app/lib/data/models/appuntamento.dart`, `calendario_logica.dart` | `occorrenzeAppuntamento`, etichette ripetizione, espansione nel periodo visibile, mascheramento privacy |
+| Allegati | `flutter_app/lib/data/models/allegato.dart`, `sp_service.dart`, `appuntamento_form_screen.dart`, `worker/src/index.js` | Upload/download/eliminazione nel KV `ALLEGATI`, metadati `allegati`, link firmato 1h, max 10 MB |
+| Promemoria programmati | `worker/src/index.js`, `flutter_app/lib/data/services/sp_service.dart` | KV `PROMEMORIA` + Cron ogni minuto; invio WhatsApp, registrazione/annullamento |
+| Privacy appuntamenti | `firestore.rules`, `sp_service.dart`, `appuntamento.dart` | Sotto-collezione `appuntamenti/{id}/privato/dettagli`; documento principale redatto |
 | Notifiche invito | `flutter_app/lib/data/services/sp_service.dart` | Notifica In-App a creatore/operatore dopo la risposta; `inviaWhatsapp`/`inviaWhatsappAUtente` best-effort |
 | Rubrica WhatsApp | `firestore.rules`, `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart` | `contatti_notifiche` aziendale: numero e consenso, leggibile dai colleghi |
 | Configurazione WhatsApp | `flutter_app/lib/features/superadmin/whatsapp_server_screen.dart`, `worker/src/index.js` | Super Admin → Server WhatsApp; URL/API key nel KV del Worker, QR e stato; invio autenticato tramite Worker |
@@ -97,6 +100,8 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Config produzione | `flutter_app/lib/firebase_options_prod.dart`, `main.dart` | Build `APP_ENV=prod` verso `commerciali-prod` |
 | Web Push client | `flutter_app/web/push/push-client.js`, `push-sw.js`, `lib/data/services/web_push_service*.dart` | Service worker, permesso, VAPID pubblica, sottoscrizione |
 | Web Push server | `functions/index.js` | Cloud Function su `notifiche/{id}`, invio a `dispositivi` |
+| Server WhatsApp | `whatsapp-server/`, VM Google Cloud `whatsapp-server` | HTTPS Caddy, numero `393516722792`, API key in KV/.env |
+| Proxy WhatsApp | `worker/src/index.js`, `worker/wrangler.prod.toml` | Worker staging/produzione, configurazione in KV |
 | Report produzione | `docs/progetto/test/2026-10-24-produzione.md` | Progetto, DB, Auth, hosting, admin, Web Push e verifiche |
 | Report integrazioni/calendario | `docs/progetto/test/2026-10-24-integrazioni-calendario.md` | O01–O04, E2E regole, 806 test verdi |
 | Report amministrazione/bandi | `docs/progetto/test/2026-10-22-amministrazione-bandi.md` | E2E ruoli, utenti, azienda, import e ATECO |

@@ -413,3 +413,12 @@ Campi aggiunti a `appuntamenti` (nessuna collezione nuova):
 Le occorrenze ricorrenti non generano documenti: il client le espande nel periodo visibile. La privacy è
 applicata nella UI; i campi restano leggibili dai membri dell'azienda (per una privacy forte servono una
 collezione separata o regole dedicate, fuori da questo task).
+
+### 2026-10-24 — Allegati su KV e promemoria
+
+- `allegati`: metadati (`elemento_tipo/id`, `nome`, `tipo_mime`, `dimensione`, `object_key`, `created_by/at`);
+  i byte sono nel KV Worker `ALLEGATI`, non in Firestore.
+- `appuntamenti/{id}/privato/dettagli`: titolo, cliente, luogo, indirizzo, note e call reali per gli
+  appuntamenti privati; leggibile solo a creatore, operatore e super admin.
+- I promemoria programmati non sono documenti Firestore: stanno nel KV Worker `PROMEMORIA` e vengono
+  inviati dal Cron via WhatsApp.

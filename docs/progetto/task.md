@@ -115,14 +115,15 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 | H04c | UI | Nuovo cliente dal form appuntamento e condivisione con colleghi/gruppi | pulsante `+` accanto al cliente; inviti con notifica; conferma disponibilità; stato provvisorio visibile; test | sviluppatore-frontend | FATTO |
 | H04d | Notifiche | Risposta invito a creatore/operatore con In-App e WhatsApp | notifica di conferma a chi ha creato o gestisce l'appuntamento; recapito WhatsApp aziendale con consenso; test e E2E; nessun test richiesto ad Andrea | sviluppatore-backend | FATTO |
 | H04e | UI | Form appuntamento: inizio/fine, tutto il giorno, ripetizione, notifica, privato | campi data/ora inizio e fine, flag tutto il giorno, ricorrenze con giorni, notifica configurabile, mascheramento privacy; test | sviluppatore-frontend | FATTO |
+| H04f | Full stack | Allegati, promemoria e privacy reale | file su KV Worker, promemoria WhatsApp via Cron, dettagli privati in sotto-collezione e regole; test/E2E | sviluppatore-backend + frontend | FATTO |
 | H05 | UI | Form appuntamento | titolo/data, cliente, operatore, luogo, Maps, call, promemoria | sviluppatore-frontend | FATTO |
 | H06 | UI | Pagina Task | lista per scadenza, filtri, completa/riapri, test | sviluppatore-frontend | FATTO |
 | H07 | UI | Form task | scadenza, operatore, priorità, cliente/appuntamento, note | sviluppatore-frontend | FATTO |
-| H08 | UI | Dettaglio appuntamento/task con allegati | immagini R2, anteprima, eliminazione | sviluppatore-frontend | DA FARE |
+| H08 | UI | Dettaglio appuntamento/task con allegati | upload/download/eliminazione nel KV Worker, form appuntamento, max 10 MB (R2 resta il target finale) | sviluppatore-frontend | FATTO |
 | H09 | Notifiche | Centro notifiche e badge in-app | elenco, lette/non lette, deep link, test | sviluppatore-frontend | FATTO |
 | H10 | Notifiche | Preferenze notifiche per utente | canali, tipi, silenzio, numero WhatsApp, test | sviluppatore-frontend | FATTO |
 | H11 | Push | Dispositivi e token FCM web/Android/iOS | registrazione, logout, token scaduto | sviluppatore-backend | DA FARE |
-| H12 | Worker | Scheduler promemoria e notifiche | cron, idempotenza, retry, fuso, test | sviluppatore-backend | DA FARE |
+| H12 | Worker | Scheduler promemoria e notifiche | Cron Worker ogni minuto, KV `PROMEMORIA`, invio WhatsApp; push/In-App richiede Blaze | sviluppatore-backend | IN CORSO |
 | H13 | WhatsApp | Invio operatore via server Volty | endpoint, secret, template, errore/retry | sviluppatore-backend | IN CORSO |
 | H13b | WhatsApp | Configurazione Super Admin e proxy Worker | URL/API key nel KV, QR/stato, invio autenticato, rubrica consenso; test app + E2E Worker | sviluppatore-backend | FATTO |
 | H14 | Email | SMTP per azienda e invio prova | settings, secret server, template, retry | sviluppatore-backend | DA FARE |

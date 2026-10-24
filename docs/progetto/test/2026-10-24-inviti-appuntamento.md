@@ -9,9 +9,9 @@ disponibilità, apertura dell'appuntamento dalla notifica.
 | Verifica | Esito |
 |---|---|
 | `flutter analyze` | 0 problemi |
-| `flutter test` | 849 test verdi |
+| `flutter test` | 856 test verdi |
 | `scripts/e2e-agenda.py` su staging | PASS: invito e conferma tra due utenti, notifiche private e rubrica `contatti_notifiche` |
-| `scripts/e2e-whatsapp-worker.py` | PASS: config protetta, KV salva/rilegge/cancella, server finto gestito |
+| `scripts/e2e-whatsapp-worker.py` | PASS: config, allegati upload/link/download/delete e promemoria registra/annulla |
 | `scripts/controlla-indice.mjs` | INDICE OK |
 
 ## Copertura dei test aggiunti
@@ -23,7 +23,7 @@ disponibilità, apertura dell'appuntamento dalla notifica.
 - `test/notifiche_screen_test.dart`: rotta verso `/calendario?appuntamento=…`.
 - `test/whatsapp_server_screen_test.dart`: schermata riservata al super admin.
 - `test/whatsapp_service_test.dart`: normalizzazione numero e URL del Worker.
-- `test/appuntamento_ricorrenza_test.dart`: inizio/fine, tutto il giorno, occorrenze (giorno/settimana/bisettimana/mese/anno/personalizzata) e mascheramento privacy.
+- `test/appuntamento_ricorrenza_test.dart`: inizio/fine, tutto il giorno, occorrenze (giorno/settimana/bisettimana/mese/anno/personalizzata), mascheramento privacy e redazione dei dati.
 
 ## Verifica funzionale per Andrea (dopo i test della squadra)
 
@@ -39,6 +39,7 @@ squadra. Serve solo la conferma dell'esperienza:
 ## Residui
 
 - La notifica push non è inclusa: l'invito arriva nel centro notifiche In-App.
-- WhatsApp è implementato ma spento finché non esistono `whatsapp_config/1` e un recapito con consenso.
+- WhatsApp è implementato; serve configurarlo e avere numeri/consensi per inviti e promemoria.
+- I promemoria sono inviati via WhatsApp dal Cron del Worker; il push/In-App programmato richiede Blaze.
 - L'aggiornamento del calendario dell'organizzatore non è realtime: si aggiorna alla riapertura o alla
   ricarica della schermata.

@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseException;
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/avviso_errore.dart';
+import '../../data/models/allegato.dart';
 import '../../data/models/appuntamento.dart';
 import '../../data/models/cliente.dart';
 import '../../data/models/stanza_chat.dart';
@@ -278,6 +280,12 @@ class _AppuntamentoFormScreenState
   List<StanzaChat> _gruppi = const [];
   List<String> _invitatiUids = const [];
   Map<String, dynamic> _conferme = const {};
+  List<Allegato> _allegati = const [];
+  final List<PlatformFile> _allegatiNuovi = [];
+  bool _caricamentoAllegati = false;
+  String? _erroreAllegati;
+  String? _idCreato;
+  bool _invitiInviati = false;
   bool _caricamentoClienti = true;
   bool _caricamentoUtenti = true;
   bool _caricamentoGruppi = true;
@@ -376,6 +384,7 @@ class _AppuntamentoFormScreenState
         : 'nessuna';
 
     _caricaDati();
+    if (_modifica) _caricaAllegati();
   }
 
   @override
@@ -570,6 +579,228 @@ class _AppuntamentoFormScreenState
           if (voce.key != uid) voce.key: voce.value,
       };
     });
+  }
+
+  Future<void> _caricaAllegati() async {
+    final appuntamento = widget.appuntamento;
+    if (appuntamento == null) return;
+    setState(() {
+      _caricamentoAllegati = true;
+      _erroreAllegati = null;
+    });
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final allegati = await servizio.getAllegati(appuntamento.id);
+      if (!mounted) return;
+      setState(() {
+        _allegati = allegati;
+        _caricamentoAllegati = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _caricamentoAllegati = false;
+        _erroreAllegati = 'Allegati non disponibili. Riprova.';
+      });
+    }
+  }
+
+  Future<void> _scegliAllegati() async {
+    final risultato = await FilePicker.pickFiles(type: FileType.any);
+    if (risultato.isEmpty || !mounted) return;
+    const limite = 10 * 1024 * 1024;
+    final aggiunti = <PlatformFile>[];
+    for (final file in risultato) {
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) {
+        setState(() => _erroreAllegati = 'Impossibile leggere ${file.name}.');
+        continue;
+      }
+      if (bytes.length > limite) {
+        setState(
+          () => _erroreAllegati = '${file.name} supera il limite di 10 MB.',
+        );
+        continue;
+      }
+      aggiunti.add(file);
+    }
+    if (!mounted) return;
+    setState(() {
+      _allegatiNuovi.addAll(aggiunti);
+      if (aggiunti.isNotEmpty) _erroreAllegati = null;
+    });
+  }
+
+  Future<void> _apriAllegato(Allegato allegato) async {
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final link = await servizio.linkAllegato(allegato);
+      if (link == null) throw StateError('Link non disponibile');
+      await launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _erroreAllegati = 'Impossibile aprire l\'allegato.');
+    }
+  }
+
+  Future<void> _eliminaAllegato(Allegato allegato) async {
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Eliminare l\'allegato?'),
+        content: Text('"${allegato.nome}" verrà rimosso definitivamente.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Elimina'),
+          ),
+        ],
+      ),
+    );
+    if (conferma != true || !mounted) return;
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      await servizio.eliminaAllegato(allegato);
+      if (!mounted) return;
+      setState(() {
+        _allegati = [
+          for (final voce in _allegati)
+            if (voce.id != allegato.id) voce,
+        ];
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _erroreAllegati = 'Eliminazione non riuscita.');
+    }
+  }
+
+  Future<void> _aggiornaPromemoria(
+    SpService servizio,
+    String appuntamentoId, {
+    required int? notificaMin,
+    required DateTime giorno,
+    required DateTime giornoFine,
+    required String? oraInizio,
+    required String? oraFine,
+    required bool tuttoIlGiorno,
+    required Map<String, dynamic> ripetizione,
+  }) async {
+    servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+    if (notificaMin == null) {
+      await servizio.annullaPromemoria(appuntamentoId);
+      return;
+    }
+
+    final modello = Appuntamento(
+      id: appuntamentoId,
+      titolo: _titolo.text,
+      data: dataIsoVisita(giorno),
+      ora: oraInizio,
+      dataFine: dataIsoVisita(giornoFine),
+      oraFine: oraFine,
+      tuttoIlGiorno: tuttoIlGiorno,
+      ripetizione: ripetizione,
+      notificaMin: notificaMin,
+      privato: _privato,
+    );
+    final adesso = DateTime.now();
+    final fine = adesso.add(const Duration(days: 90));
+    final giorni = occorrenzeAppuntamento(modello, dal: adesso, al: fine);
+    final titolo = _privato
+        ? 'Impegno privato'
+        : (_titolo.text.trim().isEmpty ? 'Appuntamento' : _titolo.text.trim());
+    final destinatari = <String>{
+      if (_uidCorrente()?.trim().isNotEmpty == true) _uidCorrente()!,
+      if (_operatoreId?.trim().isNotEmpty == true) _operatoreId!,
+      ..._invitatiUids,
+    };
+    final occorrenze = <({String dueAt, String testo})>[];
+    for (final occorrenza in giorni.take(30)) {
+      final inizio = tuttoIlGiorno
+          ? DateTime(occorrenza.year, occorrenza.month, occorrenza.day, 9)
+          : _combinaDataOraForm(occorrenza, oraInizio);
+      if (inizio == null) continue;
+      final due = inizio.subtract(Duration(minutes: notificaMin));
+      if (!due.isAfter(adesso)) continue;
+      final orario = tuttoIlGiorno
+          ? ' (tutto il giorno)'
+          : ' alle ${oraInizio ?? ''}';
+      occorrenze.add((
+        dueAt: due.toIso8601String(),
+        testo:
+            'Closer · Promemoria\n"$titolo" il '
+            '${formattaDataVisita(occorrenza)}$orario.',
+      ));
+    }
+    if (occorrenze.isEmpty || destinatari.isEmpty) {
+      await servizio.annullaPromemoria(appuntamentoId);
+      return;
+    }
+    await servizio.registraPromemoria(
+      appuntamentoId: appuntamentoId,
+      occorrenze: occorrenze,
+      utenteUids: destinatari.toList(),
+    );
+  }
+
+  Future<bool> _caricaAllegatiNuovi(SpService servizio, String id) async {
+    if (_allegatiNuovi.isEmpty) return true;
+    final errori = <String>[];
+    for (final file in [..._allegatiNuovi]) {
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) {
+        errori.add(file.name);
+        continue;
+      }
+      final mime = _mimeDaNome(file.name);
+      try {
+        final allegato = await servizio.caricaAllegato(
+          elementoId: id,
+          bytes: bytes,
+          nome: file.name,
+          mime: mime,
+        );
+        if (!mounted) return false;
+        setState(() {
+          _allegati = [..._allegati, allegato];
+          _allegatiNuovi.remove(file);
+        });
+      } catch (_) {
+        errori.add(file.name);
+      }
+    }
+    if (errori.isEmpty) return true;
+    if (mounted) {
+      setState(
+        () => _erroreAllegati =
+            'Alcuni allegati non sono stati caricati: ${errori.join(', ')}.',
+      );
+    }
+    return false;
+  }
+
+  String _mimeDaNome(String nome) {
+    final estensione = nome.split('.').last.toLowerCase();
+    const mappa = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+      'gif': 'image/gif',
+      'mp4': 'video/mp4',
+      'mov': 'video/quicktime',
+      'webm': 'video/webm',
+      'pdf': 'application/pdf',
+      'eml': 'message/rfc822',
+    };
+    return mappa[estensione] ?? 'application/octet-stream';
   }
 
   Future<void> _scegliData() async {
@@ -875,13 +1106,37 @@ class _AppuntamentoFormScreenState
     try {
       final servizio = ref.read(spServiceProvider);
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final idEsistente = appuntamento?.id ?? _idCreato;
       final Map<String, dynamic> salvato;
-      if (appuntamento != null) {
-        salvato = await servizio.aggiornaAppuntamento(appuntamento.id, dati);
+      if (idEsistente != null) {
+        salvato = await servizio.aggiornaAppuntamento(idEsistente, dati);
       } else {
         salvato = await servizio.inserisciAppuntamento(dati);
+        _idCreato = salvato['id']?.toString();
       }
-      await _inviaInviti(servizio, salvato['id']?.toString(), nuoviInvitati);
+      final id = salvato['id']?.toString();
+      final allegatiOk = await _caricaAllegatiNuovi(servizio, id ?? '');
+      if (!mounted) return;
+      if (!allegatiOk) return;
+      try {
+        await _aggiornaPromemoria(
+          servizio,
+          id ?? '',
+          notificaMin: notificaMin,
+          giorno: giorno,
+          giornoFine: giornoFine,
+          oraInizio: oraInizio,
+          oraFine: oraFine,
+          tuttoIlGiorno: _tuttoIlGiorno,
+          ripetizione: ripetizione,
+        );
+      } catch (_) {
+        // La notifica è best-effort: l'appuntamento resta salvato.
+      }
+      if (!_invitiInviati) {
+        _invitiInviati = true;
+        await _inviaInviti(servizio, id, nuoviInvitati);
+      }
       if (!mounted) return;
       Navigator.of(context).pop(true);
       return;
@@ -1335,6 +1590,97 @@ class _AppuntamentoFormScreenState
                           onChanged: _salvando
                               ? null
                               : (valore) => setState(() => _privato = valore),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Allegati',
+                      figli: const [],
+                      extra: [
+                        if (_caricamentoAllegati)
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: AppSpazi.s),
+                            child: LinearProgressIndicator(),
+                          ),
+                        if (_erroreAllegati != null) ...[
+                          AvvisoErrore(
+                            key: const Key('appuntamento-allegati-errore'),
+                            testo: _erroreAllegati!,
+                          ),
+                          const SizedBox(height: AppSpazi.s),
+                        ],
+                        if (_allegati.isEmpty && _allegatiNuovi.isEmpty)
+                          Text(
+                            'Nessun allegato.',
+                            style: tema.textTheme.bodySmall?.copyWith(
+                              color: tema.colorScheme.onSurfaceVariant,
+                            ),
+                          )
+                        else
+                          Wrap(
+                            spacing: AppSpazi.xs,
+                            runSpacing: AppSpazi.xs,
+                            children: [
+                              for (final allegato in _allegati)
+                                InputChip(
+                                  key: Key(
+                                    'appuntamento-allegato-${allegato.id}',
+                                  ),
+                                  avatar: Icon(
+                                    allegato.immagine
+                                        ? Icons.image_outlined
+                                        : allegato.video
+                                        ? Icons.videocam_outlined
+                                        : Icons.attach_file,
+                                    size: 16,
+                                  ),
+                                  label: Text(
+                                    '${allegato.nome} · '
+                                    '${allegato.dimensioneLeggibile}',
+                                  ),
+                                  onPressed: _salvando
+                                      ? null
+                                      : () => _apriAllegato(allegato),
+                                  onDeleted: _salvando
+                                      ? null
+                                      : () => _eliminaAllegato(allegato),
+                                ),
+                              for (final file in _allegatiNuovi)
+                                InputChip(
+                                  key: Key(
+                                    'appuntamento-nuovo-allegato-${file.name}',
+                                  ),
+                                  avatar: const Icon(
+                                    Icons.cloud_upload_outlined,
+                                    size: 16,
+                                  ),
+                                  label: Text('${file.name} · da caricare'),
+                                  onDeleted: _salvando
+                                      ? null
+                                      : () => setState(
+                                          () => _allegatiNuovi.remove(file),
+                                        ),
+                                ),
+                            ],
+                          ),
+                        const SizedBox(height: AppSpazi.s),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            key: const Key('appuntamento-allegati-aggiungi'),
+                            onPressed: _salvando ? null : _scegliAllegati,
+                            icon: const Icon(Icons.attach_file),
+                            label: const Text('Aggiungi immagini o video'),
+                          ),
+                        ),
+                        const SizedBox(height: AppSpazi.xxs),
+                        Text(
+                          'Max 10 MB per file. Puoi allegare immagini, video, '
+                          'PDF o file email.',
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),

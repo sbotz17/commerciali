@@ -205,6 +205,7 @@ void main() {
         'appuntamento-luogo',
         'appuntamento-indirizzo',
         'appuntamento-maps',
+        'appuntamento-allegati-aggiungi',
         'appuntamento-note',
         'appuntamento-stato',
       ]) {
