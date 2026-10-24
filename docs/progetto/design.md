@@ -143,6 +143,11 @@ Linee guida per le nuove schermate, da usare in fase di implementazione.
 - Messaggio eliminato: segnaposto grigio “Messaggio eliminato”.
 
 ### Impostazioni
+- Sezione **Personale** visibile a tutti i ruoli: **Notifiche** (canali, push, silenzio, anteprima) e
+  **Condivisione calendario**.
+- Sezione **Accessi** solo admin: Calendario e agenda, Calendario e integrazioni, Utenti, Ruoli, Licenze.
+- Il commerciale non vede le voci di amministrazione, ma gestisce le proprie notifiche e la condivisione del
+  proprio calendario.
 - Sezione “Calendario e notifiche” con card separate: Agenda, Promemoria cliente, Email SMTP, WhatsApp, Google, Microsoft, Push, Chat, Allegati.
 - Campi segreti mai mostrati in chiaro dopo il salvataggio.
 - Pulsante “Invia prova” per SMTP e WhatsApp.

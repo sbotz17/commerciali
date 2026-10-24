@@ -525,3 +525,10 @@
   gli invitati possono comunque confermare la disponibilità.
 - Allegati immagini/video: **non implementati** perché Cloudflare R2 non è attivo; nessun pulsante finto.
 - `flutter analyze` 0; `flutter test` 849 verdi; regole/Worker già pubblicati.
+
+## 2026-10-24 — Notifiche accessibili al commerciale
+
+- Separata in Impostazioni la sezione **Personale** (Notifiche, Condivisione calendario) dalle voci admin.
+- Il ruolo commerciale vede e gestisce le proprie notifiche, push e condivisione calendario.
+- Le voci Calendario e agenda, Integrazioni, Utenti, Ruoli e Licenze restano all’admin.
+- Aggiunto test widget per il ruolo commerciale; `flutter analyze` 0; suite completa aggiornata.

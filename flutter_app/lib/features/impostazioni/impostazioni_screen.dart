@@ -127,10 +127,21 @@ class ImpostazioniScreen extends ConsumerWidget {
       );
     }
 
+    final elencoAziende = aziende.value ?? const <Azienda>[];
+    Azienda? aziendaAttiva;
+    for (final azienda in elencoAziende) {
+      if (azienda.id == aziendaAttivaId) {
+        aziendaAttiva = azienda;
+        break;
+      }
+    }
+    final admin = datiProfilo.superAdmin || aziendaAttiva?.ruolo == 'admin';
+
     return CorpoImpostazioni(
       profilo: datiProfilo,
-      aziende: aziende.value ?? const [],
+      aziende: elencoAziende,
       aziendaAttivaId: aziendaAttivaId,
+      admin: admin,
       onCambiaAzienda: (id) =>
           ref.read(aziendaAttivaProvider.notifier).state = id,
       onLogout: () => _esci(context, ref),
@@ -165,12 +176,18 @@ class CorpoImpostazioni extends StatelessWidget {
     required this.onCambiaAzienda,
     required this.onLogout,
     required this.onVoce,
+    this.admin = true,
     this.onApriIntro,
   });
 
   final UserProfile? profilo;
   final List<Azienda> aziende;
   final String? aziendaAttivaId;
+
+  /// Se `true` mostra anche le voci di amministrazione dell'azienda.
+  /// Le impostazioni personali (notifiche e condivisione calendario) sono
+  /// sempre visibili a tutti i ruoli.
+  final bool admin;
   final void Function(String) onCambiaAzienda;
   final VoidCallback onLogout;
   final void Function(String rotta) onVoce;
@@ -222,10 +239,14 @@ class CorpoImpostazioni extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: AppSpazi.gapCard),
-                _CardAccessi(
-                  superAdmin: profilo?.superAdmin == true,
-                  onVoce: onVoce,
-                ),
+                _CardPersonale(onVoce: onVoce),
+                if (admin) ...[
+                  const SizedBox(height: AppSpazi.gapCard),
+                  _CardAccessi(
+                    superAdmin: profilo?.superAdmin == true,
+                    onVoce: onVoce,
+                  ),
+                ],
                 const SizedBox(height: AppSpazi.l),
                 OutlinedButton.icon(
                   key: const Key('impostazioni-logout'),
@@ -404,7 +425,42 @@ class _CardAzienda extends StatelessWidget {
   }
 }
 
-/// Card con le voci di gestione: utenti, ruoli, licenze e super admin.
+/// Impostazioni personali visibili a tutti i ruoli, anche al commerciale.
+class _CardPersonale extends StatelessWidget {
+  const _CardPersonale({required this.onVoce});
+
+  final void Function(String rotta) onVoce;
+
+  @override
+  Widget build(BuildContext context) {
+    return _CardSezione(
+      chiave: const Key('impostazioni-personali'),
+      titolo: 'Personale',
+      icona: Icons.person_outline,
+      senzaPadding: true,
+      figli: [
+        _VoceAccesso(
+          chiave: const Key('impostazioni-voce-notifiche'),
+          icona: Icons.notifications_outlined,
+          titolo: 'Notifiche',
+          sottotitolo: 'Canali, push, orari di silenzio e anteprima',
+          onTap: () => onVoce('/impostazioni/notifiche'),
+        ),
+        const Divider(height: 1),
+        _VoceAccesso(
+          chiave: const Key('impostazioni-voce-condivisioni'),
+          icona: Icons.share_outlined,
+          titolo: 'Condivisione calendario',
+          sottotitolo: 'Condividi i tuoi appuntamenti con i colleghi',
+          onTap: () => onVoce('/impostazioni/condivisioni-calendario'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Card con le voci di gestione: agenda, integrazioni, utenti, ruoli, licenze
+/// e super admin.
 class _CardAccessi extends StatelessWidget {
   const _CardAccessi({required this.superAdmin, required this.onVoce});
 
@@ -414,13 +470,6 @@ class _CardAccessi extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final voci = <Widget>[
-      _VoceAccesso(
-        chiave: const Key('impostazioni-voce-notifiche'),
-        icona: Icons.notifications_outlined,
-        titolo: 'Notifiche',
-        sottotitolo: 'Canali, orari di silenzio e anteprima',
-        onTap: () => onVoce('/impostazioni/notifiche'),
-      ),
       _VoceAccesso(
         chiave: const Key('impostazioni-voce-agenda'),
         icona: Icons.event_available_outlined,
@@ -434,13 +483,6 @@ class _CardAccessi extends StatelessWidget {
         titolo: 'Calendario e integrazioni',
         sottotitolo: 'Google, Microsoft, email e WhatsApp',
         onTap: () => onVoce('/impostazioni/integrazioni'),
-      ),
-      _VoceAccesso(
-        chiave: const Key('impostazioni-voce-condivisioni'),
-        icona: Icons.share_outlined,
-        titolo: 'Condivisione calendario',
-        sottotitolo: 'Condividi i tuoi appuntamenti con i colleghi',
-        onTap: () => onVoce('/impostazioni/condivisioni-calendario'),
       ),
       _VoceAccesso(
         chiave: const Key('impostazioni-voce-utenti'),

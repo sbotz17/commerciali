@@ -121,3 +121,11 @@ Il precedente verdetto `NON SUPERATO` era dovuto a modifiche non committate di u
 ## Validazione Web Push — 24/10/2026
 
 **APPROVATO TECNICO per staging/produzione** (non per rilascio ufficiale): gate tecnico verde (analyze 0, 849 verdi, indice OK, statici 200) e codice conforme. Restano a carico della squadra la consegna reale su dispositivo (Chrome/Android), la prova iOS PWA e l'E2E browser. Nota minore risolta: il pulsante “Disattiva” ora è disabilitato quando il push non è supportato nell’ambiente.
+
+## Notifiche e ruolo commerciale — 24/10/2026
+
+- In Impostazioni la sezione **Personale** (Notifiche, Condivisione calendario) è visibile a tutti i ruoli.
+- Il ruolo **commerciale** vede e gestisce canali, push, orari di silenzio, anteprima e condivisione del proprio calendario.
+- Le voci di amministrazione (Calendario e agenda, Integrazioni, Utenti, Ruoli, Licenze) restano visibili solo all’admin.
+- Test widget dedicato: il commerciale vede `impostazioni-voce-notifiche` e `impostazioni-voce-condivisioni`, non vede `impostazioni-voce-utenti`, `ruoli`, `licenze`, `integrazioni`.
+- `flutter analyze` 0; `flutter test` **850 verdi**; app pubblicata su staging e produzione.
