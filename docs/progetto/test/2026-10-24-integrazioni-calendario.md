@@ -58,3 +58,5 @@ L’E2E verifica con due utenti reali della stessa azienda:
 | Segreti | dialog e modelli | Client Secret disabilitato, nessun `client_secret`/token in Firestore |
 
 **Verdetto tester: NON SUPERATO per rilascio** perché manca la prova E2E nel browser richiesta dalla DoD; la fetta tecnica O01–O04 è verificata, ma restano aperti O05–O13 e la prova UI reale. Non rilasciabile in produzione.
+
+**Validazione (24/10/2026): APPROVATO TECNICO per staging** — fetta O01–O04 (schema/regole, modelli, servizio, schermata integrazioni) verificata. Non rilasciabile in produzione: manca E2E browser e restano obbligatori O05–O13.
