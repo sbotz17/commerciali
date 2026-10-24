@@ -10,7 +10,7 @@ Un task o un milestone **non è "fatto"** e non si rilascia se manca anche uno s
 
 ## Prova reale su staging (obbligatoria)
 
-Il tester deve eseguire l'app pubblicata su `https://commerciali-flutter.web.app` con un utente di test e:
+Il tester deve eseguire l'app pubblicata su `https://commerciali-app.web.app` con un utente di test e:
 
 1. fare login (email/password o Google);
 2. verificare che l'**azienda attiva** sia impostata automaticamente;

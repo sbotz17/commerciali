@@ -35,7 +35,7 @@
 | `flutter test` | ****740 test verdi**** |
 | Regole Firestore | compilate e pubblicate |
 | Indice chat | pubblicato |
-| Deploy hosting | `commerciali-app.web.app` e `commerciali-flutter.web.app` |
+| Deploy hosting | `commerciali-app.web.app` (ufficiale); `commerciali-flutter.web.app` reindirizza |
 
 ## Cosa manca
 

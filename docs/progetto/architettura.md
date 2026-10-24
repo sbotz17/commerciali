@@ -139,9 +139,9 @@ getVisitePeriodo`, `getBandi/upsertBandi`, `getFontiBandi/…/getSyncLog/scriviL
 
 ### 9. Deployment e convivenza
 
-- Web: `flutter build web` → nuova target Hosting separata (es. `flutter-commerciali-app.web.app`) nello
-  stesso progetto `commerciali-app`; la vecchia app resta sulla target attuale finché non c'è parità
-  validata, poi il passaggio sostituisce la target principale. Non usare in parallelo sulla stessa
+- Web: `flutter build web` → target Hosting `app` del progetto `commerciali-app`, pubblicata su
+  `https://commerciali-app.web.app`. L’alias `commerciali-flutter.web.app` reindirizza alla principale e
+  non è un secondo ambiente. Non usare in parallelo sulla stessa
   operazione critica (numerazione preventivi).
 - Android/iOS: build di release (firma, bundle); web resta il riferimento per lo sviluppo rapido.
 - Nessun deploy di `firestore.rules`, contatori o Worker in questa attività.

@@ -32,3 +32,6 @@ Worker VIES:
 ```sh
 cd worker && npx wrangler deploy
 ```
+
+
+**Alias**: `commerciali-flutter.web.app` non è un secondo ambiente; reindirizza con 301 a `commerciali-app.web.app`. Non usarlo per test o login.

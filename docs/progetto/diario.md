@@ -416,3 +416,9 @@
 - Form appuntamento: sezione Call con provider (Meet/Teams/altro), link manuale, copia e apertura; validazione http/https.
 - `flutter analyze` 0; `flutter test` 790 verdi; app pubblicata su staging.
 - Restano: vista calendario degli eventi condivisi e mascheramento “Occupato” (O09), creazione automatica Meet/Teams (O11), Worker OAuth (O06/O07), connessioni utente (O08), E2E browser (O12).
+
+## 2026-10-24 — Un solo indirizzo ufficiale
+
+- `commerciali-app.web.app` resta l’unico indirizzo ufficiale di Closer.
+- `commerciali-flutter.web.app` ora risponde con redirect 301 alla home principale; non è un secondo ambiente e non condivide una sessione separata.
+- Il target Hosting `flutter` pubblica solo la pagina di reindirizzamento, così i vecchi link non si rompono.

@@ -4,7 +4,7 @@
 Serve quando `firebase deploy` non riesce a rinnovare le credenziali CLI.
 Usa il refresh token già presente nella configurazione di firebase-tools.
 
-Uso: python3 scripts/deploy_hosting_rest.py
+Uso: python3 scripts/deploy_hosting_rest.py [commerciali-app]
 """
 import gzip
 import hashlib
@@ -18,7 +18,10 @@ import urllib.parse
 import urllib.request
 
 PROJECT = "commerciali-app"
-SITE = sys.argv[1] if len(sys.argv) > 1 else "commerciali-flutter"
+SITE = sys.argv[1] if len(sys.argv) > 1 else "commerciali-app"
+if SITE == "commerciali-flutter":
+    print("commerciali-flutter è solo un alias di redirect: usa commerciali-app")
+    sys.exit(1)
 API = "https://firebasehosting.googleapis.com/v1beta1"
 PUBLIC = pathlib.Path("flutter_app/build/web")
 
