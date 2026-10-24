@@ -9,3 +9,14 @@ FIREBASE_API_KEY = "AIzaSyBGoqyO_SgJeIUoE3YALsNmuBe4i1JIZ4A"
 [[kv_namespaces]]
 binding = "WHATSAPP_CONFIG"
 id = "b496969fab494fa48c8b3ba960e40dbd"
+
+[[kv_namespaces]]
+binding = "ALLEGATI"
+id = "abfb75d75cfe4b5ba82a31c75fc9a5c8"
+
+[[kv_namespaces]]
+binding = "PROMEMORIA"
+id = "b014f6a7ea764ccb910ba15d452d5f29"
+
+[triggers]
+crons = ["* * * * *"]
