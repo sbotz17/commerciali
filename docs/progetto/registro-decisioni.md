@@ -56,3 +56,11 @@ automatizzato). Google resta attivo per gli altri utenti. Stato: attivo.
 - Call: creazione automatica di Google Meet/Teams; licenze e configurazioni Azure/Google da verificare.
 - Chat interna: dirette 1-a-1 + gruppi, testo e immagini, letture, ricerca, soft delete, notifiche in-app/push; WhatsApp non usato per la chat.
 - Stato: requisiti e architettura pronti; implementazione a micro-task, prima DBA poi modelli/UI, integrazioni all'arrivo delle credenziali.
+
+## 2026-10-24 — Calendario classico predefinito
+
+Richiesta di Andrea: nell'app l'agenda deve aprirsi con la classica vista a calendario, non con l'elenco a
+card. Periodi disponibili: **giorno**, **settimana**, **mese**; lo stile **Card** esistente resta
+selezionabile per tutti e tre i periodi. Scelta di partenza: calendario **mensile**, perché dà subito la
+visione d'insieme; il periodo scelto dall'utente vale solo per la sessione. Nessuna nuova collezione, regola
+o dipendenza: solo UI e funzioni pure, coperte da test.

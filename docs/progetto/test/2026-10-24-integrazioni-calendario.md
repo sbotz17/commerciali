@@ -105,3 +105,39 @@ L’E2E verifica con due utenti reali della stessa azienda:
 
 
 **Validazione (24/10/2026): APPROVATO TECNICO per staging** — sola fetta O10 parziale + call manuale O11 verificata. Non rilasciabile in produzione: manca E2E browser; restano obbligatori O05–O09, O11 automatico, O12–O13.
+
+## Verifica tester menu laterale
+
+**Perimetro**: solo la modifica del menu laterale in `flutter_app/lib/features/shell/app_shell.dart` (+ `flutter_app/test/app_shell_test.dart`). Nessuna correzione apportata dal tester, nessun commit.
+
+### Cosa ho provato e esiti
+
+| # | Controllo | Comando / file | Esito atteso | Esito ottenuto |
+|---|---|---|---|---|
+| 1 | Analisi statica | `cd flutter_app && flutter analyze` | 0 problemi | **0 problemi** — `No issues found! (ran in 1.8s)` |
+| 2 | Test mirati shell | `flutter test test/app_shell_test.dart` | 6 verdi | **6 verdi** — `All tests passed!` |
+| 3 | Suite completa | `flutter test` | verdi (atteso 792 dal task) | **805 verdi**, `All tests passed!` — discrepanza di conteggio, vedi Problemi |
+| 4a | Rail desktop usa `_vociLaterali` | `app_shell.dart` righe 110–171, 254–261 | sì, 10 pagine | **sì**: `_vociLaterali` con Dashboard, Clienti, Catalogo, Preventivi, Visite, Calendario, Task, Chat, Bandi, Notifiche; `_Rail(voci: _vociLaterali)` |
+| 4b | Nessun `Icons.more_horiz` nella rail | grep `more_horiz` | assente dalla rail | **assente**: le 2 occorrenze residue sono in `_vociTelefono` (barra inferiore telefono), la rail non ne usa |
+| 4c | Rotella `rail-impostazioni` in fondo → `/impostazioni` | `app_shell.dart` righe 326–340 | presente e navigante | **presente**: `IconButton(key: Key('rail-impostazioni'), onPressed: onImpostazioni)`; `onImpostazioni: () => context.go('/impostazioni')` (riga 260); icona piena se rotta `/impostazioni*` |
+| 4d | Telefono: `NavigationBar` a 5 voci + drawer “Altro” | `app_shell.dart` righe 266–285, 244–249 | 5 voci + drawer | **sì**: Dashboard, Clienti, Preventivi, Bandi, Altro; il tap su “Altro” apre `_DrawerAltro` con 7 voci (Catalogo, Calendario, Visite, Task, Chat, Notifiche, Impostazioni) |
+| 5a | Nessuna voce “Altro” nella rail | test widget + grep | 0 | **0** nella rail; “Altro” esiste solo come destinazione della `NavigationBar` telefono e come titolo del drawer |
+| 5b | Impostazioni fuori dalle 10 destinazioni | test widget (riga 154–160) | assente | **assente** dalla rail: `find.descendant(NavigationRail, text('Impostazioni'))` → `findsNothing`; rotella separata come `trailing` |
+| 6 | Rotte delle 10 voci | `lib/routing/app_router.dart` | tutte raggiungibili | **tutte presenti**: `/catalogo`, `/visite`, `/calendario`, `/task`, `/chat`, `/bandi`, `/notifiche`, `/impostazioni` (+ `/`, `/clienti`, `/preventivi`) |
+| 7 | Regressioni | test shell desktop/telefono | nessuna | nessuna: selezione corretta per `/calendario` (indice 5), `/bandi` (indice 3), `/visite` e `/chat` sotto “Altro”, `/impostazioni/agenda` → rotella selezionata e `selectedIndex` null |
+| 8 | Segnaposto / dati di test / segreti | grep `TODO`/`FIXME`/`Schermata in preparazione`; grep chiavi/token | nessuno | **nessuno** nella shell; nessun segreto o dato di test nel file |
+| 9 | Indice memoria | `node scripts/controlla-indice.mjs` | OK | **INDICE OK** — 19 nodi, 9 file chiave |
+
+### Problemi
+
+- **Conteggio test diverso dall'atteso (non bloccante)**: il task indicava **792** verdi, la suite reale dà **805 verdi** con `All tests passed!`. Nessun test rosso o saltato; l'aumento è coerente con i test aggiunti nel frattempo sulle altre fette (il report precedente ne registrava 790). Il criterio sostanziale (suite interamente verde, nessuna regressione) è soddisfatto, ma il numero va riallineato nella DoD/task board.
+- **Nodo di memoria non aggiornato (non bloccante)**: `docs/progetto/memoria/flutter/index.md` ha `Ultima revisione: 2026-10-24` ma non descrive la nuova struttura del menu (10 voci nella rail, Impostazioni come rotella in fondo, drawer “Altro” su telefono). Va integrato dallo sviluppatore dell'area; il controllo dell'indice non lo rileva perché il file esiste.
+- Nessun problema funzionale rilevato: nessuna doppia voce “Altro”, nessuna duplicazione di Impostazioni, selezione corretta in tutti i percorsi provati.
+
+### Residuo generale (non di questa modifica)
+
+- Prova E2E nel browser su staging richiesta da `docs/progetto/definition-of-done.md` (login reale, azienda attiva, CRUD cliente e preventivo, nessun permission-denied): **non eseguita**. Resta un residuo generale dell'intero progetto e non è imputabile alla modifica del menu; il giudizio qui sotto riguarda solo la verifica statica/widget della modifica UI.
+
+**Verdetto tester: SUPERATO per la modifica del menu laterale** (analisi 0, 6/6 test mirati verdi, suite completa verde, rail a 10 voci senza “Altro” e senza Impostazioni, rotella `rail-impostazioni` funzionante, barra telefono a 5 voci con drawer “Altro”). L'E2E browser su staging resta un residuo generale del progetto, dichiarato sopra.
+
+**Validazione (24/10/2026): APPROVATO TECNICO per staging** — modifica del menu laterale verificata (rail desktop a 10 voci senza "Altro" né Impostazioni, rotella `rail-impostazioni` in fondo, barra telefono a 5 voci con drawer "Altro", selezione corretta delle rotte). Non rilasciabile in produzione: resta il residuo generale E2E browser (O12).

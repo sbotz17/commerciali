@@ -9,8 +9,9 @@ void main() {
   Future<void> mostraShell(
     WidgetTester tester, {
     String percorso = '/bandi',
+    Size dimensione = const Size(400, 900),
   }) async {
-    tester.view.physicalSize = const Size(400, 900);
+    tester.view.physicalSize = dimensione;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -110,6 +111,68 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+  });
+
+  group('AppShell su desktop', () {
+    testWidgets('la barra laterale mostra tutte le pagine senza Altro',
+        (tester) async {
+      await mostraShell(
+        tester,
+        percorso: '/calendario',
+        dimensione: const Size(1200, 1000),
+      );
+
+      expect(find.byType(NavigationRail), findsOneWidget);
+      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byIcon(Icons.more_horiz), findsNothing);
+
+      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+      expect(rail.destinations.length, 10);
+      expect(rail.selectedIndex, 5);
+      for (final etichetta in [
+        'Dashboard',
+        'Clienti',
+        'Catalogo',
+        'Preventivi',
+        'Visite',
+        'Calendario',
+        'Task',
+        'Chat',
+        'Bandi',
+        'Notifiche',
+      ]) {
+        expect(
+          find.descendant(
+            of: find.byType(NavigationRail),
+            matching: find.text(etichetta),
+          ),
+          findsOneWidget,
+          reason: etichetta,
+        );
+      }
+      expect(
+        find.descendant(
+          of: find.byType(NavigationRail),
+          matching: find.text('Impostazioni'),
+        ),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('rail-impostazioni')), findsOneWidget);
+      expect(find.byIcon(Icons.settings_outlined), findsOneWidget);
+    });
+
+    testWidgets('con una rotta impostazioni la rotella è selezionata',
+        (tester) async {
+      await mostraShell(
+        tester,
+        percorso: '/impostazioni/agenda',
+        dimensione: const Size(1200, 1000),
+      );
+
+      final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
+      expect(rail.selectedIndex, isNull);
+      expect(find.byIcon(Icons.settings), findsOneWidget);
     });
   });
 }

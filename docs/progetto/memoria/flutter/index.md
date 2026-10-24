@@ -33,7 +33,10 @@ flutter_app/lib/
 - F20 pagina introduttiva installazione: fatto.
 - F21 intro interattiva con scelta dispositivo e mockup animati: fatto.
 - Agenda, task, notifiche, chat: base fatta (vedi `memoria/ui/` e report).
+- Calendario: vista classica giorno/settimana/mese e stile card; apertura predefinita sul calendario mensile
+  (`calendario_logica.dart` + `viste_calendario.dart`).
 - Integrazioni aziendali e condivisione calendario: O01–O04 fatti; O10 parziale; call manuale O11.
+- Menu desktop: `NavigationRail` con tutte le pagine e rotella Impostazioni in fondo; telefono con `NavigationBar` + drawer “Altro”.
 - Prossimo: Worker OAuth (O06/O07), connessioni utente (O08), vista calendario condiviso (O09), call automatica (O11), E2E browser (O12).
 
 ## Punti fermi

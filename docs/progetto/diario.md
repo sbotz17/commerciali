@@ -422,3 +422,18 @@
 - `commerciali-app.web.app` resta l’unico indirizzo ufficiale di Closer.
 - `commerciali-flutter.web.app` ora risponde con redirect 301 alla home principale; non è un secondo ambiente e non condivide una sessione separata.
 - Il target Hosting `flutter` pubblica solo la pagina di reindirizzamento, così i vecchi link non si rompono.
+
+## 2026-10-24 — Calendario classico giorno/settimana/mese
+
+- Aggiunte `calendario_logica.dart` (periodi, raggruppamento, griglia del mese, posizionamento eventi sovrapposti) e `viste_calendario.dart` (`VistaMeseCalendario`, `VistaGrigliaOraria`).
+- La schermata Calendario ha ora due selettori: periodo **Giorno/Settimana/Mese** e stile **Calendario/Card**. All'apertura usa il calendario **mensile**; l'elenco a card esistente resta per tutti i periodi.
+- La griglia giorno/settimana ha il righello delle ore, affianca gli eventi sovrapposti, mostra “Senza orario” e crea un appuntamento toccando uno spazio vuoto (ora proposta).
+- Il form appuntamento accetta `oraIniziale`.
+- `flutter analyze` 0; `flutter test` 805 verdi (29 nel solo `calendario_test.dart`).
+
+## 2026-10-24 — Menu laterale semplificato
+
+- Rimosse le due voci “Altro” con i tre puntini dalla barra laterale desktop.
+- La rail mostra tutte le pagine (Dashboard, Clienti, Catalogo, Preventivi, Visite, Calendario, Task, Chat, Bandi, Notifiche) e la rotella Impostazioni in fondo.
+- Su telefono resta la `NavigationBar` con quattro voci principali e drawer “Altro”.
+- `flutter analyze` 0; `flutter test` 805 verdi; app pubblicata su `commerciali-app.web.app`.

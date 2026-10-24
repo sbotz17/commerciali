@@ -207,6 +207,10 @@ settimana.
 4. Le visite esistenti compaiono senza migrazione e restano modificabili da "Visite"; un elemento senza ora
    va in "Senza orario".
 
+**Aggiornamento 2026-10-24 (approvato da Andrea)**: si aggiunge la vista mese; il calendario classico
+(giorno, settimana, mese) è la vista predefinita e sostituisce l'apertura a card. L'elenco a card esistente
+resta selezionabile per tutti e tre i periodi.
+
 **Casi limite**: fuso orario del dispositivo diverso da quello aziendale (mostrare l'ora aziendale con nota);
 molti elementi nel periodo (limite di query); elemento di altra azienda mai visibile.
 
@@ -409,7 +413,7 @@ auto-gestione in MVP); fuso orario del cliente.
 2. L'"operatore" è un utente Closer con login o anche un contatto esterno senza account?
 3. Il promemoria al cliente va via email, WhatsApp o entrambi? Con quale indirizzo mittente?
 4. La creazione di appuntamenti/task è per tutti o solo per chi ha un permesso dedicato?
-5. Serve la vista mese nell'MVP o bastano giorno e settimana?
+5. ~~Serve la vista mese nell'MVP o bastano giorno e settimana?~~ **Sì: approvata il 24/10/2026,** insieme alle viste classiche e allo stile card.
 6. Per Teams/Meet basta incollare il link nell'MVP, con creazione automatica in Fase 2?
 7. La pagina di prenotazione deve essere pubblica senza login?Chi conferma lo slot?
 8. Quanti allegati e quale dimensione massima per appuntamento/task?

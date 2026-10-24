@@ -1,9 +1,12 @@
-// Calendario dell'agenda: appuntamenti e task uniti per giorno o settimana.
+// Calendario dell'agenda: appuntamenti e task uniti per giorno, settimana o
+// mese. La vista predefinita è il calendario classico; l'elenco a card resta
+// disponibile come alternativa.
 //
 // La schermata non introduce nuove letture dati: usa `getAppuntamenti`,
 // `getTask` e `getUtenti` del servizio e riusa il form degli appuntamenti
-// (`AppuntamentoFormScreen`) per la creazione. Le funzioni di conversione e
-// raggruppamento sono pure, così restano verificabili senza Firebase.
+// (`AppuntamentoFormScreen`) per la creazione. Le funzioni di conversione,
+// raggruppamento e posizionamento sono pure e vivono in `calendario_logica.dart`;
+// le viste classiche in `viste_calendario.dart`.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,242 +19,25 @@ import '../../data/models/appuntamento.dart';
 import '../../data/models/task_item.dart';
 import '../../data/models/user_profile.dart';
 import '../../state/azienda_providers.dart';
-import '../visite/visite_screen.dart'
-    show dataIsoVisita, etichettaGiornoVisite, formattaDataVisita;
+import '../visite/visite_screen.dart' show dataIsoVisita, formattaDataVisita;
 import 'appuntamento_form_screen.dart'
     show
         AppuntamentoFormScreen,
         messaggioErroreAppuntamenti,
         nomeUtenteAppuntamento,
         uriMapsIndirizzo;
+import 'calendario_logica.dart';
+import 'viste_calendario.dart';
 
-// ---------------------------------------------------------------------------
-// Funzioni pure: conversione, raggruppamento e date (verificabili senza
-// Firebase né UI)
-// ---------------------------------------------------------------------------
-
-/// Tipo di voce dell'agenda: appuntamento o task.
-const String tipoAppuntamento = 'appuntamento';
-const String tipoTask = 'task';
-
-/// Voce mostrata nel calendario, ricavata da un appuntamento o da un task.
-class ElementoAgenda {
-  const ElementoAgenda({
-    required this.data,
-    required this.titolo,
-    required this.tipo,
-    this.ora,
-    this.appuntamento,
-    this.task,
-  });
-
-  /// Giorno della voce in formato `YYYY-MM-DD`.
-  final String data;
-
-  /// Ora `HH:MM`, oppure `null` quando la voce non ha un orario.
-  final String? ora;
-
-  /// Titolo visibile (con fallback se il documento è senza titolo).
-  final String titolo;
-
-  /// `appuntamento` oppure `task`.
-  final String tipo;
-
-  /// Appuntamento di origine, se [tipo] è `appuntamento`.
-  final Appuntamento? appuntamento;
-
-  /// Task di origine, se [tipo] è `task`.
-  final TaskItem? task;
-
-  /// `true` se la voce è un appuntamento.
-  bool get isAppuntamento => tipo == tipoAppuntamento;
-}
-
-/// Ora normalizzata `HH:MM`, oppure `null` se assente o non valida.
-String? _oraElemento(String? ora) {
-  final valore = ora?.trim() ?? '';
-  if (valore.isEmpty) return null;
-  final parti = valore.split(':');
-  if (parti.length != 2) return valore;
-  final ore = int.tryParse(parti[0]);
-  final minuti = int.tryParse(parti[1]);
-  if (ore == null || minuti == null) return valore;
-  if (ore < 0 || ore > 23 || minuti < 0 || minuti > 59) return valore;
-  return '${ore.toString().padLeft(2, '0')}:'
-      '${minuti.toString().padLeft(2, '0')}';
-}
-
-/// Titolo con fallback per i documenti senza titolo.
-String _titoloElemento(String? titolo, String fallback) {
-  final valore = titolo?.trim() ?? '';
-  return valore.isEmpty ? fallback : valore;
-}
-
-/// Converte gli appuntamenti in voci dell'agenda.
-///
-/// Gli appuntamenti senza `data` non possono essere collocati in un giorno e
-/// vengono scartati; l'ordine di partenza è quello del servizio.
-List<ElementoAgenda> elementiDaAppuntamenti(List<Appuntamento> appuntamenti) {
-  final elementi = <ElementoAgenda>[];
-  for (final appuntamento in appuntamenti) {
-    final data = appuntamento.data?.trim() ?? '';
-    if (data.isEmpty) continue;
-    elementi.add(
-      ElementoAgenda(
-        data: data,
-        ora: _oraElemento(appuntamento.ora),
-        titolo: _titoloElemento(appuntamento.titolo, 'Appuntamento'),
-        tipo: tipoAppuntamento,
-        appuntamento: appuntamento,
-      ),
-    );
-  }
-  return elementi;
-}
-
-/// Converte i task in voci dell'agenda.
-///
-/// Solo i task con `scadenzaData` hanno un giorno: quelli senza scadenza sono
-/// esclusi dal calendario.
-List<ElementoAgenda> elementiDaTask(List<TaskItem> task) {
-  final elementi = <ElementoAgenda>[];
-  for (final voce in task) {
-    final data = voce.scadenzaData?.trim() ?? '';
-    if (data.isEmpty) continue;
-    elementi.add(
-      ElementoAgenda(
-        data: data,
-        ora: _oraElemento(voce.scadenzaOra),
-        titolo: _titoloElemento(voce.titolo, 'Task'),
-        tipo: tipoTask,
-        task: voce,
-      ),
-    );
-  }
-  return elementi;
-}
-
-/// Chiave di ordinamento dell'ora: le voci senza ora finiscono in fondo.
-String _chiaveOra(ElementoAgenda elemento) => elemento.ora ?? '99:99';
-
-/// Raggruppa le voci per giorno (`YYYY-MM-DD`).
-///
-/// Le chiavi sono ordinate per data crescente e, dentro ogni giorno, le voci
-/// sono ordinate per ora (senza ora in fondo) e poi per titolo.
-Map<String, List<ElementoAgenda>> raggruppaPerGiorno(
-  List<ElementoAgenda> elementi,
-) {
-  final gruppi = <String, List<ElementoAgenda>>{};
-  for (final elemento in elementi) {
-    final data = elemento.data.trim();
-    if (data.isEmpty) continue;
-    gruppi.putIfAbsent(data, () => <ElementoAgenda>[]).add(elemento);
-  }
-
-  final giorni = gruppi.keys.toList()..sort();
-  final risultato = <String, List<ElementoAgenda>>{};
-  for (final giorno in giorni) {
-    final voci = gruppi[giorno]!;
-    voci.sort((a, b) {
-      final cmpOra = _chiaveOra(a).compareTo(_chiaveOra(b));
-      if (cmpOra != 0) return cmpOra;
-      return a.titolo.toLowerCase().compareTo(b.titolo.toLowerCase());
-    });
-    risultato[giorno] = voci;
-  }
-  return risultato;
-}
-
-/// I sette giorni (lunedì → domenica) della settimana che contiene [giorno].
-List<DateTime> giorniSettimana(DateTime giorno) {
-  final base = DateTime(giorno.year, giorno.month, giorno.day);
-  final lunedi = base.subtract(Duration(days: base.weekday - 1));
-  return [
-    for (var indice = 0; indice < 7; indice++)
-      DateTime(lunedi.year, lunedi.month, lunedi.day + indice),
-  ];
-}
-
-/// Etichetta del giorno: "Oggi", "Domani" (o "Ieri") oppure `gg/mm/aaaa`.
-///
-/// [oggi] serve ai test per fissare il riferimento; in app è la data corrente.
-String etichettaGiorno(DateTime giorno, {DateTime? oggi}) =>
-    etichettaGiornoVisite(giorno, oggi: oggi);
-
-/// Etichetta italiana dello stato di un task (`Completato`/`Da fare`).
-String etichettaStatoTask(String? stato) {
-  final chiave = stato?.trim().toLowerCase() ?? '';
-  return chiave == 'completato' ? 'Completato' : 'Da fare';
-}
-
-/// Etichetta dello stato della voce, coerente con il suo tipo.
-String etichettaStatoElemento(ElementoAgenda elemento) {
-  if (elemento.isAppuntamento) {
-    return etichettaStatoAppuntamento(elemento.appuntamento?.stato);
-  }
-  return etichettaStatoTask(elemento.task?.stato);
-}
-
-/// Colore del badge di stato della voce.
-Color coloreStatoElemento(ElementoAgenda elemento) {
-  final stato = elemento.isAppuntamento
-      ? (elemento.appuntamento?.stato ?? '')
-      : (elemento.task?.stato ?? '');
-  switch (stato.trim().toLowerCase()) {
-    case 'fatto':
-    case 'completato':
-      return AppColors.accettato;
-    case 'annullato':
-      return AppColors.errore;
-    default:
-      return AppColors.attesa;
-  }
-}
-
-/// Riga secondaria della card: cliente e operatore, con `—` se assenti.
-String dettaglioElemento(
-  ElementoAgenda elemento,
-  Map<String, String> nomiOperatori,
-) {
-  final parti = <String>[];
-  final cliente = (elemento.appuntamento?.clienteNome ??
-          elemento.task?.clienteNome ??
-          '')
-      .trim();
-  if (cliente.isNotEmpty) parti.add(cliente);
-
-  final operatoreId = (elemento.appuntamento?.operatoreId ??
-          elemento.task?.operatoreId ??
-          '')
-      .trim();
-  final operatore = nomiOperatori[operatoreId]?.trim() ?? '';
-  if (operatore.isNotEmpty) parti.add(operatore);
-
-  return parti.isEmpty ? '—' : parti.join(' · ');
-}
-
-/// Data e ora della voce in formato italiano: `gg/mm/aaaa · HH:MM`.
-///
-/// Se l'ora manca resta la sola data; se la data non è interpretabile si
-/// mostra il valore originale.
-String etichettaDataOraElemento(ElementoAgenda elemento) {
-  final grezza = elemento.data.trim();
-  final iso = DateTime.tryParse(grezza);
-  final data = iso == null ? grezza : formattaDataVisita(iso);
-  final ora = elemento.ora;
-  return ora == null ? data : '$data · $ora';
-}
-
-/// Azioni restituite dal dialogo di dettaglio della voce.
-const String azioneModificaVoce = 'modifica';
-const String azioneEliminaVoce = 'elimina';
-const String azioneApriTaskVoce = 'apri-task';
+export 'calendario_logica.dart';
+export 'viste_calendario.dart';
 
 // ---------------------------------------------------------------------------
 // Schermata
 // ---------------------------------------------------------------------------
 
-/// Calendario dell'agenda con vista giorno/settimana e filtro operatore.
+/// Calendario dell'agenda con viste giorno/settimana/mese (calendario classico
+/// o card) e filtro operatore.
 class CalendarioScreen extends ConsumerStatefulWidget {
   const CalendarioScreen({super.key});
 
@@ -261,7 +47,8 @@ class CalendarioScreen extends ConsumerStatefulWidget {
 
 class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
   late DateTime _giorno;
-  bool _settimana = false;
+  VistaAgenda _vista = vistaAgendaPredefinita;
+  StileAgenda _stile = stileAgendaPredefinito;
   String _operatoreId = '';
 
   List<Appuntamento> _appuntamenti = const [];
@@ -345,9 +132,8 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
 
   /// Nomi degli operatori per le card, con uid come fallback.
   Map<String, String> get _nomiOperatori => {
-        for (final utente in _utenti)
-          utente.uid: nomeUtenteAppuntamento(utente),
-      };
+    for (final utente in _utenti) utente.uid: nomeUtenteAppuntamento(utente),
+  };
 
   /// Voci di tutti i giorni, filtrate per operatore.
   List<ElementoAgenda> get _elementi {
@@ -355,20 +141,17 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
     final appuntamenti = operatore.isEmpty
         ? _appuntamenti
         : _appuntamenti
-            .where((appuntamento) => appuntamento.operatoreId == operatore)
-            .toList();
+              .where((appuntamento) => appuntamento.operatoreId == operatore)
+              .toList();
     final task = operatore.isEmpty
         ? _task
         : _task.where((voce) => voce.operatoreId == operatore).toList();
-    return [
-      ...elementiDaAppuntamenti(appuntamenti),
-      ...elementiDaTask(task),
-    ];
+    return [...elementiDaAppuntamenti(appuntamenti), ...elementiDaTask(task)];
   }
 
-  void _sposta(int giorni) {
+  void _sposta(int verso) {
     setState(() {
-      _giorno = DateTime(_giorno.year, _giorno.month, _giorno.day + giorni);
+      _giorno = spostaPeriodo(_vista, _giorno, verso);
     });
   }
 
@@ -377,10 +160,22 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
     setState(() => _giorno = DateTime(oggi.year, oggi.month, oggi.day));
   }
 
-  Future<void> _apriNuovoAppuntamento() async {
+  /// Apre il giorno selezionato nella vista giornaliera.
+  void _apriGiorno(DateTime giorno) {
+    setState(() {
+      _giorno = DateTime(giorno.year, giorno.month, giorno.day);
+      _vista = VistaAgenda.giorno;
+    });
+  }
+
+  /// Apre il form di un nuovo appuntamento con data (e ora) già impostate.
+  Future<void> _apriNuovoAppuntamento({DateTime? giorno, String? ora}) async {
     final salvato = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => AppuntamentoFormScreen(dataIniziale: _giorno),
+        builder: (_) => AppuntamentoFormScreen(
+          dataIniziale: giorno ?? _giorno,
+          oraIniziale: ora,
+        ),
       ),
     );
     if (salvato == true) await _carica();
@@ -390,10 +185,8 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
   Future<void> _apriDettaglio(ElementoAgenda elemento) async {
     final azione = await showDialog<String>(
       context: context,
-      builder: (_) => _DialogoElemento(
-        elemento: elemento,
-        nomiOperatori: _nomiOperatori,
-      ),
+      builder: (_) =>
+          _DialogoElemento(elemento: elemento, nomiOperatori: _nomiOperatori),
     );
     if (!mounted || azione == null) return;
 
@@ -430,9 +223,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       builder: (context) => AlertDialog(
         key: const Key('calendario-conferma-elimina'),
         title: const Text('Eliminare l\'appuntamento?'),
-        content: Text(
-          'L\'appuntamento $nome verrà eliminato definitivamente.',
-        ),
+        content: Text('L\'appuntamento $nome verrà eliminato definitivamente.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -453,9 +244,9 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
       await servizio.eliminaAppuntamento(appuntamento.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Appuntamento eliminato')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Appuntamento eliminato')));
       await _carica();
     } catch (errore) {
       if (!mounted) return;
@@ -465,13 +256,8 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
     }
   }
 
-  /// Testo del periodo: giorno singolo oppure intervallo lunedì–domenica.
-  String get _etichettaPeriodo {
-    if (!_settimana) return etichettaGiorno(_giorno);
-    final giorni = giorniSettimana(_giorno);
-    return '${formattaDataVisita(giorni.first)} – '
-        '${formattaDataVisita(giorni.last)}';
-  }
+  /// Testo del periodo: giorno singolo, intervallo lunedì–domenica o mese.
+  String get _etichettaPeriodo => etichettaPeriodo(_vista, _giorno);
 
   @override
   Widget build(BuildContext context) {
@@ -498,17 +284,18 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
               child: _BarraCalendario(
                 riga: riga,
                 etichettaPeriodo: _etichettaPeriodo,
-                settimana: _settimana,
+                vista: _vista,
+                stile: _stile,
                 operatoreId: _operatoreId,
                 operatori: {
                   for (final utente in _utenti)
                     utente.uid: nomeUtenteAppuntamento(utente),
                 },
-                onPrecedente: () => _sposta(_settimana ? -7 : -1),
-                onSuccessivo: () => _sposta(_settimana ? 7 : 1),
+                onPrecedente: () => _sposta(-1),
+                onSuccessivo: () => _sposta(1),
                 onOggi: _vaiAOggi,
-                onVista: (settimana) =>
-                    setState(() => _settimana = settimana),
+                onVista: (vista) => setState(() => _vista = vista),
+                onStile: (stile) => setState(() => _stile = stile),
                 onOperatore: (operatore) =>
                     setState(() => _operatoreId = operatore),
                 onNuovo: _apriNuovoAppuntamento,
@@ -525,12 +312,16 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
                 child: CorpoCalendario(
                   elementi: _elementi,
                   giorno: _giorno,
-                  settimana: _settimana,
+                  vista: _vista,
+                  aCard: _stile == StileAgenda.card,
                   caricamento: _caricamento,
                   errore: _errore,
                   nomiOperatori: _nomiOperatori,
                   onRiprova: _carica,
                   onTapVoce: _apriDettaglio,
+                  onTapGiorno: _apriGiorno,
+                  onTapVuoto: (giorno, ora) =>
+                      _apriNuovoAppuntamento(giorno: giorno, ora: ora),
                 ),
               ),
             ),
@@ -541,34 +332,50 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
   }
 }
 
-/// Barra con navigazione del periodo, vista, filtro operatore e pulsante
-/// "Nuovo appuntamento".
+/// Barra con navigazione del periodo, scelta della vista, filtro operatore e
+/// pulsante "Nuovo appuntamento".
 class _BarraCalendario extends StatelessWidget {
   const _BarraCalendario({
     required this.riga,
     required this.etichettaPeriodo,
-    required this.settimana,
+    required this.vista,
+    required this.stile,
     required this.operatoreId,
     required this.operatori,
     required this.onPrecedente,
     required this.onSuccessivo,
     required this.onOggi,
     required this.onVista,
+    required this.onStile,
     required this.onOperatore,
     required this.onNuovo,
   });
 
   final bool riga;
   final String etichettaPeriodo;
-  final bool settimana;
+  final VistaAgenda vista;
+  final StileAgenda stile;
   final String operatoreId;
   final Map<String, String> operatori;
   final VoidCallback onPrecedente;
   final VoidCallback onSuccessivo;
   final VoidCallback onOggi;
-  final ValueChanged<bool> onVista;
+  final ValueChanged<VistaAgenda> onVista;
+  final ValueChanged<StileAgenda> onStile;
   final ValueChanged<String> onOperatore;
   final VoidCallback onNuovo;
+
+  String get _tooltipPrecedente => switch (vista) {
+    VistaAgenda.giorno => 'Giorno precedente',
+    VistaAgenda.settimana => 'Settimana precedente',
+    VistaAgenda.mese => 'Mese precedente',
+  };
+
+  String get _tooltipSuccessivo => switch (vista) {
+    VistaAgenda.giorno => 'Giorno successivo',
+    VistaAgenda.settimana => 'Settimana successiva',
+    VistaAgenda.mese => 'Mese successivo',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -577,7 +384,7 @@ class _BarraCalendario extends StatelessWidget {
       children: [
         IconButton(
           key: const Key('calendario-precedente'),
-          tooltip: settimana ? 'Settimana precedente' : 'Giorno precedente',
+          tooltip: _tooltipPrecedente,
           onPressed: onPrecedente,
           icon: const Icon(Icons.chevron_left),
         ),
@@ -591,7 +398,7 @@ class _BarraCalendario extends StatelessWidget {
         ),
         IconButton(
           key: const Key('calendario-successivo'),
-          tooltip: settimana ? 'Settimana successiva' : 'Giorno successivo',
+          tooltip: _tooltipSuccessivo,
           onPressed: onSuccessivo,
           icon: const Icon(Icons.chevron_right),
         ),
@@ -604,23 +411,35 @@ class _BarraCalendario extends StatelessWidget {
       child: const Text('Oggi'),
     );
 
-    final vista = SegmentedButton<bool>(
+    final selettoreVista = SegmentedButton<VistaAgenda>(
       key: const Key('calendario-vista'),
       showSelectedIcon: false,
       segments: const [
+        ButtonSegment(value: VistaAgenda.giorno, label: Text('Giorno')),
+        ButtonSegment(value: VistaAgenda.settimana, label: Text('Settimana')),
+        ButtonSegment(value: VistaAgenda.mese, label: Text('Mese')),
+      ],
+      selected: {vista},
+      onSelectionChanged: (selezione) => onVista(selezione.first),
+    );
+
+    final selettoreStile = SegmentedButton<StileAgenda>(
+      key: const Key('calendario-stile'),
+      showSelectedIcon: false,
+      segments: const [
         ButtonSegment(
-          value: false,
-          label: Text('Giorno'),
+          value: StileAgenda.calendario,
+          label: Text('Calendario'),
+          icon: Icon(Icons.calendar_view_month_outlined),
+        ),
+        ButtonSegment(
+          value: StileAgenda.card,
+          label: Text('Card'),
           icon: Icon(Icons.view_agenda_outlined),
         ),
-        ButtonSegment(
-          value: true,
-          label: Text('Settimana'),
-          icon: Icon(Icons.view_week_outlined),
-        ),
       ],
-      selected: {settimana},
-      onSelectionChanged: (selezione) => onVista(selezione.first),
+      selected: {stile},
+      onSelectionChanged: (selezione) => onStile(selezione.first),
     );
 
     final filtro = SizedBox(
@@ -672,30 +491,38 @@ class _BarraCalendario extends StatelessWidget {
             spacing: AppSpazi.xs,
             runSpacing: AppSpazi.xs,
             crossAxisAlignment: WrapCrossAlignment.center,
-            children: [vista, filtro, pulsanteNuovo],
+            children: [selettoreVista, selettoreStile, filtro, pulsanteNuovo],
           ),
         ],
       );
     }
 
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        navigazione,
-        const SizedBox(width: AppSpazi.xs),
-        pulsanteOggi,
-        const Spacer(),
-        vista,
-        const SizedBox(width: AppSpazi.xs),
-        filtro,
-        const SizedBox(width: AppSpazi.xs),
-        pulsanteNuovo,
+        Row(
+          children: [
+            navigazione,
+            const SizedBox(width: AppSpazi.xs),
+            pulsanteOggi,
+            const Spacer(),
+            pulsanteNuovo,
+          ],
+        ),
+        const SizedBox(height: AppSpazi.xs),
+        Wrap(
+          spacing: AppSpazi.s,
+          runSpacing: AppSpazi.xs,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [selettoreVista, selettoreStile, filtro],
+        ),
       ],
     );
   }
 }
 
-/// Corpo del calendario: stati caricamento/errore/vuoto e viste giorno e
-/// settimana.
+/// Corpo del calendario: stati caricamento/errore/vuoto e viste classiche
+/// (giorno, settimana, mese) o elenco a card.
 ///
 /// È pubblico e senza provider per poter essere verificato con un widget test
 /// senza Firebase.
@@ -704,17 +531,23 @@ class CorpoCalendario extends StatelessWidget {
     super.key,
     required this.elementi,
     required this.giorno,
+    required this.vista,
+    required this.aCard,
     required this.caricamento,
     required this.onRiprova,
-    required this.settimana,
     this.errore,
     this.nomiOperatori = const {},
     this.onTapVoce,
+    this.onTapGiorno,
+    this.onTapVuoto,
   });
 
   final List<ElementoAgenda> elementi;
   final DateTime giorno;
-  final bool settimana;
+  final VistaAgenda vista;
+
+  /// `true` per l'elenco a card, `false` per il calendario classico.
+  final bool aCard;
   final bool caricamento;
   final Object? errore;
   final Map<String, String> nomiOperatori;
@@ -722,6 +555,12 @@ class CorpoCalendario extends StatelessWidget {
 
   /// Azione al tocco di una voce; `null` disabilita l'apertura del dettaglio.
   final ValueChanged<ElementoAgenda>? onTapVoce;
+
+  /// Passaggio al giorno selezionato da una vista più ampia.
+  final ValueChanged<DateTime>? onTapGiorno;
+
+  /// Tocco su uno spazio vuoto della griglia: giorno e ora proposti.
+  final void Function(DateTime giorno, String ora)? onTapVuoto;
 
   @override
   Widget build(BuildContext context) {
@@ -746,28 +585,86 @@ class CorpoCalendario extends StatelessWidget {
       );
     }
 
-    final gruppi = raggruppaPerGiorno(elementi);
+    if (aCard) {
+      final voci = elementiNelPeriodo(elementi, vista, giorno);
+      if (voci.isEmpty) {
+        return const StatoCentrato(
+          key: Key('calendario-vuoto'),
+          icona: Icons.calendar_today_outlined,
+          titolo: 'Nessun appuntamento',
+          sottotitolo:
+              'Non ci sono appuntamenti né task per questo periodo. Usa "Nuovo '
+              'appuntamento" per aggiungerne uno.',
+        );
+      }
 
-    if (settimana) {
-      return _VistaSettimana(
-        giorni: giorniSettimana(giorno),
-        gruppi: gruppi,
+      return switch (vista) {
+        VistaAgenda.giorno => _VistaGiornoCard(
+          elementi: voci,
+          giorno: giorno,
+          nomiOperatori: nomiOperatori,
+          onTapVoce: onTapVoce,
+        ),
+        VistaAgenda.settimana => _VistaSettimanaCard(
+          elementi: voci,
+          giorno: giorno,
+          nomiOperatori: nomiOperatori,
+          onTapVoce: onTapVoce,
+        ),
+        VistaAgenda.mese => _VistaMeseCard(
+          elementi: voci,
+          mese: giorno,
+          nomiOperatori: nomiOperatori,
+          onTapVoce: onTapVoce,
+        ),
+      };
+    }
+
+    return switch (vista) {
+      VistaAgenda.giorno => VistaGrigliaOraria(
+        giorni: [giorno],
+        elementi: elementi,
         nomiOperatori: nomiOperatori,
         onTapVoce: onTapVoce,
-      );
-    }
+        onTapVuoto: onTapVuoto,
+        onTapGiorno: onTapGiorno,
+      ),
+      VistaAgenda.settimana => VistaGrigliaOraria(
+        giorni: giorniSettimana(giorno),
+        elementi: elementi,
+        nomiOperatori: nomiOperatori,
+        onTapVoce: onTapVoce,
+        onTapVuoto: onTapVuoto,
+        onTapGiorno: onTapGiorno,
+      ),
+      VistaAgenda.mese => VistaMeseCalendario(
+        mese: giorno,
+        elementi: elementi,
+        onTapVoce: onTapVoce,
+        onTapGiorno: onTapGiorno,
+      ),
+    };
+  }
+}
 
+/// Vista giorno a elenco cronologico di card.
+class _VistaGiornoCard extends StatelessWidget {
+  const _VistaGiornoCard({
+    required this.elementi,
+    required this.giorno,
+    required this.nomiOperatori,
+    this.onTapVoce,
+  });
+
+  final List<ElementoAgenda> elementi;
+  final DateTime giorno;
+  final Map<String, String> nomiOperatori;
+  final ValueChanged<ElementoAgenda>? onTapVoce;
+
+  @override
+  Widget build(BuildContext context) {
+    final gruppi = raggruppaPerGiorno(elementi);
     final voci = gruppi[dataIsoVisita(giorno)] ?? const <ElementoAgenda>[];
-    if (voci.isEmpty) {
-      return const StatoCentrato(
-        key: Key('calendario-vuoto'),
-        icona: Icons.calendar_today_outlined,
-        titolo: 'Nessun appuntamento',
-        sottotitolo:
-            'Non ci sono appuntamenti né task per questo giorno. Usa "Nuovo '
-            'appuntamento" per aggiungerne uno.',
-      );
-    }
 
     return ListView.separated(
       key: const Key('calendario-giorno'),
@@ -784,45 +681,41 @@ class CorpoCalendario extends StatelessWidget {
   }
 }
 
-/// Vista settimanale: una sezione per giorno, da lunedì a domenica.
-class _VistaSettimana extends StatelessWidget {
-  const _VistaSettimana({
-    required this.giorni,
-    required this.gruppi,
+/// Vista settimanale a card: una sezione per giorno, da lunedì a domenica.
+class _VistaSettimanaCard extends StatelessWidget {
+  const _VistaSettimanaCard({
+    required this.elementi,
+    required this.giorno,
     required this.nomiOperatori,
     this.onTapVoce,
   });
 
-  final List<DateTime> giorni;
-  final Map<String, List<ElementoAgenda>> gruppi;
+  final List<ElementoAgenda> elementi;
+  final DateTime giorno;
   final Map<String, String> nomiOperatori;
   final ValueChanged<ElementoAgenda>? onTapVoce;
 
-  static const List<String> _nomiGiorni = [
-    'Lunedì',
-    'Martedì',
-    'Mercoledì',
-    'Giovedì',
-    'Venerdì',
-    'Sabato',
-    'Domenica',
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final gruppi = raggruppaPerGiorno(elementi);
+
     return ListView(
       key: const Key('calendario-settimana'),
       padding: const EdgeInsets.only(bottom: AppSpazi.l),
       children: [
-        for (final giorno in giorni) ..._sezione(context, giorno),
+        for (final voce in giorniSettimana(giorno))
+          ..._sezione(context, voce, gruppi[dataIsoVisita(voce)] ?? const []),
       ],
     );
   }
 
   /// Intestazione del giorno e sue voci (o "Nessun appuntamento").
-  List<Widget> _sezione(BuildContext context, DateTime giorno) {
+  List<Widget> _sezione(
+    BuildContext context,
+    DateTime giorno,
+    List<ElementoAgenda> voci,
+  ) {
     final tema = Theme.of(context);
-    final voci = gruppi[dataIsoVisita(giorno)] ?? const <ElementoAgenda>[];
 
     return [
       Padding(
@@ -830,7 +723,7 @@ class _VistaSettimana extends StatelessWidget {
         child: Row(
           children: [
             Text(
-              _nomiGiorni[giorno.weekday - 1],
+              nomiGiorni[giorno.weekday - 1],
               style: tema.textTheme.titleSmall,
             ),
             const SizedBox(width: AppSpazi.xs),
@@ -865,6 +758,71 @@ class _VistaSettimana extends StatelessWidget {
         const SizedBox(height: AppSpazi.s),
       ],
     ];
+  }
+}
+
+/// Vista mensile a card: i giorni del mese che hanno delle voci.
+class _VistaMeseCard extends StatelessWidget {
+  const _VistaMeseCard({
+    required this.elementi,
+    required this.mese,
+    required this.nomiOperatori,
+    this.onTapVoce,
+  });
+
+  final List<ElementoAgenda> elementi;
+  final DateTime mese;
+  final Map<String, String> nomiOperatori;
+  final ValueChanged<ElementoAgenda>? onTapVoce;
+
+  @override
+  Widget build(BuildContext context) {
+    final gruppi = raggruppaPerGiorno(elementi);
+    final tema = Theme.of(context);
+
+    return ListView(
+      key: const Key('calendario-mese-card'),
+      padding: const EdgeInsets.only(bottom: AppSpazi.l),
+      children: [
+        for (final gruppo in gruppi.entries) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpazi.xs),
+            child: Row(
+              children: [
+                Text(
+                  _intestazioneGiorno(gruppo.key),
+                  style: tema.textTheme.titleSmall,
+                ),
+                const SizedBox(width: AppSpazi.xs),
+                Text(
+                  '${gruppo.value.length} '
+                  '${gruppo.value.length == 1 ? 'voce' : 'voci'}',
+                  style: tema.textTheme.bodySmall?.copyWith(
+                    color: tema.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          for (final voce in gruppo.value) ...[
+            _CardElemento(
+              elemento: voce,
+              nomiOperatori: nomiOperatori,
+              onTap: onTapVoce,
+            ),
+            const SizedBox(height: AppSpazi.xs),
+          ],
+          const SizedBox(height: AppSpazi.s),
+        ],
+      ],
+    );
+  }
+
+  /// "Venerdì 24/10/2026" per l'intestazione della sezione.
+  String _intestazioneGiorno(String data) {
+    final iso = DateTime.tryParse(data);
+    if (iso == null) return data;
+    return '${nomiGiorni[iso.weekday - 1]} ${formattaDataVisita(iso)}';
   }
 }
 
@@ -959,10 +917,7 @@ class _CardElemento extends StatelessWidget {
 /// `azioneModificaVoce`, `azioneEliminaVoce`, `azioneApriTaskVoce`; i link
 /// esterni (Maps e call) vengono aperti qui.
 class _DialogoElemento extends StatelessWidget {
-  const _DialogoElemento({
-    required this.elemento,
-    required this.nomiOperatori,
-  });
+  const _DialogoElemento({required this.elemento, required this.nomiOperatori});
 
   final ElementoAgenda elemento;
   final Map<String, String> nomiOperatori;
@@ -986,9 +941,7 @@ class _DialogoElemento extends StatelessWidget {
       if (!aperto) throw Exception('Link non aperto');
     } catch (_) {
       messenger.showSnackBar(
-        SnackBar(
-          content: Text('Non è stato possibile aprire $descrizione.'),
-        ),
+        SnackBar(content: Text('Non è stato possibile aprire $descrizione.')),
       );
     }
   }
@@ -1047,11 +1000,8 @@ class _DialogoElemento extends StatelessWidget {
         if (callUrl.isNotEmpty)
           TextButton.icon(
             key: const Key('calendario-call'),
-            onPressed: () => _apriLink(
-              context,
-              Uri.tryParse(callUrl),
-              'la call',
-            ),
+            onPressed: () =>
+                _apriLink(context, Uri.tryParse(callUrl), 'la call'),
             icon: const Icon(Icons.videocam_outlined),
             label: const Text('Apri call'),
           ),
@@ -1118,4 +1068,3 @@ class _RigaDettaglio extends StatelessWidget {
     );
   }
 }
-

@@ -16,11 +16,12 @@ L'obiettivo è che un utente non debba cercare in tre schermate diverse.
 ## Calendario
 
 1. Apri **Calendario** dal menu.
-2. Scegli la vista **Giorno** o **Settimana**.
-3. Usa **Oggi** per tornare alla data corrente.
-4. Filtra per **operatore**, **tipo** e **stato**.
+2. Il calendario si apre sulla **vista mensile**. Scegli **Giorno**, **Settimana** o **Mese** per il periodo e **Calendario** o **Card** per lo stile.
+3. Usa **Oggi** per tornare alla data corrente e le frecce per spostarti.
+4. Filtra per **operatore**.
 5. Tocca un elemento per aprire il dettaglio.
-6. Tocca uno spazio vuoto per creare un appuntamento con data e ora già impostate.
+6. Tocca uno spazio vuoto nella vista giorno o settimana per creare un appuntamento con data e ora già impostate.
+7. Dalla vista mese, tocca un giorno per aprirlo nella vista giornaliera.
 
 Gli elementi senza orario compaiono in **Senza orario**.
 

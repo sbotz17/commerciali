@@ -175,6 +175,7 @@ class AppuntamentoFormScreen extends ConsumerStatefulWidget {
     super.key,
     this.appuntamento,
     this.dataIniziale,
+    this.oraIniziale,
   });
 
   /// Appuntamento da modificare; `null` per crearne uno nuovo.
@@ -183,12 +184,16 @@ class AppuntamentoFormScreen extends ConsumerStatefulWidget {
   /// Giorno proposto per un nuovo appuntamento (default: oggi).
   final DateTime? dataIniziale;
 
+  /// Ora `HH:MM` proposta per un nuovo appuntamento (default: vuota).
+  final String? oraIniziale;
+
   @override
   ConsumerState<AppuntamentoFormScreen> createState() =>
       _AppuntamentoFormScreenState();
 }
 
-class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen> {
+class _AppuntamentoFormScreenState
+    extends ConsumerState<AppuntamentoFormScreen> {
   final _modulo = GlobalKey<FormState>();
 
   late final TextEditingController _titolo;
@@ -222,13 +227,17 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
     super.initState();
     final appuntamento = widget.appuntamento;
 
-    _dataScelta = _giornoAppuntamento(appuntamento) ??
+    _dataScelta =
+        _giornoAppuntamento(appuntamento) ??
         _soloGiorno(widget.dataIniziale ?? DateTime.now());
     _titolo = TextEditingController(text: appuntamento?.titolo ?? '');
     _data = TextEditingController(text: formattaDataVisita(_dataScelta));
-    _ora = TextEditingController(text: appuntamento?.ora ?? '');
-    _durata =
-        TextEditingController(text: (appuntamento?.durataMin ?? 60).toString());
+    _ora = TextEditingController(
+      text: appuntamento?.ora ?? widget.oraIniziale ?? '',
+    );
+    _durata = TextEditingController(
+      text: (appuntamento?.durataMin ?? 60).toString(),
+    );
     _luogo = TextEditingController(text: appuntamento?.luogo ?? '');
     _indirizzo = TextEditingController(text: appuntamento?.indirizzo ?? '');
     _note = TextEditingController(text: appuntamento?.note ?? '');
@@ -335,7 +344,8 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
   /// elenco (per non perdere il collegamento in modifica).
   Map<String, String> get _opzioniClienti {
     final opzioni = <String, String>{
-      for (final cliente in _clienti) cliente.id: nomeClienteAppuntamento(cliente),
+      for (final cliente in _clienti)
+        cliente.id: nomeClienteAppuntamento(cliente),
     };
     final id = _clienteId;
     if (id != null && id.isNotEmpty && !opzioni.containsKey(id)) {
@@ -380,7 +390,8 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
   Future<void> _scegliOra() async {
     final scelta = await showTimePicker(
       context: context,
-      initialTime: _oraDaTesto(_ora.text) ?? const TimeOfDay(hour: 9, minute: 0),
+      initialTime:
+          _oraDaTesto(_ora.text) ?? const TimeOfDay(hour: 9, minute: 0),
       helpText: 'Scegli l\'ora',
       cancelText: 'Annulla',
       confirmText: 'Conferma',
@@ -397,7 +408,8 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
     );
     if (scelta == null || !mounted) return;
     setState(() {
-      _ora.text = '${scelta.hour.toString().padLeft(2, '0')}:'
+      _ora.text =
+          '${scelta.hour.toString().padLeft(2, '0')}:'
           '${scelta.minute.toString().padLeft(2, '0')}';
     });
   }
@@ -409,9 +421,8 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
     if (testo.isEmpty) return;
     await Clipboard.setData(ClipboardData(text: testo));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Link call copiato')),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text('Link call copiato')));
   }
 
   /// Apre il link call nel browser o nell'app esterna.
@@ -438,7 +449,9 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
     final uri = uriMapsIndirizzo(_indirizzo.text);
     if (uri == null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Inserisci un indirizzo per aprire Maps.')),
+        const SnackBar(
+          content: Text('Inserisci un indirizzo per aprire Maps.'),
+        ),
       );
       return;
     }
@@ -474,8 +487,8 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
       'ora': normalizzaOraVisita(_ora.text),
       'durata_min': durata,
       'cliente_id': _clienteId,
-      'cliente_nome': cliente?.nome ??
-          (cliente == null ? appuntamento?.clienteNome : null),
+      'cliente_nome':
+          cliente?.nome ?? (cliente == null ? appuntamento?.clienteNome : null),
       'operatore_id': _operatoreId,
       'luogo': _luogo.text,
       'indirizzo': _indirizzo.text,
@@ -517,9 +530,7 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _modifica ? 'Modifica appuntamento' : 'Nuovo appuntamento',
-        ),
+        title: Text(_modifica ? 'Modifica appuntamento' : 'Nuovo appuntamento'),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -613,9 +624,7 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
                           key: const Key('appuntamento-stato'),
                           initialValue: _stato,
                           isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Stato',
-                          ),
+                          decoration: const InputDecoration(labelText: 'Stato'),
                           items: [
                             for (final voce in statiAppuntamento.entries)
                               DropdownMenuItem(
@@ -664,10 +673,11 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
                           onChanged: _salvando || _caricamentoClienti
                               ? null
                               : (valore) => setState(() {
-                                    _clienteId = (valore == null || valore.isEmpty)
-                                        ? null
-                                        : valore;
-                                  }),
+                                  _clienteId =
+                                      (valore == null || valore.isEmpty)
+                                      ? null
+                                      : valore;
+                                }),
                         ),
                         DropdownButtonFormField<String>(
                           key: const Key('appuntamento-operatore'),
@@ -694,7 +704,7 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
                           onChanged: _salvando || _caricamentoUtenti
                               ? null
                               : (valore) =>
-                                  setState(() => _operatoreId = valore),
+                                    setState(() => _operatoreId = valore),
                         ),
                       ],
                       extra: [
@@ -743,8 +753,7 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
                         TextFormField(
                           key: const Key('appuntamento-call-url'),
                           controller: _callUrl,
-                          enabled:
-                              !_salvando && _callProvider != 'nessuna',
+                          enabled: !_salvando && _callProvider != 'nessuna',
                           keyboardType: TextInputType.url,
                           textInputAction: TextInputAction.next,
                           validator: (valore) =>
@@ -758,8 +767,7 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
                                 IconButton(
                                   key: const Key('appuntamento-call-copia'),
                                   tooltip: 'Copia link',
-                                  onPressed:
-                                      _salvando ? null : _copiaCall,
+                                  onPressed: _salvando ? null : _copiaCall,
                                   icon: const Icon(Icons.copy_outlined),
                                 ),
                                 IconButton(
@@ -814,9 +822,7 @@ class _AppuntamentoFormScreenState extends ConsumerState<AppuntamentoFormScreen>
                           maxLines: 4,
                           textCapitalization: TextCapitalization.sentences,
                           textInputAction: TextInputAction.newline,
-                          decoration: const InputDecoration(
-                            labelText: 'Note',
-                          ),
+                          decoration: const InputDecoration(labelText: 'Note'),
                         ),
                       ],
                     ),

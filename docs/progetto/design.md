@@ -87,8 +87,11 @@ login/onboarding/reset, CRUD e PDF. Nessuna nuova funzione, campo o schermata.
 Linee guida per le nuove schermate, da usare in fase di implementazione.
 
 ### Navigazione
-- Menu principale: Dashboard, Clienti, Preventivi, **Calendario**, Altro.
-- Task e Chat raggiungibili da Calendario/Altro; su desktop possono stare nella rail.
+- **Desktop/tablet**: barra laterale con tutte le pagine — Dashboard, Clienti, Catalogo, Preventivi, Visite,
+  Calendario, Task, Chat, Bandi, Notifiche — e **rotella Impostazioni** in fondo. Niente voce “Altro” né
+  secondi tre puntini.
+- **Telefono**: barra inferiore con Dashboard, Clienti, Preventivi, Bandi e “Altro”; il drawer “Altro”
+  contiene Catalogo, Calendario, Visite, Task, Chat, Notifiche e Impostazioni.
 - Badge non letti su Chat e campanella notifiche.
 
 ### Calendario
@@ -97,6 +100,14 @@ Linee guida per le nuove schermate, da usare in fase di implementazione.
 - Elementi: orario, titolo, cliente/operatore, stato, icona call/allegati.
 - Tocco su spazio vuoto → nuovo appuntamento con data/ora già compilate.
 - “Senza orario” in fondo, sempre visibile.
+
+**Aggiornamento 2026-10-24 — viste classiche e card**
+- Il calendario è la vista predefinita, aperta sul **mese**.
+- Periodo: **Giorno**, **Settimana**, **Mese**; stile: **Calendario** o **Card**.
+- Giorno e settimana usano una griglia con righello delle ore; gli eventi sovrapposti si affiancano.
+- Mese: griglia lunedì–domenica con voci compatte (su telefono solo indicatori); tocco sul giorno → vista giorno.
+- La vista card esistente resta disponibile per giorno, settimana e mese.
+- Tocco su uno spazio vuoto della griglia → nuovo appuntamento con data e ora proposte.
 
 ### Appuntamento / Task
 - Form a sezioni: Dettagli, Cliente e operatore, Luogo, Promemoria, Allegati.

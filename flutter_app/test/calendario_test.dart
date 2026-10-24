@@ -17,6 +17,7 @@ void main() {
     String? operatoreId,
     String? clienteNome,
     String stato = 'da_fare',
+    int durataMin = 60,
   }) {
     return Appuntamento(
       id: id,
@@ -26,6 +27,7 @@ void main() {
       operatoreId: operatoreId,
       clienteNome: clienteNome,
       stato: stato,
+      durataMin: durataMin,
     );
   }
 
@@ -51,9 +53,7 @@ void main() {
 
   group('elementiDaAppuntamenti', () {
     test('converte data, ora, titolo e tipo', () {
-      final elementi = elementiDaAppuntamenti([
-        appuntamento(),
-      ]);
+      final elementi = elementiDaAppuntamenti([appuntamento()]);
 
       expect(elementi, hasLength(1));
       final elemento = elementi.single;
@@ -130,10 +130,12 @@ void main() {
       final gruppi = raggruppaPerGiorno(elementi);
 
       expect(gruppi.keys.toList(), ['2026-10-24', '2026-10-25']);
-      expect(
-        gruppi['2026-10-24']!.map((elemento) => elemento.ora),
-        ['08:30', '09:15', '15:00', null],
-      );
+      expect(gruppi['2026-10-24']!.map((elemento) => elemento.ora), [
+        '08:30',
+        '09:15',
+        '15:00',
+        null,
+      ]);
       expect(gruppi['2026-10-25'], hasLength(1));
     });
 
@@ -145,10 +147,10 @@ void main() {
         ]),
       ]);
 
-      expect(
-        gruppi['2026-10-24']!.map((elemento) => elemento.titolo),
-        ['alfa', 'Zeta'],
-      );
+      expect(gruppi['2026-10-24']!.map((elemento) => elemento.titolo), [
+        'alfa',
+        'Zeta',
+      ]);
     });
 
     test('elenco vuoto produce una mappa vuota', () {
@@ -179,21 +181,12 @@ void main() {
 
     test('oggi e domani', () {
       expect(etichettaGiorno(oggi, oggi: oggi), 'Oggi');
-      expect(
-        etichettaGiorno(DateTime(2026, 10, 25), oggi: oggi),
-        'Domani',
-      );
+      expect(etichettaGiorno(DateTime(2026, 10, 25), oggi: oggi), 'Domani');
     });
 
     test('le altre date usano gg/mm/aaaa', () {
-      expect(
-        etichettaGiorno(DateTime(2026, 11, 1), oggi: oggi),
-        '01/11/2026',
-      );
-      expect(
-        etichettaGiorno(DateTime(2026, 1, 5), oggi: oggi),
-        '05/01/2026',
-      );
+      expect(etichettaGiorno(DateTime(2026, 11, 1), oggi: oggi), '01/11/2026');
+      expect(etichettaGiorno(DateTime(2026, 1, 5), oggi: oggi), '05/01/2026');
     });
   });
 
@@ -203,9 +196,7 @@ void main() {
         appuntamento(stato: 'fatto'),
       ]).single;
       final taskAperto = elementiDaTask([task()]).single;
-      final taskCompletato = elementiDaTask([
-        task(stato: 'completato'),
-      ]).single;
+      final taskCompletato = elementiDaTask([task(stato: 'completato')]).single;
 
       expect(etichettaStatoElemento(appuntamentoFatto), 'Fatto');
       expect(etichettaStatoElemento(taskAperto), 'Da fare');
@@ -219,14 +210,17 @@ void main() {
         appuntamento(clienteNome: 'ACME Srl', operatoreId: 'u1'),
       ]).single;
 
-      expect(dettaglioElemento(elemento, {'u1': 'Mario Rossi'}),
-          'ACME Srl · Mario Rossi');
+      expect(
+        dettaglioElemento(elemento, {'u1': 'Mario Rossi'}),
+        'ACME Srl · Mario Rossi',
+      );
       expect(dettaglioElemento(elemento, const {}), 'ACME Srl');
     });
   });
 
-  testWidgets('la vista giorno vuota mostra "Nessun appuntamento"',
-      (tester) async {
+  testWidgets('la vista giorno vuota mostra "Nessun appuntamento"', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light,
@@ -234,7 +228,8 @@ void main() {
           body: CorpoCalendario(
             elementi: const [],
             giorno: DateTime(2026, 10, 24),
-            settimana: false,
+            vista: VistaAgenda.giorno,
+            aCard: true,
             caricamento: false,
             onRiprova: () {},
           ),
@@ -252,9 +247,7 @@ void main() {
     final elementi = [
       ...elementiDaAppuntamenti([appuntamento(ora: '09:30')]),
       ...elementiDaTask([task()]),
-      ...elementiDaAppuntamenti([
-        appuntamento(id: 'a9', data: '2026-10-30'),
-      ]),
+      ...elementiDaAppuntamenti([appuntamento(id: 'a9', data: '2026-10-30')]),
     ];
 
     await tester.pumpWidget(
@@ -264,7 +257,8 @@ void main() {
           body: CorpoCalendario(
             elementi: elementi,
             giorno: DateTime(2026, 10, 24),
-            settimana: false,
+            vista: VistaAgenda.giorno,
+            aCard: true,
             caricamento: false,
             onRiprova: () {},
           ),
@@ -276,5 +270,242 @@ void main() {
     expect(find.text('Visita ACME'), findsOneWidget);
     expect(find.text('Richiamare cliente'), findsOneWidget);
     expect(find.byKey(const Key('calendario-vuoto')), findsNothing);
+  });
+
+  group('periodi del calendario', () {
+    test('la vista predefinita è il calendario mensile', () {
+      expect(stileAgendaPredefinito, StileAgenda.calendario);
+      expect(vistaAgendaPredefinita, VistaAgenda.mese);
+    });
+
+    test('etichettaPeriodo per giorno, settimana e mese', () {
+      final giorno = DateTime(2099, 10, 24);
+
+      expect(etichettaPeriodo(VistaAgenda.giorno, giorno), '24/10/2099');
+      expect(
+        etichettaPeriodo(VistaAgenda.settimana, giorno),
+        '19/10/2099 – 25/10/2099',
+      );
+      expect(etichettaPeriodo(VistaAgenda.mese, giorno), 'Ottobre 2099');
+    });
+
+    test('spostaPeriodo rispetta giorno, settimana e mese', () {
+      final giorno = DateTime(2026, 1, 31);
+
+      expect(
+        spostaPeriodo(VistaAgenda.giorno, giorno, 1),
+        DateTime(2026, 2, 1),
+      );
+      expect(
+        spostaPeriodo(VistaAgenda.settimana, giorno, -1),
+        DateTime(2026, 1, 24),
+      );
+      expect(spostaPeriodo(VistaAgenda.mese, giorno, 1), DateTime(2026, 2, 1));
+    });
+
+    test('la griglia del mese parte dal lunedì e contiene tutto il mese', () {
+      final giorni = giorniGrigliaMese(DateTime(2026, 10, 15));
+
+      expect(giorni.first.weekday, DateTime.monday);
+      expect(giorni.first, DateTime(2026, 9, 28));
+      expect(giorni.last, DateTime(2026, 11, 1));
+      expect(giorni.length % 7, 0);
+      expect(giorni, contains(DateTime(2026, 10, 31)));
+      expect(giorni, isNot(contains(DateTime(2026, 11, 2))));
+    });
+
+    test('elementiNelPeriodo filtra giorno, settimana e mese', () {
+      final elementi = [
+        ...elementiDaAppuntamenti([
+          appuntamento(id: 'a1', data: '2026-10-24', ora: '09:00'),
+          appuntamento(id: 'a2', data: '2026-10-20', ora: '10:00'),
+          appuntamento(id: 'a3', data: '2026-11-02', ora: '11:00'),
+        ]),
+      ];
+
+      expect(
+        elementiNelPeriodo(
+          elementi,
+          VistaAgenda.giorno,
+          DateTime(2026, 10, 24),
+        ),
+        hasLength(1),
+      );
+      expect(
+        elementiNelPeriodo(
+          elementi,
+          VistaAgenda.settimana,
+          DateTime(2026, 10, 24),
+        ),
+        hasLength(2),
+      );
+      expect(
+        elementiNelPeriodo(elementi, VistaAgenda.mese, DateTime(2026, 10, 1)),
+        hasLength(2),
+      );
+    });
+  });
+
+  group('griglia oraria', () {
+    test('minutiDaOra normalizza e scarta le ore non valide', () {
+      expect(minutiDaOra('9:05'), 9 * 60 + 5);
+      expect(minutiDaOra('09:30'), 570);
+      expect(minutiDaOra(null), isNull);
+      expect(minutiDaOra('25:00'), isNull);
+      expect(minutiDaOra('testo'), isNull);
+    });
+
+    test('durataMinutiElemento usa la durata o il default', () {
+      final appuntamentoLungo = elementiDaAppuntamenti([
+        appuntamento(durataMin: 90),
+      ]).single;
+      final appuntamentoSenzaDurata = elementiDaAppuntamenti([
+        appuntamento(durataMin: 0),
+      ]).single;
+      final taskSenzaDurata = elementiDaTask([task()]).single;
+
+      expect(durataMinutiElemento(appuntamentoLungo), 90);
+      expect(durataMinutiElemento(appuntamentoSenzaDurata), 30);
+      expect(durataMinutiElemento(taskSenzaDurata), 30);
+    });
+
+    test('disponiVociGiorno affianca le voci sovrapposte', () {
+      final voci = disponiVociGiorno(
+        elementiDaAppuntamenti([
+          appuntamento(id: 'a1', ora: '09:00', durataMin: 60),
+          appuntamento(id: 'a2', ora: '09:30', durataMin: 60),
+          appuntamento(id: 'a3', ora: '11:00', durataMin: 30),
+        ]),
+      );
+
+      final prima = voci.firstWhere(
+        (voce) => voce.elemento.appuntamento?.id == 'a1',
+      );
+      final seconda = voci.firstWhere(
+        (voce) => voce.elemento.appuntamento?.id == 'a2',
+      );
+      final terza = voci.firstWhere(
+        (voce) => voce.elemento.appuntamento?.id == 'a3',
+      );
+
+      expect(prima.corsie, 2);
+      expect(seconda.corsie, 2);
+      expect({prima.corsia, seconda.corsia}, {0, 1});
+      expect(terza.corsie, 1);
+      expect(voci.first.inizio, 9 * 60);
+    });
+
+    test('le voci senza ora restano fuori dalla griglia', () {
+      final elementi = elementiDaAppuntamenti([
+        appuntamento(ora: null),
+        appuntamento(id: 'a2', ora: '09:00'),
+      ]);
+
+      expect(disponiVociGiorno(elementi), hasLength(1));
+      expect(vociSenzaOrario(elementi), hasLength(1));
+      expect(vociConOrario(elementi), hasLength(1));
+    });
+
+    test('intervalloOrarioElementi include le voci fuori orario standard', () {
+      expect(intervalloOrarioElementi(const []), (
+        inizio: 7 * 60,
+        fine: 21 * 60,
+      ));
+      expect(
+        intervalloOrarioElementi(
+          elementiDaAppuntamenti([
+            appuntamento(ora: '06:15', durataMin: 30),
+            appuntamento(id: 'a2', ora: '22:00', durataMin: 90),
+          ]),
+        ),
+        (inizio: 6 * 60, fine: 24 * 60),
+      );
+    });
+  });
+
+  testWidgets('la vista mese mostra i giorni e le voci', (tester) async {
+    final elementi = elementiDaAppuntamenti([
+      appuntamento(titolo: 'Visita del mese', ora: '09:30'),
+    ]);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SizedBox(
+            height: 600,
+            child: VistaMeseCalendario(
+              mese: DateTime(2026, 10, 24),
+              elementi: elementi,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calendario-mese')), findsOneWidget);
+    expect(find.text('LUN'), findsOneWidget);
+    expect(find.text('Visita del mese'), findsOneWidget);
+    expect(find.text('31'), findsOneWidget);
+  });
+
+  testWidgets('la vista giorno classica mostra eventi e senza orario', (
+    tester,
+  ) async {
+    final elementi = [
+      ...elementiDaAppuntamenti([
+        appuntamento(titolo: 'Visita con orario', ora: '09:30'),
+      ]),
+      ...elementiDaTask([task(titolo: 'Task senza ora', scadenzaOra: null)]),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SizedBox(
+            height: 600,
+            child: VistaGrigliaOraria(
+              giorni: [DateTime(2026, 10, 24)],
+              elementi: elementi,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('calendario-griglia-giorno')), findsOneWidget);
+    expect(find.text('Visita con orario'), findsOneWidget);
+    expect(find.byKey(const Key('calendario-senza-orario')), findsOneWidget);
+    expect(find.text('Task senza ora'), findsOneWidget);
+  });
+
+  testWidgets('la vista settimana classica mostra i sette giorni', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: SizedBox(
+            height: 600,
+            child: VistaGrigliaOraria(
+              giorni: giorniSettimana(DateTime(2026, 10, 24)),
+              elementi: const [],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('calendario-griglia-settimana')),
+      findsOneWidget,
+    );
+    expect(find.text('LUN'), findsOneWidget);
+    expect(find.text('DOM'), findsOneWidget);
   });
 }

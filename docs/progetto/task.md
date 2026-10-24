@@ -111,6 +111,7 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 | H02 | Dati | Modelli `Appuntamento`, `Task`, `Promemoria`, `Notifica` | fromMap/toMap, default, test | sviluppatore-backend | FATTO |
 | H03 | Dati | `SpService`: CRUD appuntamenti e task | query per azienda, filtro operatore, test | sviluppatore-backend | FATTO |
 | H04 | UI | Schermata Calendario giorno/settimana | viste, filtri, oggi, senza orario, test | sviluppatore-frontend | FATTO |
+| H04b | UI | Calendario classico giorno/settimana/mese e stile card | vista predefinita calendario; selettori periodo e stile; griglia ore, mese, “Senza orario”, creazione con ora; test | sviluppatore-frontend | FATTO |
 | H05 | UI | Form appuntamento | titolo/data, cliente, operatore, luogo, Maps, call, promemoria | sviluppatore-frontend | FATTO |
 | H06 | UI | Pagina Task | lista per scadenza, filtri, completa/riapri, test | sviluppatore-frontend | FATTO |
 | H07 | UI | Form task | scadenza, operatore, priorità, cliente/appuntamento, note | sviluppatore-frontend | FATTO |

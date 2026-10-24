@@ -71,7 +71,10 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Nuovo cliente da preventivo | `flutter_app/lib/features/preventivi/preventivo_edit_screen.dart` | Pulsante nella card cliente e selezione automatica dopo la creazione |
 | Agenda — modelli | `flutter_app/lib/data/models/appuntamento.dart`, `task_item.dart`, `promemoria.dart`, `notifica.dart` | Modelli dati dell'area agenda |
 | Chat — modelli | `flutter_app/lib/data/models/stanza_chat.dart`, `messaggio_chat.dart` | Stanze dirette/gruppi e messaggi |
-| Calendario | `flutter_app/lib/features/calendario/calendario_screen.dart`, `appuntamento_form_screen.dart` | Vista giorno/settimana, creazione appuntamento, dettaglio, Maps |
+| Calendario | `flutter_app/lib/features/calendario/calendario_screen.dart`, `calendario_logica.dart`, `viste_calendario.dart`, `appuntamento_form_screen.dart` | Calendario classico giorno/settimana/mese (predefinito) e stile card; creazione appuntamento con data/ora, dettaglio, Maps |
+| Calendario — logica | `flutter_app/lib/features/calendario/calendario_logica.dart` | `VistaAgenda`/`StileAgenda`, `ElementoAgenda`, raggruppamento, periodi, griglia del mese, posizionamento eventi sovrapposti |
+| Calendario — viste classiche | `flutter_app/lib/features/calendario/viste_calendario.dart` | `VistaMeseCalendario` e `VistaGrigliaOraria` per giorno/settimana, con “Senza orario” e tocco su spazio vuoto |
+| Test calendario | `flutter_app/test/calendario_test.dart` | Unit test di periodi e griglia oraria + widget test di mese, giorno e settimana |
 | Task | `flutter_app/lib/features/task/task_screen.dart`, `task_form_screen.dart` | Lista per periodi, filtri, completamento, form |
 | Notifiche | `flutter_app/lib/features/notifiche/notifiche_screen.dart`, `campanella_notifiche.dart` | Centro notifiche, badge, preferenze |
 | Chat UI | `flutter_app/lib/features/chat/chat_screen.dart`, `chat_thread_screen.dart` | Lista conversazioni, nuove chat/gruppi, thread |
