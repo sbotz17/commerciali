@@ -76,9 +76,10 @@ String messaggioErrorePreferenzeNotifiche(Object errore) {
 
 /// Testo breve di privacy mostrato sotto il consenso WhatsApp.
 const String testoPrivacyWhatsapp =
-    'Il numero serve solo alle notifiche WhatsApp dell\'azienda (preventivi, '
-    'visite, promemoria). Non viene condiviso con terzi e puoi revocare il '
-    'consenso quando vuoi.';
+    'Il numero serve alle notifiche WhatsApp dell\'azienda (preventivi, visite, '
+    'promemoria, inviti) ed è visibile ai colleghi della tua azienda solo per '
+    'questo scopo. Non viene condiviso con terzi e puoi revocare il consenso '
+    'quando vuoi.';
 
 /// Testo che spiega il comportamento del push senza anteprima.
 const String testoAnteprimPush =

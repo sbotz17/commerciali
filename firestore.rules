@@ -162,6 +162,23 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.utente_uid == uid();
     }
 
+    // Rubrica aziendale dei recapiti per le notifiche WhatsApp. Contiene solo
+    // numero e consenso, mai token o segreti; è leggibile dai membri
+    // dell'azienda per inviare avvisi ai colleghi.
+    match /contatti_notifiche/{id} {
+      allow read: if signedIn() && memberOf(resource.data.azienda_id);
+      allow create: if signedIn()
+        && request.resource.data.azienda_id is string
+        && request.resource.data.utente_uid == uid()
+        && memberOf(request.resource.data.azienda_id);
+      allow update: if signedIn()
+        && resource.data.utente_uid == uid()
+        && request.resource.data.utente_uid == uid()
+        && request.resource.data.azienda_id == resource.data.azienda_id
+        && memberOf(resource.data.azienda_id);
+      allow delete: if signedIn() && resource.data.utente_uid == uid();
+    }
+
     match /allegati/{id} {
       allow read: if memberOf(resource.data.azienda_id) || isSuper();
       allow create: if memberOf(request.resource.data.azienda_id) || isSuper();

@@ -274,6 +274,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       await servizio.rispondiInvitoAppuntamento(
         appuntamento.id,
         disponibile: disponibile,
+        nomeRispondente: _nomiOperatori[_uidCorrente] ?? '',
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

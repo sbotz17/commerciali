@@ -286,6 +286,30 @@ String statoCondivisioneDaConferme(
   return statoCondivisioneInAttesa;
 }
 
+/// Testo della notifica inviata a chi ha creato l'appuntamento quando un
+/// invitato risponde.
+String messaggioRispostaInvito({
+  required String nomeRispondente,
+  required bool disponibile,
+  required String titolo,
+  String? data,
+  String? ora,
+}) {
+  final nome = nomeRispondente.trim().isEmpty
+      ? 'Un collega'
+      : nomeRispondente.trim();
+  final oggetto = titolo.trim().isEmpty ? 'Appuntamento' : titolo.trim();
+  final quando = [
+    (data ?? '').trim(),
+    (ora ?? '').trim(),
+  ].where((voce) => voce.isNotEmpty).join(' ');
+  final azione = disponibile
+      ? 'ha confermato la disponibilità'
+      : 'non è disponibile';
+  return '$nome $azione per "$oggetto"'
+      '${quando.isEmpty ? '.' : ' del $quando.'}';
+}
+
 List<String> _listaUid(dynamic valore) {
   if (valore is! List) return const [];
   final visti = <String>{};

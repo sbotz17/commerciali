@@ -39,3 +39,11 @@ resta visibile nel calendario.
 
 **Come tornare indietro**: rimuovere i campi dal payload e ripristinare il form; i campi già scritti non
 impediscono il funzionamento della versione precedente.
+
+### Aggiornamento — notifica di conferma e WhatsApp
+
+- La conferma di un invitato ora genera una notifica In-App per chi ha creato l'appuntamento e per
+  l'operatore assegnato; è stata recuperata anche la conferma già presente di Simone.
+- L'invio WhatsApp è implementato con rubrica aziendale e consenso, ma **non è attivo** finché non vengono
+  configurati `whatsapp_config/1` (URL + API key del server) e il numero/consenso dell'utente.
+- I test sono della squadra: analyze, 827 test, E2E regole reali. Andrea deve solo validare l'esperienza.

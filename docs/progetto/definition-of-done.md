@@ -8,6 +8,15 @@ Un task o un milestone **non è "fatto"** e non si rilascia se manca anche uno s
 2. `flutter test` → tutti verdi; ogni correzione ha un test che fallisce senza la correzione.
 3. Nessuna modifica a `firestore.rules`, vecchia app o configurazioni di produzione senza approvazione.
 
+## Test eseguiti dalla squadra
+
+I test sono un compito della squadra, **non di Andrea**:
+
+- il tester esegue i comandi (`flutter analyze`, `flutter test`, script E2E) e la prova su staging;
+- ogni comportamento nuovo o corretto ha un test automatico che lo copre;
+- se manca un test, il task non è `FATTO` e torna allo sviluppo;
+- ad Andrea si chiede solo la validazione funzionale/UX, dopo il report del tester.
+
 ## Prova reale su staging (obbligatoria)
 
 Il tester deve eseguire l'app pubblicata su `https://commerciali-app.web.app` con un utente di test e:

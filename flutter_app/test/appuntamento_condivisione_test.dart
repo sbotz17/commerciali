@@ -109,6 +109,33 @@ void main() {
     });
   });
 
+  group('messaggioRispostaInvito', () {
+    test('conferma con data e ora', () {
+      expect(
+        messaggioRispostaInvito(
+          nomeRispondente: 'Simone',
+          disponibile: true,
+          titolo: 'Sopralluogo',
+          data: '24/10/2026',
+          ora: '10:00',
+        ),
+        'Simone ha confermato la disponibilità per "Sopralluogo" del '
+        '24/10/2026 10:00.',
+      );
+    });
+
+    test('rifiuto e fallback del nome', () {
+      expect(
+        messaggioRispostaInvito(
+          nomeRispondente: '  ',
+          disponibile: false,
+          titolo: '  ',
+        ),
+        'Un collega non è disponibile per "Appuntamento".',
+      );
+    });
+  });
+
   group('etichette risposte', () {
     test('stato condivisione e risposta singola', () {
       expect(

@@ -474,3 +474,17 @@
 - Pubblicata l’app su `https://commerciali-prod.web.app` con configurazione Firebase di produzione.
 - `main` non contiene ancora l’app Flutter: la pubblicazione è stata fatta dal ramo corrente; il passaggio ufficiale su `main` richiede la validazione finale.
 - Google Sign-In non è ancora configurato in produzione; l’accesso email/password funziona.
+
+## 2026-10-24 — Notifica di conferma all’organizzatore
+
+- Corretto il flusso: quando un invitato conferma o rifiuta, vengono avvisati **creatore** e **operatore**
+  dell’appuntamento con una notifica In-App (prima non veniva creata).
+- Aggiunto l’invio WhatsApp best-effort alla stessa cerchia, tramite `whatsapp_config/1` e la nuova rubrica
+  aziendale `contatti_notifiche` (numero e consenso, leggibile dai colleghi, scrivibile solo dall’interessato).
+- `salvaPreferenzeNotifiche` aggiorna la rubrica; senza consenso o senza numero il recapito viene rimosso.
+- Backfill eseguito per la conferma già esistente di Simone sull’appuntamento “Appuntamento da Gennari”:
+  creata la notifica In-App per Andrea.
+- Test: `flutter analyze` 0; `flutter test` 827 verdi; `scripts/e2e-agenda.py` PASS anche su
+  `contatti_notifiche`; regole Firestore pubblicate su staging.
+- WhatsApp non può ancora partire: nel progetto Firebase non esiste `whatsapp_config/1` e non ci sono
+  numeri/consensi salvati. Serve configurare il server WhatsApp e il proprio numero nelle preferenze.

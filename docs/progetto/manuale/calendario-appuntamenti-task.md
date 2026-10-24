@@ -41,6 +41,10 @@ L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invit
 disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
 **Confermo** e **Non disponibile**.
 
+Quando un invitato risponde, chi ha creato l'appuntamento e l'utente assegnato ricevono una **notifica
+In-App**. Se hanno attivato WhatsApp nelle proprie preferenze, ricevono anche un messaggio WhatsApp.
+Per attivarlo: **Impostazioni → Notifiche → WhatsApp**, inserisci il numero e attiva il consenso.
+
 ### Icona auto
 
 Se l'appuntamento ha un indirizzo, accanto compare l'icona **auto**.

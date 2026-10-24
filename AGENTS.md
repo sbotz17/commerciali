@@ -69,6 +69,17 @@ Nessun task o milestone è concluso senza `docs/progetto/definition-of-done.md`:
 prova E2E reale su staging (login, azienda attiva, CRUD cliente e preventivo, nessun permission-denied)
 e nessuna pagina segnaposto nel perimetro. Tester e validatore devono verificare le prove, non solo il codice.
 
+### Test: li esegue la squadra, non Andrea
+
+- Ogni sviluppo o correzione include i test automatici scritti e mantenuti dalla squadra (unit, widget,
+  E2E). Se il test manca, il task non è `FATTO`.
+- Il **tester** esegue `flutter analyze`, `flutter test`, gli script E2E e la prova su staging; allega il
+  report in `docs/progetto/test/`.
+- **Non si chiede ad Andrea di eseguire unit test, script o prove tecniche.** A lui si chiede solo la
+  validazione funzionale/UX dopo che la squadra ha già verificato tutto.
+- Se un comportamento richiesto non è coperto da un test, il tester lo segnala e il task torna in sviluppo:
+  non si "passa la verifica" ad Andrea.
+
 ### Task piccoli (obbligatorio)
 
 Nessun lavoro si assegna "tutto insieme". Ogni richiesta si spezza in task da **un solo obiettivo

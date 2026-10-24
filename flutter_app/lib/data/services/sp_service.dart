@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/appuntamento.dart';
 import '../models/azienda.dart';
@@ -297,6 +300,23 @@ int confrontaCondivisioniPerData(
     return 1;
   }
   return 0;
+}
+
+/// Normalizza un numero WhatsApp in sole cifre (prefisso internazionale
+/// incluso), così il server riceve sempre un valore pulito.
+String normalizzaNumeroWhatsapp(String? numero) =>
+    (numero ?? '').replaceAll(RegExp(r'\D'), '');
+
+/// URL `/send` del server WhatsApp a partire dall'indirizzo configurato.
+///
+/// Ritorna `null` se l'indirizzo è vuoto, non è http/https o non è valido.
+Uri? uriInvioWhatsapp(String? indirizzo) {
+  final base = (indirizzo ?? '').trim().replaceAll(RegExp(r'/+$'), '');
+  if (base.isEmpty) return null;
+  final uri = Uri.tryParse('$base/send');
+  if (uri == null || uri.host.isEmpty) return null;
+  if (uri.scheme != 'https' && uri.scheme != 'http') return null;
+  return uri;
 }
 
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
@@ -1035,13 +1055,21 @@ class SpService {
   /// sovrascrivano la risposta. Aggiorna `conferme.{uid}`, ricalcola
   /// `stato_condivisione` e `updated_at`. L'utente deve essere tra gli
   /// invitati dell'appuntamento.
+  ///
+  /// Dopo la risposta avvisa chi ha creato l'appuntamento con una notifica
+  /// In-App e, se ha un recapito con consenso, anche su WhatsApp.
   Future<void> rispondiInvitoAppuntamento(
     String id, {
     required bool disponibile,
+    String? nomeRispondente,
   }) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) throw StateError('Utente non autenticato');
     final riferimento = _firestore.collection('appuntamenti').doc(id);
+    String creatore = '';
+    String operatore = '';
+    String titolo = '';
+    String quando = '';
 
     await _firestore.runTransaction((transazione) async {
       final documento = await transazione.get(riferimento);
@@ -1053,6 +1081,14 @@ class SpService {
       if (!invitati.contains(uid)) {
         throw StateError('Non sei invitato a questo appuntamento');
       }
+
+      creatore = (dati['created_by'] ?? '').toString().trim();
+      operatore = (dati['operatore_id'] ?? '').toString().trim();
+      titolo = (dati['titolo'] ?? '').toString().trim();
+      quando = [
+        (dati['data'] ?? '').toString().trim(),
+        (dati['ora'] ?? '').toString().trim(),
+      ].where((voce) => voce.isNotEmpty).join(' ');
 
       final conferme = <String, dynamic>{};
       final grezze = dati['conferme'];
@@ -1072,6 +1108,44 @@ class SpService {
         'updated_at': _now(),
       });
     });
+
+    final destinatari = <String>{
+      if (creatore.isNotEmpty && creatore != uid) creatore,
+      if (operatore.isNotEmpty && operatore != uid) operatore,
+    };
+    if (destinatari.isEmpty) return;
+
+    final oggetto = titolo.isEmpty ? 'Appuntamento' : titolo;
+    final testo = messaggioRispostaInvito(
+      nomeRispondente: nomeRispondente ?? '',
+      disponibile: disponibile,
+      titolo: titolo,
+      data: quando,
+    );
+
+    for (final destinatario in destinatari) {
+      try {
+        await creaNotifica(
+          utenteUid: destinatario,
+          tipo: 'appuntamento',
+          titolo: 'Risposta invito: $oggetto',
+          testo: testo,
+          targetTipo: 'appuntamento',
+          targetId: id,
+        );
+      } catch (_) {
+        // La risposta è già salvata: la notifica non deve farla fallire.
+      }
+
+      try {
+        await inviaWhatsappAUtente(
+          utenteUid: destinatario,
+          messaggio: 'Closer · Risposta invito\n$testo',
+        );
+      } catch (_) {
+        // WhatsApp è best-effort e può non essere configurato.
+      }
+    }
   }
 
   /// Costruisce il payload Firestore di un appuntamento, coerente con il
@@ -1904,21 +1978,134 @@ class SpService {
   ///
   /// Scrive `impostazioni_notifiche/{aziendaId}_{uid}` con merge, garantendo
   /// sempre `azienda_id`, `utente_uid` e `updated_at`.
+  ///
+  /// Aggiorna anche la rubrica aziendale `contatti_notifiche` usata per gli
+  /// avvisi WhatsApp: il numero è condiviso con i colleghi dell'azienda solo
+  /// quando il consenso WhatsApp è attivo.
   Future<void> salvaPreferenzeNotifiche(Map<String, dynamic> dati) async {
     _richiediAzienda();
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
       throw StateError('Nessun utente autenticato.');
     }
-    await _firestore
-        .collection('impostazioni_notifiche')
-        .doc('${_aziendaAttiva}_$uid')
-        .set({
-          ...dati,
-          'azienda_id': _aziendaAttiva,
-          'utente_uid': uid,
-          'updated_at': _now(),
-        }, SetOptions(merge: true));
+    final aziendaId = _aziendaAttiva!;
+    final numero = (dati['numero_whatsapp'] ?? '').toString().trim();
+    final consenso = dati['consenso_whatsapp'] == true;
+    final canale = dati['canale_whatsapp'] == true;
+    final batch = _firestore.batch();
+
+    batch.set(
+      _firestore.collection('impostazioni_notifiche').doc('${aziendaId}_$uid'),
+      {
+        ...dati,
+        'azienda_id': aziendaId,
+        'utente_uid': uid,
+        'updated_at': _now(),
+      },
+      SetOptions(merge: true),
+    );
+
+    final contatto = _firestore
+        .collection('contatti_notifiche')
+        .doc('${aziendaId}_$uid');
+    if (consenso && canale && numero.isNotEmpty) {
+      batch.set(contatto, {
+        'azienda_id': aziendaId,
+        'utente_uid': uid,
+        'numero_whatsapp': numero,
+        'consenso_whatsapp': true,
+        'updated_at': _now(),
+      }, SetOptions(merge: true));
+    } else {
+      // Non cancella il documento (la delete senza documento esistente può
+      // essere negata dalle regole): azzera numero e consenso.
+      batch.set(contatto, {
+        'azienda_id': aziendaId,
+        'utente_uid': uid,
+        'numero_whatsapp': '',
+        'consenso_whatsapp': false,
+        'updated_at': _now(),
+      }, SetOptions(merge: true));
+    }
+
+    await batch.commit();
+  }
+
+  /// Recapito WhatsApp di un utente dell'azienda attiva, oppure `null`.
+  ///
+  /// Legge `contatti_notifiche/{aziendaId}_{uid}`, la rubrica leggibile dai
+  /// membri dell'azienda creata dalle preferenze di notifica dell'utente.
+  Future<Map<String, dynamic>?> getContattoNotifiche(String utenteUid) async {
+    final aziendaId = _aziendaAttiva;
+    final uid = utenteUid.trim();
+    if (aziendaId == null || uid.isEmpty) return null;
+    final snap = await _firestore
+        .collection('contatti_notifiche')
+        .doc('${aziendaId}_$uid')
+        .get();
+    return snap.data();
+  }
+
+  /// Invia un messaggio WhatsApp al numero [numero] tramite il server
+  /// configurato in `whatsapp_config/1`.
+  ///
+  /// Ritorna `false` (senza sollevare) se WhatsApp non è configurato, se il
+  /// server non risponde o se risponde con un errore: l'avviso In-App resta
+  /// comunque valido. La API key non viene mai loggata.
+  Future<bool> inviaWhatsapp({
+    required String numero,
+    required String messaggio,
+  }) async {
+    final pulito = normalizzaNumeroWhatsapp(numero);
+    if (pulito.isEmpty) return false;
+    try {
+      final snap = await _firestore
+          .collection('whatsapp_config')
+          .doc('1')
+          .get();
+      final dati = snap.data();
+      final uri = uriInvioWhatsapp(dati?['url']?.toString());
+      if (!snap.exists || uri == null) return false;
+      final risposta = await http
+          .post(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': (dati?['api_key'] ?? '').toString(),
+            },
+            body: jsonEncode({'to': pulito, 'message': messaggio}),
+          )
+          .timeout(const Duration(seconds: 15));
+      if (risposta.statusCode < 200 || risposta.statusCode >= 300) {
+        return false;
+      }
+      if (risposta.body.trim().isNotEmpty) {
+        final corpo = jsonDecode(risposta.body);
+        if (corpo is Map && corpo['error'] != null) return false;
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Invia un avviso WhatsApp a un utente dell'azienda, se ha un recapito con
+  /// consenso attivo. Best-effort: non interrompe mai il flusso chiamante.
+  Future<bool> inviaWhatsappAUtente({
+    required String utenteUid,
+    required String messaggio,
+  }) async {
+    try {
+      final contatto = await getContattoNotifiche(utenteUid);
+      if (contatto == null || contatto['consenso_whatsapp'] != true) {
+        return false;
+      }
+      final numero = (contatto['numero_whatsapp'] ?? '').toString().trim();
+      if (numero.isEmpty) return false;
+      return await inviaWhatsapp(numero: numero, messaggio: messaggio);
+    } catch (_) {
+      return false;
+    }
   }
 
   // ---------- chat ----------

@@ -687,6 +687,14 @@ class _AppuntamentoFormScreenState
       } catch (_) {
         // La notifica non deve impedire il salvataggio dell'appuntamento.
       }
+      try {
+        await servizio.inviaWhatsappAUtente(
+          utenteUid: uid,
+          messaggio: 'Closer · Invito appuntamento\n$nome\n$testo',
+        );
+      } catch (_) {
+        // WhatsApp è best-effort e può non essere configurato.
+      }
     }
   }
 

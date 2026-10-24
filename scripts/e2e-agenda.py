@@ -219,6 +219,26 @@ def main():
             if st != 200:
                 errori.append(f"segna letta da B: {st}")
 
+        # contatti_notifiche: rubrica aziendale per gli avvisi WhatsApp
+        contatto_id = f"{az}_{users[0]['uid']}"
+        contatto_path = f"contatti_notifiche/{contatto_id}"
+        st, d = crea(contatto_path, {
+            "azienda_id": s(az), "utente_uid": s(users[0]["uid"]),
+            "numero_whatsapp": s("393330000000"), "consenso_whatsapp": b(True),
+            "updated_at": s(now),
+        }, token_a)
+        if st != 200:
+            errori.append(f"create contatto_notifiche: {st} {d}")
+        else:
+            st, _ = call("GET", percorso(contatto_path), token=token_b)
+            if st != 200:
+                errori.append(f"B non legge il contatto aziendale: {st}")
+            # B non può modificare il recapito di A
+            st, _ = call("PATCH", percorso(contatto_path + "?updateMask.fieldPaths=numero_whatsapp"),
+                         {"fields": {"numero_whatsapp": s("393331111111")}}, token_b)
+            if st == 200:
+                errori.append("B ha potuto modificare il recapito WhatsApp di A")
+
         # integrazioni_azienda: solo admin, mai secret
         integrazione_path = f"integrazioni_azienda/{az}"
         st, _ = call("PATCH", percorso(integrazione_path), {"fields": {

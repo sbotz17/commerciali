@@ -9,8 +9,8 @@ disponibilità, apertura dell'appuntamento dalla notifica.
 | Verifica | Esito |
 |---|---|
 | `flutter analyze` | 0 problemi |
-| `flutter test` | 822 test verdi |
-| `scripts/e2e-agenda.py` su staging | PASS: l'invitato B legge e aggiorna `conferme`/`stato_condivisione`; A vede la conferma; notifiche private rispettate |
+| `flutter test` | 827 test verdi |
+| `scripts/e2e-agenda.py` su staging | PASS: invito e conferma tra due utenti, notifiche private e rubrica `contatti_notifiche` |
 | `scripts/controlla-indice.mjs` | INDICE OK |
 
 ## Copertura dei test aggiunti
@@ -21,7 +21,10 @@ disponibilità, apertura dell'appuntamento dalla notifica.
 - `test/calendario_test.dart`: badge e colore della condivisione.
 - `test/notifiche_screen_test.dart`: rotta verso `/calendario?appuntamento=…`.
 
-## Prova manuale da fare su staging
+## Verifica funzionale per Andrea (dopo i test della squadra)
+
+Questa non è una richiesta di eseguire test tecnici: analyze, test e regole sono già stati eseguiti dalla
+squadra. Serve solo la conferma dell'esperienza:
 
 1. Creare un appuntamento con un cliente nuovo dal **+** accanto al cliente.
 2. Invitare una persona e un gruppo della chat.
@@ -32,5 +35,6 @@ disponibilità, apertura dell'appuntamento dalla notifica.
 ## Residui
 
 - La notifica push non è inclusa: l'invito arriva nel centro notifiche In-App.
+- WhatsApp è implementato ma spento finché non esistono `whatsapp_config/1` e un recapito con consenso.
 - L'aggiornamento del calendario dell'organizzatore non è realtime: si aggiorna alla riapertura o alla
   ricarica della schermata.

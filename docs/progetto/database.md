@@ -92,6 +92,7 @@ Tutte le collezioni hanno `azienda_id` e sono isolate per azienda.
 | `notifiche` | Consegne effettive in-app/push/WhatsApp | utente_uid, tipo, titolo, testo, target_tipo/id, canale, stato, programmata_at, inviata_at, letta_at, tentativi, errore, idempotenza_key |
 | `dispositivi` | Token push per dispositivo | utente_uid, piattaforma, token_fcm, attivo, ultimo_uso_at |
 | `impostazioni_notifiche/{aziendaId}_{uid}` | Preferenze personali | canali, tipi, numero WhatsApp, consenso, silenzio, fuso, anteprima |
+| `contatti_notifiche/{aziendaId}_{uid}` | Rubrica aziendale per avvisi WhatsApp | numero, consenso, aggiornato_at; leggibile dai membri dell'azienda |
 | `allegati` | Metadati immagini | elemento_tipo/id, nome, mime, dimensione, object_key R2, thumb_url |
 | `impostazioni_agenda/{aziendaId}` | Configurazione aziendale | fuso, anticipo, orario invio cliente, canale, template, slot, limiti allegati, Maps |
 | `integrazioni/{aziendaId}_{uid}` | Stato account Google/Microsoft | provider, calendar_id, tenant_id, stato, scopes (nessun token) |
@@ -375,3 +376,17 @@ Campi aggiunti (facoltativi) a `appuntamenti`, senza nuova collezione e senza mo
 L'invitato aggiorna il documento con una transazione (già consentita dalla regola `update` per i membri);
 la notifica In-App usa la collezione `notifiche` esistente con `target_tipo = appuntamento` e
 `target_id = id` dell'appuntamento. Nessun indice nuovo.
+
+### Rubrica WhatsApp aziendale (`contatti_notifiche`)
+
+Per inviare un avviso WhatsApp a un collega, il client deve conoscere il suo numero. Le preferenze
+`impostazioni_notifiche` restano private; viene quindi creata una rubrica aziendale ridotta:
+
+- documento `contatti_notifiche/{aziendaId}_{uid}`;
+- campi `azienda_id`, `utente_uid`, `numero_whatsapp`, `consenso_whatsapp`, `updated_at`;
+- leggibile dai membri dell'azienda, scrivibile e cancellabile solo dall'interessato;
+- viene aggiornata da `salvaPreferenzeNotifiche` e cancellata se il consenso o il canale WhatsApp vengono
+  disattivati.
+
+Regole aggiunte in `firestore.rules` e verificate con `scripts/e2e-agenda.py` (lettura tra colleghi,
+divieto di modifica del recapito altrui). Nessun indice nuovo.
