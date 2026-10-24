@@ -54,6 +54,24 @@
         { "fieldPath": "azienda_id", "order": "ASCENDING" },
         { "fieldPath": "partecipanti_uids", "arrayConfig": "CONTAINS" }
       ]
+    },
+    {
+      "collectionGroup": "condivisioni_calendario",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "azienda_id", "order": "ASCENDING" },
+        { "fieldPath": "destinatario_uid", "order": "ASCENDING" },
+        { "fieldPath": "stato", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "condivisioni_calendario",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "azienda_id", "order": "ASCENDING" },
+        { "fieldPath": "proprietario_uid", "order": "ASCENDING" },
+        { "fieldPath": "stato", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

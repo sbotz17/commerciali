@@ -130,3 +130,27 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 | H21 | Chat | Notifiche chat in-app/push | notifiche in-app create per i destinatari; push FCM ancora da fare | sviluppatore-backend | IN CORSO |
 | H22 | Impostazioni | Sezione Calendario e notifiche | fuso, promemoria, template, slot, allegati, Maps; test | sviluppatore-frontend | FATTO |
 | H23 | Qualità | E2E agenda/notifiche/chat | appuntamento, task, promemoria, chat, Maps, push | tester | DA FARE |
+
+## Calendario per operatore, condivisione e OAuth aziendale (F32)
+
+Decisioni confermate da Andrea il 24/10/2026. Un task = un obiettivo verificabile. Primo blocco eseguibile senza credenziali esterne: O01–O05 e O08–O10 con stub; O06/O07/O11 richiedono le credenziali e il Worker.
+
+| ID | Area | Task | Criteri di accettazione | Agente | Stato |
+|---|---|---|---|---|---|
+| O01 | DBA | Schema e regole `integrazioni_azienda`, `condivisioni_calendario`, estensioni `integrazioni`/`impostazioni_agenda` | schema, indici e regole approvati; nessun secret in Firestore; test positivi/negativi; nessuna migrazione | dba | FATTO |
+| O02 | Dati | Modelli `IntegrazioneAzienda` e `CondivisioneCalendario` | `fromMap`/`toMap`, default compatibili, livelli e stati validati; test | sviluppatore-backend | FATTO |
+| O03 | Dati | `SpService`: lettura/salvataggio integrazioni azienda e CRUD condivisioni | admin legge/salva; utente legge proprie condivisioni; revoca; test | sviluppatore-backend | FATTO |
+| O04 | UI | `Impostazioni → Integrazioni`: card Google, Microsoft, SMTP, WhatsApp, R2, Push | stati, modalità app Closer/app propria, campi, secret mascherati, test widget | sviluppatore-frontend | FATTO |
+| O05 | UI | Procedura guidata Google/Microsoft (passi, copia redirect, test connessione) | 6 passi, errori comprensibili, nessun secret mostrato dopo il salvataggio; test | sviluppatore-frontend | DA FARE |
+| O06 | Worker | OAuth Google: start, callback, token KV, refresh, revoca, test connessione | token mai al client; state firmato; scope minimi; test con mock | sviluppatore-backend | DA FARE |
+| O07 | Worker | OAuth Microsoft/Graph: app multi-tenant, token, Teams, test connessione | consenso tenant, token KV, online meeting; test con mock | sviluppatore-backend | DA FARE |
+| O08 | UI | `Impostazioni utente → Connessioni` Google/Microsoft | collega/ricollega/scollega, calendario scelto, stato; test | sviluppatore-frontend | DA FARE |
+| O09 | Dati/Worker | Condivisione calendario e mascheramento eventi esterni | livelli libero/occupato/dettagli/modifica; stesso azienda; revoca; nessun dato mascherato al client; test | sviluppatore-backend | DA FARE |
+| O10 | UI | Condivisione calendario e sezione "Condivisi con me" | dialog, livelli, revoca, badge, eventi "Occupato"; test | sviluppatore-frontend | DA FARE |
+| O11 | Worker | Creazione evento e call Meet/Teams sul calendario dell'operatore | evento sul calendario corretto, cliente invitato, link salvato, conflitti; test | sviluppatore-backend | DA FARE |
+| O12 | Qualità | E2E staging calendario condiviso e OAuth | connessione, evento, call, condivisione, revoca, 0 `permission-denied`, nessun secret esposto | tester | DA FARE |
+| O13 | Qualità | Validazione finale F32 | report tester, DoD, approvazione; residui dichiarati | validatore | DA FARE |
+
+**Dipendenze**: O01 → O02/O03 → O04/O05; O06/O07 richiedono credenziali Google/Azure e Worker; O08 dopo O06/O07; O09/O10 dopo O01/O03; O11 dopo O06/O07; O12/O13 alla fine.
+
+**Prima fetta**: O01 + O02 + O03 + O04, con O06/O07 simulati da un `Test connessione` stub che non chiama servizi esterni. Serve a rendere visibili e salvabili le configurazioni senza credenziali.

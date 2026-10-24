@@ -13,6 +13,7 @@ import '../features/chat/chat_screen.dart';
 import '../features/clienti/clienti_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/impostazioni/impostazioni_agenda_screen.dart';
+import '../features/impostazioni/impostazioni_integrazioni_screen.dart';
 import '../features/impostazioni/impostazioni_screen.dart';
 import '../features/impostazioni/licenze_screen.dart';
 import '../features/impostazioni/notifiche_preferenze_screen.dart';
@@ -134,6 +135,10 @@ GoRouter creaAppRouter({String? initialLocation}) {
           GoRoute(
             path: '/impostazioni/agenda',
             builder: (context, state) => const ImpostazioniAgendaScreen(),
+          ),
+          GoRoute(
+            path: '/impostazioni/integrazioni',
+            builder: (context, state) => const ImpostazioniIntegrazioniScreen(),
           ),
           GoRoute(
             path: '/superadmin',

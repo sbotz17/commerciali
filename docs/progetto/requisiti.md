@@ -548,3 +548,252 @@ _Aggiunta del 2026-10-23 alla voce sopra._
 2. Chi crea i gruppi: tutti o solo admin/titolare? I gruppi sono modificabili da tutti i membri?
 3. Le conferme di lettura sono obbligatorie o si possono disattivare?
 4. Quale dimensione massima per le immagini e per quanti giorni si conservano i messaggi eliminati?
+
+## 2026-10-24 — Calendario per operatore, condivisione e OAuth aziendale
+
+**Obiettivo**: dare a ogni operatore un calendario personale collegato al proprio account Google o Microsoft,
+condivisibile in sola lettura o in modifica con i colleghi della stessa azienda, usando di default l'app OAuth
+Closer e, solo se l'azienda lo sceglie, un'app OAuth propria.
+
+**Punto di partenza verificato nel codice**
+- Esiste `appuntamenti` con `operatore_id`, `cliente_id`, `cliente_nome`, `luogo`, `note`, `call_provider`,
+  `call_url`, `meeting_id`, `google_event_id`, `outlook_event_id`, `created_by`, `created_at`, `updated_at`.
+- Esiste `integrazioni/{aziendaId}_{utenteId}` con provider, calendario, tenant, stato e date; le regole
+  attuali la fanno leggere solo al proprietario e la fanno scrivere solo al server.
+- Esiste `impostazioni_agenda/{aziendaId}` per le impostazioni dell'agenda; `giro_visite` resta separata.
+- Il Worker Cloudflare oggi espone solo il proxy VIES: non ci sono ancora endpoint OAuth, calendario o SMTP.
+
+**Decisioni confermate da Andrea (24/10/2026)**
+1. Ogni operatore collega il proprio account Google o Microsoft; appuntamenti e call stanno sul suo calendario.
+2. La condivisione è solo con utenti Closer della stessa azienda, con tre livelli: `libero_occupato`,
+   `dettagli`, `modifica`. Il default è `dettagli` in sola lettura; `modifica` si concede solo esplicitamente.
+3. Il proprietario crea e revoca la condivisione; il destinatario non può ri-condividere; la revoca è immediata.
+4. `libero_occupato` nasconde titolo, cliente, note e luogo; `dettagli` mostra data/ora, titolo, cliente e luogo
+   ma non le note private; `modifica` consente la modifica con traccia dell'autore.
+5. L'evento e il link Meet/Teams sono intestati al proprietario del calendario; se un collega crea un evento su
+   un calendario condiviso, l'organizzatore resta il proprietario.
+6. L'app OAuth Closer, unica e verificata, è il default per tutti. L'azienda può scegliere un'app OAuth propria
+   in `Impostazioni → Integrazioni`, con procedura guidata e test di connessione.
+7. Google: app Closer esterna con verifica per l'uso multi-azienda; app propria di tipo Internal per le aziende
+   con Google Workspace. Microsoft: app Closer multi-tenant; app propria con tenant, client e secret dell'azienda.
+8. SMTP aziendale: una sola configurazione per azienda, usata per tutti i promemoria.
+9. I segreti stanno solo lato Worker (KV/secret); in Firestore solo stato e metadati; mai token o client secret.
+10. Tutte le configurazioni aziendali stanno nel pannello admin dell'azienda. FCM, VAPID e APNs restano
+    configurazione di piattaforma del superadmin perché legati all'app installata.
+
+**User story**
+- Come operatore voglio collegare il mio account Google o Microsoft e vedere i miei appuntamenti e le mie call
+  sul mio calendario, così non duplico gli impegni a mano.
+- Come proprietario del calendario voglio condividerlo con un collega scegliendo quanto mostrare, così resta
+  coordinato senza esporre note private o dati del cliente.
+- Come collega con livello `dettagli` voglio vedere quando un collega è occupato e con chi, senza poter
+  modificare nulla.
+- Come collega con livello `modifica` voglio poter spostare o correggere un appuntamento sul calendario del
+  collega, sapendo che resta traccia di chi ha modificato.
+- Come amministratore dell'azienda voglio configurare l'app OAuth e l'SMTP aziendale in un solo pannello, con
+  un test che mi dica subito se i dati sono corretti, senza vedere i segreti in chiaro.
+
+### Criteri di accettazione
+
+1. **Connessione account**
+   Si vede: in `Impostazioni → Integrazioni` le voci Google e Microsoft con stato "Non collegato" e il pulsante
+   "Collega account". Si può: completare il flusso OAuth del provider scelto; a fine flusso lo stato diventa
+   "Collegato" e mostra indirizzo dell'account e data di collegamento. Non deve succedere: se l'utente annulla
+   o il provider risponde con errore, lo stato resta "Non collegato" e nessun appuntamento viene modificato.
+
+2. **Scollegamento**
+   Si può: scollegare l'account con una conferma esplicita. Dopo lo scollegamento lo stato torna "Non
+   collegato" e il Worker invalida i token dell'utente. Non deve succedere: nessun appuntamento Closer viene
+   eliminato o modificato e nessun evento già creato sul calendario esterno viene cancellato.
+
+3. **Stato e identità visibili**
+   Si vede: per ogni operatore il provider, l'indirizzo dell'account collegato, lo stato, la data dell'ultimo
+   collegamento e l'ultimo errore in italiano. Si può: l'amministratore dell'azienda consultare lo stato dei
+   colleghi. Non deve succedere: l'amministratore o un collega non vedono token, refresh token o client secret.
+
+4. **Condivisione e livelli**
+   Si può: il proprietario apre "Condividi calendario", sceglie uno o più utenti attivi della stessa azienda e
+   un livello. Il livello proposto è `dettagli`; `modifica` richiede una scelta esplicita e una conferma. La
+   lista mostra nome, livello e data della condivisione. Non deve succedere: non si può condividere con utenti
+   di altre aziende o con utenti disattivati; non esiste un livello diverso dai tre indicati.
+
+5. **Revoca immediata**
+   Si può: il proprietario revoca una condivisione in qualsiasi momento. Il destinatario perde l'accesso al
+   primo caricamento o aggiornamento successivo, senza attendere la scadenza di un token. Non deve succedere:
+   dopo la revoca il destinatario non vede più l'evento, non lo apre e non lo modifica; eventuali dati già
+   caricati nella schermata spariscono al refresh.
+
+6. **Nessuna ri-condivisione**
+   Si vede: il pulsante "Condividi" solo al proprietario. Si può: il destinatario usa l'evento secondo il
+   livello ricevuto. Non deve succedere: il destinatario non può creare, modificare o revocare condivisioni,
+   non può cambiare il proprio livello e non può girarne i dettagli a un altro utente tramite la funzione di
+   condivisione.
+
+7. **Isolamento per azienda**
+   Si vede: solo calendari e condivisioni dell'azienda attiva. Si può: aprire un evento condiviso solo se la
+   condivisione esiste nella propria azienda. Non deve succedere: con due aziende di prova, un utente
+   dell'azienda A non vede nomi, eventi o condivisioni dell'azienda B e un tentativo diretto produce un errore
+   di permesso, non un dato.
+
+8. **Mascheramento `libero_occupato`**
+   Si vede: solo "Occupato" con data e orario di inizio e fine. Non si vede: titolo, cliente, note, luogo,
+   link call e allegati. Non deve succedere: i campi nascosti non arrivano al dispositivo del destinatario,
+   nemmeno nella risposta di rete; la ricerca e il dettaglio non li mostrano.
+
+9. **`dettagli` in sola lettura**
+   Si vede: data, ora, titolo, cliente e luogo. Non si vede: note private e link della call. Non deve
+   succedere: il destinatario non trova pulsanti di modifica o eliminazione e un tentativo di salvataggio
+   viene rifiutato con un messaggio comprensibile.
+
+10. **`modifica` con traccia autore**
+    Si può: il destinatario autorizzato modifica i campi dell'evento sul calendario del proprietario. Ogni
+    salvataggio registra chi ha modificato e quando; il proprietario vede "Modificato da <nome> il <data/ora>".
+    Non deve succedere: il delegato non può cambiare proprietario, condivisione o livello, e l'evento non si
+    sposta sul calendario del delegato.
+
+11. **Organizzatore e call sul calendario corretto**
+    Si può: creare un evento e una call Meet o Teams su un calendario condiviso con `modifica`. L'evento nasce
+    sul calendario del proprietario, con il proprietario come organizzatore e con il link della call salvato
+    nell'appuntamento. Non deve succedere: l'evento non nasce sul calendario del delegato e l'organizzatore non
+    cambia; chi ha creato materialmente l'evento resta registrato nella traccia autore.
+
+12. **Cliente invitato**
+    Si può: invitare il cliente solo dall'evento del proprietario o da un delegato con `modifica`. L'invito
+    parte dall'account del proprietario e il cliente vede il proprietario come organizzatore. Non deve
+    succedere: l'invito non parte da un livello `libero_occupato` o `dettagli`; il messaggio al cliente non
+    contiene note private, altri clienti o dati interni.
+
+13. **App OAuth Closer predefinita**
+    Si vede: in `Impostazioni → Integrazioni` l'app Closer indicata come predefinita e già pronta, senza campi
+    da compilare. Si può: collegare Google o Microsoft senza configurare nulla. Non deve succedere: una nuova
+    azienda non è obbligata a creare un'app propria e non vede campi tecnici vuoti o obbligatori.
+
+14. **App OAuth propria: procedura guidata, test e rotazione**
+    Si può: scegliere "Usa un'app propria", seguire la procedura guidata con i campi del provider, copiare
+    l'URL di reindirizzamento mostrato e usare "Prova connessione". Il salvataggio è consentito solo se il test
+    riesce; se fallisce, il messaggio dice cosa correggere. Sostituendo client secret o tenant, il test
+    conferma la nuova configurazione e le connessioni esistenti continuano o mostrano "Ricollega l'account".
+    Non deve succedere: la rotazione non richiede di ricreare utenti o appuntamenti e il vecchio secret non
+    funziona più.
+
+15. **Nessun segreto esposto**
+    Si vede: dopo il salvataggio i campi segreti sono mascherati e non più leggibili in chiaro. In Firestore
+    restano solo stato e metadati (provider, tenant, client id, date, esito test). Non deve succedere: token,
+    refresh token, client secret e password SMTP non compaiono in Firestore, nel browser, nei log, nei messaggi
+    di errore o nei link condivisi; stanno solo nei secret/KV del Worker.
+
+16. **SMTP aziendale unico**
+    Si può: l'amministratore configura un solo SMTP per azienda, invia un messaggio di prova e attiva il canale
+    email. Tutti i promemoria dell'azienda usano quella configurazione. Non deve succedere: non esistono
+    configurazioni SMTP per singolo utente nell'MVP; senza SMTP valido il canale email è disattivato con
+    spiegazione e gli altri canali restano attivi.
+
+17. **Nessuna migrazione e nessun impatto sugli appuntamenti esistenti**
+    Si vede: gli appuntamenti già presenti restano visibili al loro operatore con gli stessi dati. Si può:
+    attivare o disattivare la funzione senza toccare i documenti esistenti. Non deve succedere: nessuna
+    migrazione, nessuna riscrittura di `appuntamenti`, `giro_visite`, `impostazioni_agenda` o `integrazioni`,
+    nessun utente costretto a ricollegare l'account e nessun dato cancellato disattivando la funzione.
+
+18. **Errori comprensibili**
+    Si vede: per token revocato "Ricollega l'account"; per secret o configurazione non valida "Configurazione
+    non valida: controlla i dati e riprova"; per licenza Teams mancante "L'account Microsoft non ha una licenza
+    per Teams"; per rete assente "Connessione non disponibile, riprova". Non deve succedere: l'utente non vede
+    stack trace, codici HTTP da soli o nomi tecnici interni, e l'app resta utilizzabile.
+
+19. **Confini del pannello**
+    Si vede: nel pannello admin dell'azienda solo le configurazioni aziendali (OAuth propria, SMTP, livelli di
+    condivisione, fuso orario). Non si vede: FCM, VAPID e APNs, che restano nel pannello di piattaforma del
+    superadmin. Non deve succedere: un admin d'azienda non può modificare le chiavi push della piattaforma.
+
+### Cosa non deve succedere (riepilogo)
+
+- Nessun token, refresh token, client secret o password SMTP in Firestore, nel codice, nei log o nei link.
+- Nessun dato di un'altra azienda, nemmeno per errore di query o di ricerca.
+- Nessun campo nascosto di `libero_occupato` inviato al dispositivo del destinatario.
+- Nessuna ri-condivisione o autopromozione di livello da parte del destinatario.
+- Nessuna revoca "dopo un po'": la perdita di accesso è immediata al refresh.
+- Nessuna modifica o cancellazione dei dati esistenti e nessuna migrazione.
+- Nessun evento creato sul calendario sbagliato e nessun organizzatore diverso dal proprietario.
+- Nessun invito al cliente da un livello che non mostra i dettagli.
+- Nessuna sovrascrittura silenziosa in caso di modifica concorrente.
+- Nessun promemoria inviato con un SMTP diverso da quello dell'azienda.
+- Nessuna configurazione push (FCM/VAPID/APNs) spostata nel pannello azienda.
+
+### Casi limite
+
+- **Token revocato o scaduto**: lo stato passa a "Da ricollegare", l'app avvisa e i dati Closer restano intatti;
+  nessun errore tecnico mostrato.
+- **Client secret scaduto o ruotato dal provider**: il test di connessione fallisce con messaggio chiaro; le
+  connessioni esistenti mostrano "Ricollega l'account" e non vengono cancellate.
+- **Account Microsoft senza licenza Teams**: gli appuntamenti e il calendario funzionano; la creazione della call
+  è disabilitata con spiegazione e resta possibile incollare un link manuale.
+- **Utente rimosso dall'azienda**: le sue condivisioni verso colleghi e le condivisioni ricevute diventano
+  inattive; i suoi appuntamenti restano al proprietario e non vengono riassegnati automaticamente.
+- **Condivisione verso utente disattivato**: la condivisione non si crea; se l'utente viene disattivato dopo, non
+  vede più nulla al refresh e il proprietario vede lo stato "Non attivo".
+- **Fuso orario**: l'ora mostrata è quella aziendale; un evento creato da un dispositivo in un altro fuso resta
+  corretto e non slitta. Il passaggio ora legale/solare non duplica né sposta gli eventi.
+- **Evento esterno ricorrente**: in MVP è visibile in sola lettura come gli altri eventi esterni; non si modifica
+  la serie e non si creano copie degli eventi ricorrenti.
+- **Modifica concorrente**: se proprietario e delegato salvano quasi insieme, vince l'ultimo salvataggio ma
+  l'app avvisa del conflitto e mostra chi ha modificato; nessuna sovrascrittura silenziosa.
+- **Proprietario disattivato**: il calendario condiviso resta consultabile secondo il livello, ma non si creano
+  nuovi eventi né call finché il proprietario non è di nuovo attivo.
+- **Stesso account collegato due volte**: la seconda connessione riusa lo stato esistente senza duplicare
+  eventi o token.
+
+### Rischi
+
+- **Verifica Google**: l'app Closer esterna richiede verifica e tempi non prevedibili; l'app Internal funziona
+  solo con Google Workspace e non per account Gmail generici.
+- **Consenso Microsoft**: l'app multi-tenant può richiedere consenso dell'amministratore del tenant; senza
+  consenso il collegamento fallisce.
+- **Identità dell'organizzatore**: creare un evento sul calendario di un altro utente richiede l'autorizzazione
+  del proprietario; va verificato che il provider intesti davvero l'evento e la call al proprietario.
+- **Segreti e rotazione**: un errore di rotazione può interrompere tutti i collegamenti; serve una procedura
+  provata e un test prima di sostituire il secret attivo.
+- **Mascheramento**: nascondere i campi solo nell'interfaccia non basta; il dato non deve arrivare al client.
+- **Revoca**: se il client conserva una cache locale, la revoca deve invalidarla al refresh.
+- **Fuso orario e ora legale**: errori di conversione possono spostare appuntamenti e promemoria.
+- **Privacy/GDPR**: la condivisione espone dati di clienti e colleghi; servono livelli chiari, revoca semplice e
+  conservazione delle tracce di modifica.
+- **Complessità delle regole Firestore**: la condivisione introduce controlli per documento; regole sbagliate
+  possono aprire dati o bloccare utenti legittimi.
+- **Assenza di suite automatica**: la verifica resta manuale su staging, con costo e rischio di regressioni.
+
+### Assunzioni
+
+- Si lavora **solo su staging**; produzione e ramo `main` non esistono e non vengono toccati.
+- Si usano le collezioni esistenti. L'eventuale nuova collezione per le condivisioni e per la configurazione
+  OAuth aziendale è **solo una proposta** dell'architetto/dba e richiede l'approvazione di Andrea; nessuna
+  migrazione e nessuna modifica a `firestore.rules` senza approvazione.
+- "Operatore" significa utente Closer attivo con login e membership nell'azienda. I clienti finali non hanno
+  account e non vedono il calendario.
+- Il calendario è personale: ogni evento appartiene all'operatore a cui è assegnato; non esiste un calendario
+  unico aziendale in questa versione.
+- `dettagli` non mostra il link della call: il link resta visibile al proprietario e a chi ha `modifica`, finché
+  Andrea non indica diversamente.
+- `modifica` riguarda i campi dell'evento, non la condivisione, il proprietario o il livello.
+- La condivisione riguarda gli appuntamenti; `giro_visite` resta visibile e gestita come oggi.
+- L'ora di riferimento è quella aziendale, già prevista in `impostazioni_agenda`.
+- L'SMTP è uno per azienda; l'eventuale override per utente non è previsto nell'MVP.
+- FCM, VAPID e APNs restano configurazione di piattaforma del superadmin.
+
+### Fuori ambito (MVP)
+
+- Condivisione nativa Google/Outlook tramite ACL esterna: la condivisione è solo dentro Closer.
+- Utenti esterni a Closer, ospiti, clienti con account o calendari di altre aziende.
+- App mobile negli store (App Store, Google Play) e relativa distribuzione.
+- Notifiche push iOS (APNs) e ottimizzazioni specifiche per iOS.
+- Sincronizzazione bidirezionale automatica: in MVP gli eventi esterni sono in sola lettura e non si sovrascrive
+  nulla in silenzio.
+- Migrazione o riscrittura di appuntamenti, visite o impostazioni esistenti.
+- Calendari di risorse, sale riunioni, ferie e presenze.
+- Sostituzione di Google Calendar o Outlook e copia delle loro funzioni avanzate.
+- Configurazione FCM/VAPID/APNs nel pannello azienda.
+
+### Domande aperte
+
+Nessuna domanda bloccante: le assunzioni sopra valgono fino a diversa indicazione di Andrea. Restano due punti
+che Andrea può cambiare senza toccare i dati: (1) se il link Meet/Teams debba essere visibile anche a chi ha
+`dettagli`; (2) se la condivisione debba valere anche per le visite in `giro_visite` o solo per `appuntamenti`.

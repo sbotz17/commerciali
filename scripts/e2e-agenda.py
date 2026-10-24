@@ -69,6 +69,10 @@ def arr(values):
     return {"arrayValue": {"values": [s(v) for v in values]}}
 
 
+def m(fields):
+    return {"mapValue": {"fields": fields}}
+
+
 def main():
     suffix = "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(7))
     az = "".join(random.choice(string.ascii_letters + string.digits) for _ in range(20))
@@ -93,13 +97,14 @@ def main():
             {"update": {"name": f"projects/{PROJECT}/databases/(default)/documents/aziende/{az}",
                         "fields": {"nome": s("E2E Agenda"), "created_by": s(users[0]["uid"]), "created_at": s(now)}}},
         ]
-        for u in users:
+        for indice, u in enumerate(users):
+            ruolo = "admin" if indice == 0 else "commerciale"
             writes += [
                 {"update": {"name": f"projects/{PROJECT}/databases/(default)/documents/utenti/{u['uid']}",
                             "fields": {"uid": s(u["uid"]), "email": s(u["email"]), "nome": s(u["email"].split("@")[0]),
-                                       "ruolo": s("admin"), "attivo": b(True), "created_at": s(now)}}},
+                                       "ruolo": s(ruolo), "attivo": b(True), "created_at": s(now)}}},
                 {"update": {"name": f"projects/{PROJECT}/databases/(default)/documents/membri/{az}_{u['uid']}",
-                            "fields": {"azienda_id": s(az), "utente_id": s(u["uid"]), "ruolo": s("admin"), "created_at": s(now)}}},
+                            "fields": {"azienda_id": s(az), "utente_id": s(u["uid"]), "ruolo": s(ruolo), "created_at": s(now)}}},
             ]
         st, d = call("POST", BASE + ":commit", {"writes": writes}, admin)
         if st != 200:
@@ -195,12 +200,76 @@ def main():
             if st != 200:
                 errori.append(f"segna letta da B: {st}")
 
+        # integrazioni_azienda: solo admin, mai secret
+        integrazione_path = f"integrazioni_azienda/{az}"
+        st, _ = call("PATCH", percorso(integrazione_path), {"fields": {
+            "azienda_id": s(az), "client_secret": s("vietato"),
+        }}, token_a)
+        if st == 200:
+            errori.append("A ha potuto salvare client_secret in integrazioni_azienda")
+        st, d = crea(integrazione_path, {
+            "azienda_id": s(az),
+            "google": m({"modalita": s("closer"), "attivo": b(True), "client_id": s("client-e2e"), "stato": s("configurata")}),
+            "microsoft": m({"modalita": s("closer"), "attivo": b(False), "stato": s("non_configurata")}),
+            "call_predefinita": s("meet"), "condivisione_abilitata": b(True),
+            "livello_condivisione_predefinito": s("dettagli"), "updated_at": s(now),
+        }, token_a)
+        if st != 200:
+            errori.append(f"create integrazione_azienda: {st} {d}")
+        else:
+            st, _ = call("GET", percorso(integrazione_path), token=token_a)
+            if st != 200:
+                errori.append(f"read integrazione_azienda da admin: {st}")
+            st, _ = call("GET", percorso(integrazione_path), token=token_b)
+            if st == 200:
+                errori.append("B non admin ha letto integrazioni_azienda")
+
+        # condivisione calendario: proprietario A, destinatario B
+        condivisione = f"{az}_{users[0]['uid']}_{users[1]['uid']}"
+        condivisione_path = f"condivisioni_calendario/{condivisione}"
+        st, d = crea(condivisione_path, {
+            "azienda_id": s(az), "proprietario_uid": s(users[0]["uid"]),
+            "destinatario_uid": s(users[1]["uid"]), "livello": s("dettagli"),
+            "stato": s("attiva"), "creato_da": s(users[0]["uid"]),
+            "created_at": s(now), "updated_at": s(now),
+        }, token_a)
+        if st != 200:
+            errori.append(f"create condivisione: {st} {d}")
+        else:
+            st, _ = call("GET", percorso(condivisione_path), token=token_b)
+            if st != 200:
+                errori.append(f"read condivisione da B: {st}")
+            # B non può spacciarsi per proprietario
+            st, _ = crea(f"condivisioni_calendario/{az}_{users[1]['uid']}_{users[0]['uid']}", {
+                "azienda_id": s(az), "proprietario_uid": s(users[0]["uid"]),
+                "destinatario_uid": s(users[1]["uid"]), "livello": s("dettagli"),
+                "stato": s("attiva"), "creato_da": s(users[1]["uid"]),
+                "created_at": s(now), "updated_at": s(now),
+            }, token_b)
+            if st == 200:
+                errori.append("B ha potuto creare una condivisione spacciandosi per A")
+            # B non può revocare
+            st, _ = call("PATCH", percorso(condivisione_path + "?updateMask.fieldPaths=stato"),
+                         {"fields": {"stato": s("revocata")}}, token_b)
+            if st == 200:
+                errori.append("B ha potuto revocare la condivisione di A")
+            # A revoca
+            st, _ = call("PATCH", percorso(condivisione_path + "?updateMask.fieldPaths=stato&updateMask.fieldPaths=revoked_at&updateMask.fieldPaths=revoked_by&updateMask.fieldPaths=updated_at"),
+                         {"fields": {"stato": s("revocata"), "revoked_at": s(now),
+                                     "revoked_by": s(users[0]["uid"]), "updated_at": s(now)}}, token_a)
+            if st != 200:
+                errori.append(f"revoca condivisione da A: {st}")
+            # dopo la revoca B non deve più leggere
+            st, _ = call("GET", percorso(condivisione_path), token=token_b)
+            if st == 200:
+                errori.append("B ha letto la condivisione dopo la revoca")
+
         if errori:
             print("FAIL E2E agenda:")
             for e in errori:
                 print(" -", e)
             return 1
-        print("PASS: appuntamenti, task, chat e notifiche rispettano le regole")
+        print("PASS: appuntamenti, task, chat, notifiche, integrazioni e condivisioni rispettano le regole")
         return 0
     finally:
         try:

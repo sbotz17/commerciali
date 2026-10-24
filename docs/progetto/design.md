@@ -130,3 +130,128 @@ Linee guida per le nuove schermate, da usare in fase di implementazione.
 - Campi segreti mai mostrati in chiaro dopo il salvataggio.
 - Pulsante “Invia prova” per SMTP e WhatsApp.
 - Stato integrazione con pallino verde/rosso e “Ricollega”.
+
+## 2026-10-24 — Impostazioni integrazioni e calendario condiviso
+
+Solo UI: nessuna nuova regola dati. Testi in italiano semplice, mobile first. Riuso prima di creare.
+
+### Componenti riusati
+
+| Componente | Da dove | Uso |
+|---|---|---|
+| Card impostazioni | `index.html` (`bg-white rounded-2xl border border-slate-200 shadow-sm p-6`) | ogni integrazione e ogni connessione |
+| Intestazione card | `h2 text-base font-bold` + `p text-xs text-slate-400` | titolo e descrizione breve |
+| Pulsante primario / secondario / pericolo | classi `btn-tap` blu, bordo, rosso | Configura, Test, Disconnetti |
+| Pallino stato | `w-2 h-2 rounded-full` verde/grigio/rosso/ambra | stato integrazione |
+| Passi numerati | cerchi `w-6 h-6 rounded-full bg-blue-700` di Import Bandi | procedura guidata |
+| Box esito | verde `bg-green-50 border-green-200`, rosso `bg-red-50 border-red-200` | test riuscito/fallito |
+| Spinner | SVG `animate-spin` | caricamento e test in corso |
+| Modale / foglio | `fixed inset-0 bg-black/40`, su telefono `items-end sm:items-center` | conferme e scelta modalità |
+| Toast | `Alpine.store("ui").mostraToast(...)` | salvataggi e revoche |
+
+Nuovi, da registrare in `catalogo.md`: `PallinoStato`, `BadgeLivello`, `PassoGuida`, `CampoSegreto`, `CardIntegrazione`.
+Token da `design.md` §4: blu `#1D4ED8`, sfondo `#F8FAFC`, bordi `#E2E8F0`, verde `#16A34A`, rosso `#DC2626`, ambra `#D97706`.
+
+### 1. Impostazioni → Integrazioni (solo admin azienda)
+
+**Gerarchia.** Titolo pagina "Integrazioni", una riga di aiuto: "Collega i servizi che Closer usa per email, calendario, messaggi e allegati." Poi 6 card, in quest'ordine: Google, Microsoft, Email SMTP, WhatsApp, Storage R2, Push.
+
+**Struttura card (uguale per tutte).**
+- Riga 1: icona, nome servizio, a destra `PallinoStato` + etichetta ("Configurato", "Da configurare", "Errore").
+- Riga 2: descrizione di una riga (es. Google: "Crea appuntamenti e link call sul calendario Google.").
+- Riga 3 azioni: `Configura` (primario), `Test connessione` (secondario, disabilitato se non configurato), `Disconnetti` (pericolo, solo se configurato).
+- Push è **sola lettura**: niente `Configura`; testo "I permessi si gestiscono da Impostazioni → Notifiche"; pulsante `Apri preferenze`.
+
+**Google / Microsoft — scelta modalità.** `Configura` apre una schermata intera (telefono) o un pannello laterale (desktop) con due scelte grandi:
+- `Usa app Closer` — preselezionata, testo "Consigliata. Non serve configurare nulla."
+- `Usa app propria` — testo "Per aziende con un proprio account Google o Microsoft."
+Cambiare modalità chiede conferma: "Se cambi modalità, la connessione attuale viene rimossa. Continuare?"
+
+**Form "app propria".**
+Campi: Client ID, Client Secret (`CampoSegreto`, con occhio solo durante l'inserimento), Tenant ID (solo Microsoft, aiuto "Lo trovi nel pannello Microsoft Azure"), Redirect URI **in sola lettura** con pulsante `Copia`.
+Sotto: `Apri guida` (link esterno), `Test connessione`, riga stato.
+Dopo il salvataggio il secret non è mai più mostrato: si vede solo `•••• 1234` con etichetta "Client Secret salvato". Per cambiarlo: `Sostituisci secret`.
+
+**Procedura guidata (6 passi)** con `PassoGuida`, pulsanti `Indietro` / `Avanti`, barra di avanzamento "Passo 2 di 6":
+1. Prerequisiti — cosa serve (account amministratore, accesso alla console).
+2. Crea progetto/app — link diretto alla console.
+3. Abilita API/permessi — elenco permessi minimi (calendario, email).
+4. Crea credenziali — spiega dove copiare Client ID e Secret; pulsante `Copia` dove serve.
+5. Incolla in Closer — riepilogo dei campi già compilati.
+6. Test — `Test connessione` con esito.
+Errori mostrati in chiaro, esempi: "Il Redirect URI non corrisponde. Copia quello mostrato qui sopra."; "Manca l'abilitazione dell'API Calendar."; "Client Secret non valido: controlla di aver copiato tutto."
+
+**Email SMTP.** Una sola configurazione per azienda (testo: "Vale per tutta l'azienda"). Campi: host, porta, TLS (interruttore, aiuto "Di solito 587 con TLS attivo"), username, password (`CampoSegreto`), mittente (email), nome mittente.
+Azione `Invia email di prova`, destinatario precompilato con l'email dell'utente. Esiti: invio in corso, "Email di prova inviata a …", errore con motivo semplice e `Riprova`.
+
+### 2. Impostazioni utente → Connessioni
+
+Due card, Google e Microsoft. Per ciascuna:
+- Account collegato: email o "Nessun account collegato".
+- `Calendario scelto`: menu con i calendari disponibili.
+- `Ultimo sync`: "Oggi alle 14:32" oppure "Mai".
+- Azioni: `Collega` (se assente), `Ricollega` (se presente), `Scollega` (conferma).
+Testo di aiuto obbligatorio sotto il titolo: **"Serve per creare appuntamenti e link call sul tuo calendario."**
+Nota privacy breve: "Closer vede solo i calendari che scegli. Puoi scollegare quando vuoi."
+Stati: caricamento, nessun calendario disponibile ("Nessun calendario trovato. Riprova o controlla le autorizzazioni."), errore con `Riprova`, senza permesso.
+
+### 3. Impostazioni utente → Condivisione calendario
+
+Titolo sezione: **"Condividi il mio calendario con un collega"**.
+- Selezione utente della stessa azienda (ricerca per nome, escluso se stesso).
+- Livello: `Solo libero/occupato`, `Dettagli` (predefinito, sola lettura), `Modifica`.
+- Spiegazione privacy in 1–2 righe per livello: libero/occupato "Vede solo se sei occupato, non titoli o clienti"; dettagli "Vede titoli e dettagli, senza modificare"; modifica "Può modificare i tuoi eventi".
+- `Modifica` mostra avviso ambra: "Il collega potrà cambiare i tuoi appuntamenti." e chiede conferma prima di salvare.
+- Elenco condivisioni attive: avatar, nome, `BadgeLivello`, `Revoca` con dialogo "Vuoi revocare l'accesso a …?".
+- Sezione **"Condivisi con me"**: elenco in sola lettura (proprietario, livello, nota "Sola lettura" se Dettagli).
+Stati: vuoto ("Non hai ancora condiviso il tuo calendario"), caricamento, errore, senza permesso.
+
+### 4. Calendario
+
+- Pannello/legenda con due gruppi: **"I miei calendari"** e **"Condivisi con me"**. Colori distinti (proprio: blu; condivisi: tonalità diverse, sempre con etichetta, mai solo colore).
+- Ogni calendario condiviso ha `BadgeLivello` accanto al nome.
+- Eventi con livello libero/occupato: blocco grigio intitolato **"Occupato"**, senza titolo, cliente o note.
+- Dettaglio evento: mostra "Fonte: calendario di …" e il livello. Il link call è visibile solo se il livello è Dettagli o Modifica; con libero/occupato non compare.
+- Con `Modifica` compaiono le azioni di modifica; altrimenti sola lettura.
+- Telefono: vista giorno a lista; eventi condivisi con bordo colorato e badge. Desktop: griglia settimanale, eventi condivisi in tinta più chiara; tocco/clic apre il dettaglio in pannello.
+
+### 5. Stati obbligatori
+
+| Stato | Comportamento |
+|---|---|
+| Caricamento | skeleton delle card, altezza stabile, nessun salto |
+| Vuoto | frase semplice + azione ("Nessuna condivisione. Condividi il calendario") |
+| Errore | box rosso con motivo breve e `Riprova` |
+| Senza permesso | schermata `SenzaPermesso` con spiegazione; nessun dato caricato |
+| Test in corso | pulsante disabilitato + spinner + "Verifica in corso…" |
+| Test riuscito | box verde "Connessione riuscita" |
+| Test fallito | box rosso con causa leggibile + `Riprova` |
+| Secret configurato | solo `•••• 1234` + "Sostituisci secret" |
+| Disconnesso | pallino grigio, "Da configurare", azioni di connessione |
+
+### 6. Chiavi di test consigliate
+
+| Chiave | Verifica |
+|---|---|
+| `integrazioni-google` | card Google, stato e azioni |
+| `integrazioni-google-modalita` | scelta app Closer / app propria |
+| `integrazioni-google-test` | esito test riuscito e fallito |
+| `condivisione-calendario` | creazione condivisione |
+| `condivisione-livello` | default Dettagli e avviso su Modifica |
+| `condivisione-revoca` | conferma e revoca |
+| `calendario-condivisi` | sezione "Condivisi con me" e mascheramento "Occupato" |
+
+### 7. Telefono e desktop
+
+- **Telefono (<640):** card impilate a una colonna; form e procedura guidata a schermo intero con barra `Salva` fissa in basso; conferme come foglio dal basso; testi a piena larghezza.
+- **Tablet (640–1024):** card a due colonne, form a pannello.
+- **Desktop (>1024):** due colonne — elenco integrazioni a sinistra (1/3), dettaglio/configurazione a destra (2/3); spazio interno card 20–24.
+- I pulsanti restano grandi e distanziati; nessun menu nascosto per le azioni principali.
+
+### 8. Testi e regole di contenuto
+
+- Aiuti brevi, una frase: "Collega il tuo account per creare appuntamenti.", "Una sola configurazione email per tutta l'azienda."
+- Niente gergo: dire "account", "codice", "indirizzo", non "OAuth", "endpoint", "scope".
+- Se manca una configurazione, dirlo: "Senza Google o Microsoft, il link call va incollato a mano."; "Senza SMTP, le email non partono: i promemoria restano dentro Closer."
+- **Mai** mostrare token, Client Secret o password dopo il salvataggio; sempre mascherati.
+- Nessun pulsante "Pubblica sugli store" o simile.

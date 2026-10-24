@@ -429,6 +429,13 @@ class _CardAccessi extends StatelessWidget {
         onTap: () => onVoce('/impostazioni/agenda'),
       ),
       _VoceAccesso(
+        chiave: const Key('impostazioni-voce-integrazioni'),
+        icona: Icons.link,
+        titolo: 'Calendario e integrazioni',
+        sottotitolo: 'Google, Microsoft, email e WhatsApp',
+        onTap: () => onVoce('/impostazioni/integrazioni'),
+      ),
+      _VoceAccesso(
         chiave: const Key('impostazioni-voce-utenti'),
         icona: Icons.people_outline,
         titolo: 'Utenti',

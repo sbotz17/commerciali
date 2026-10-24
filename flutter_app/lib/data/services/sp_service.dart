@@ -6,7 +6,9 @@ import '../models/azienda.dart';
 import '../models/bando.dart';
 import '../models/categoria.dart';
 import '../models/cliente.dart';
+import '../models/condivisione_calendario.dart';
 import '../models/fonte_bando.dart';
+import '../models/integrazione_azienda.dart';
 import '../models/licenza.dart';
 import '../models/messaggio_chat.dart';
 import '../models/notifica.dart';
@@ -242,6 +244,48 @@ Map<String, dynamic> normalizzaImpostazioniAgenda(Map<String, dynamic> dati) {
     'allegati_max': interoPositivo('allegati_max', 'allegatiMax', 10),
     'maps_attivo': booleano('maps_attivo', 'mapsAttivo', true),
   };
+}
+
+/// Verifica che una condivisione di calendario sia valida.
+///
+/// I due uid devono essere non vuoti (dopo trim) e diversi tra loro; il
+/// [livello] deve appartenere a [livelliCondivisione].
+bool condivisioneCalendarioValida({
+  required String? proprietarioUid,
+  required String? destinatarioUid,
+  required String? livello,
+}) {
+  final proprietario = proprietarioUid?.trim() ?? '';
+  final destinatario = destinatarioUid?.trim() ?? '';
+  if (proprietario.isEmpty || destinatario.isEmpty) return false;
+  if (proprietario == destinatario) return false;
+  return livelliCondivisione.contains(livello);
+}
+
+/// Filtra una lista di condivisioni tenendo solo quelle attive.
+List<CondivisioneCalendario> condivisioniAttive(
+  List<CondivisioneCalendario> condivisioni,
+) {
+  return condivisioni.where((c) => c.attiva).toList();
+}
+
+/// Compara due condivisioni per `createdAt` discendente (le più recenti per
+/// prime), con i valori assenti in fondo.
+int confrontaCondivisioniPerData(
+  CondivisioneCalendario a,
+  CondivisioneCalendario b,
+) {
+  final da = a.createdAt;
+  final db = b.createdAt;
+  if (da != null && db != null) {
+    final cmp = db.compareTo(da);
+    if (cmp != 0) return cmp;
+  } else if (da != null) {
+    return -1;
+  } else if (db != null) {
+    return 1;
+  }
+  return 0;
 }
 
 /// Servizio dati base dell'app Flutter, porting dell'interfaccia `SP` della
@@ -1148,6 +1192,175 @@ class SpService {
           'azienda_id': _aziendaAttiva,
           'updated_at': _now(),
         }, SetOptions(merge: true));
+  }
+
+  // ---------- integrazioni calendario ----------
+
+  /// Legge l'integrazione calendario dell'azienda attiva da
+  /// `integrazioni_azienda/{aziendaId}`.
+  ///
+  /// Ritorna `null` se non è impostata un'azienda attiva; se il documento non
+  /// esiste restituisce un'[IntegrazioneAzienda] vuota (default) per
+  /// l'azienda, altrimenti la deserializza con [IntegrazioneAzienda.fromMap].
+  Future<IntegrazioneAzienda?> getIntegrazioneAzienda() async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null) return null;
+    final snap = await _firestore
+        .collection('integrazioni_azienda')
+        .doc(aziendaId)
+        .get();
+    final dati = snap.data();
+    if (!snap.exists || dati == null) {
+      return IntegrazioneAzienda.vuota(aziendaId);
+    }
+    return IntegrazioneAzienda.fromMap(dati, id: aziendaId);
+  }
+
+  /// Salva l'integrazione calendario dell'azienda attiva.
+  ///
+  /// Scrive `integrazioni_azienda/{aziendaId}` con merge, garantendo sempre
+  /// `azienda_id` e `updated_at`. Non scrive mai `client_secret` né token (il
+  /// modello [IntegrazioneAzienda] li esclude per costruzione). Richiede
+  /// un'azienda attiva.
+  Future<void> salvaIntegrazioneAzienda(
+    IntegrazioneAzienda integrazione,
+  ) async {
+    _richiediAzienda();
+    final aziendaId = _aziendaAttiva!;
+    await _firestore
+        .collection('integrazioni_azienda')
+        .doc(aziendaId)
+        .set({
+          ...integrazione.toMap(),
+          'azienda_id': aziendaId,
+          'updated_at': _now(),
+        }, SetOptions(merge: true));
+  }
+
+  /// Elenco delle condivisioni di calendario create dall'utente corrente
+  /// (proprietario) nell'azienda attiva, ordinate per `createdAt` discendente.
+  ///
+  /// Se [includiRevocate] è `false` (default) tiene solo le condivisioni
+  /// `attiva`. Ritorna una lista vuota se non è impostata un'azienda attiva o
+  /// non c'è un utente autenticato.
+  Future<List<CondivisioneCalendario>> getCondivisioniCalendario({
+    bool includiRevocate = false,
+  }) async {
+    final aziendaId = _aziendaAttiva;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (aziendaId == null || uid == null) return [];
+    var query = _firestore
+        .collection('condivisioni_calendario')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .where('proprietario_uid', isEqualTo: uid);
+    if (!includiRevocate) {
+      query = query.where('stato', isEqualTo: 'attiva');
+    }
+    final snap = await query.get();
+    final condivisioni = snap.docs
+        .map((d) => CondivisioneCalendario.fromMap(d.data(), id: d.id))
+        .toList();
+    condivisioni.sort(confrontaCondivisioniPerData);
+    return condivisioni;
+  }
+
+  /// Elenco delle condivisioni di calendario ricevute dall'utente corrente
+  /// (destinatario) nell'azienda attiva, solo `attiva`, ordinate per
+  /// `createdAt` discendente.
+  ///
+  /// Ritorna una lista vuota se non è impostata un'azienda attiva o non c'è un
+  /// utente autenticato.
+  Future<List<CondivisioneCalendario>> getCondivisioniRicevute() async {
+    final aziendaId = _aziendaAttiva;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (aziendaId == null || uid == null) return [];
+    final snap = await _firestore
+        .collection('condivisioni_calendario')
+        .where('azienda_id', isEqualTo: aziendaId)
+        .where('destinatario_uid', isEqualTo: uid)
+        .where('stato', isEqualTo: 'attiva')
+        .get();
+    final condivisioni = snap.docs
+        .map((d) => CondivisioneCalendario.fromMap(d.data(), id: d.id))
+        .toList();
+    condivisioni.sort(confrontaCondivisioniPerData);
+    return condivisioni;
+  }
+
+  /// Crea (o aggiorna) la condivisione del calendario dell'azienda attiva con
+  /// il [destinatarioUid] al [livello] indicato.
+  ///
+  /// Richiede un'azienda attiva e un utente autenticato; valida i dati con
+  /// [condivisioneCalendarioValida]. L'id è deterministico
+  /// ([CondivisioneCalendario.idPer]): se esiste già una condivisione `attiva`
+  /// con lo stesso livello non fa nulla, se è `attiva` con livello diverso
+  /// lancia [StateError], se è `revocata` la elimina e la ricrea.
+  Future<void> condividiCalendario({
+    required String destinatarioUid,
+    required String livello,
+  }) async {
+    _richiediAzienda();
+    final aziendaId = _aziendaAttiva!;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Nessun utente autenticato.');
+    }
+    if (!condivisioneCalendarioValida(
+      proprietarioUid: uid,
+      destinatarioUid: destinatarioUid,
+      livello: livello,
+    )) {
+      throw ArgumentError('Condivisione calendario non valida.');
+    }
+    final id = CondivisioneCalendario.idPer(
+      aziendaId: aziendaId,
+      proprietarioUid: uid,
+      destinatarioUid: destinatarioUid,
+    );
+    final ref = _firestore.collection('condivisioni_calendario').doc(id);
+    final snap = await ref.get();
+    if (snap.exists && snap.data() != null) {
+      final esistente =
+          CondivisioneCalendario.fromMap(snap.data()!, id: snap.id);
+      if (esistente.attiva) {
+        if (esistente.livello == livello) return;
+        throw StateError(
+          'Revoca la condivisione prima di cambiare livello.',
+        );
+      }
+      await ref.delete();
+    }
+    final ora = _now();
+    await ref.set({
+      'azienda_id': aziendaId,
+      'proprietario_uid': uid,
+      'destinatario_uid': destinatarioUid,
+      'livello': livello,
+      'stato': 'attiva',
+      'creato_da': uid,
+      'created_at': ora,
+      'updated_at': ora,
+    });
+  }
+
+  /// Revoca la condivisione di calendario con l'[id] indicato.
+  ///
+  /// Imposta `stato: revocata`, `revoked_at`, `revoked_by` (uid corrente) e
+  /// `updated_at`.
+  Future<void> revocaCondivisione(String id) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final ora = _now();
+    return _firestore.collection('condivisioni_calendario').doc(id).update({
+      'stato': 'revocata',
+      'revoked_at': ora,
+      'revoked_by': uid,
+      'updated_at': ora,
+    });
+  }
+
+  /// Elimina la condivisione di calendario con l'[id] indicato.
+  Future<void> eliminaCondivisione(String id) {
+    return _firestore.collection('condivisioni_calendario').doc(id).delete();
   }
 
   // ---------- preventivi ----------

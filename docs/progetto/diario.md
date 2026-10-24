@@ -390,3 +390,21 @@
 - Ancora da fare: push FCM, scheduler Worker, WhatsApp operatore, SMTP, Google/Microsoft, R2 immagini, prenotazione pubblica, notifiche chat, impostazioni agenda complete, E2E.
 
 - Aggiunte notifiche chat in-app e impostazioni agenda di base; suite a **740 test verdi**.
+
+## 2026-10-24 — Task O03: servizio integrazioni e condivisioni calendario
+
+- `lib/data/services/sp_service.dart`: import dei modelli `integrazione_azienda.dart` e `condivisione_calendario.dart`.
+- `SpService`: `getIntegrazioneAzienda()` (null senza azienda attiva; `vuota(aziendaId)` se assente), `salvaIntegrazioneAzienda()` (merge su `integrazioni_azienda/{aziendaId}`, mai `client_secret`/token), `getCondivisioniCalendario()` (proprietario, filtro `attiva` opzionale, ordine `createdAt` disc.), `getCondivisioniRicevute()` (destinatario, solo attive), `condividiCalendario()` (id deterministico, no-op se attiva stesso livello, `StateError` se livello diverso, delete+ricrea se revocata), `revocaCondivisione()`, `eliminaCondivisione()`.
+- Funzioni pure top-level: `condivisioneCalendarioValida()`, `condivisioniAttive()`, `confrontaCondivisioniPerData()`.
+- Test `test/integrazioni_service_test.dart`: validazione (self, vuoti, livello invalido, validi), filtro attive, ordinamento (disc. e null in fondo). `salvaIntegrazioneAzienda` non testata senza Firestore (non forzata).
+- Verifiche: `flutter analyze` 0; `flutter test test/integrazioni_service_test.dart` → 9 test verdi.
+
+## 2026-10-24 — Prima fetta calendario condiviso e OAuth aziendale (O01–O04)
+
+- Aggiunte regole e indici staging per `integrazioni_azienda` e `condivisioni_calendario`; deploy completato.
+- Regola di lettura corretta: dopo la revoca il destinatario non vede più la condivisione.
+- Creati modelli `IntegrazioneAzienda`, `ConfigIntegrazioneProvider`, `CondivisioneCalendario` con test (20).
+- Aggiunti a `SpService` lettura/salvataggio integrazione e CRUD condivisioni, con funzioni pure testate (9).
+- Creata `Impostazioni → Calendario e integrazioni` con card Google, Microsoft, SMTP, WhatsApp, R2 e Push; il Client Secret è disabilitato finché non c'è il Worker.
+- `flutter analyze` 0; `flutter test` 778 verdi; `scripts/e2e-agenda.py` PASS anche su integrazioni e condivisioni.
+- Restano O05–O13: Worker OAuth, connessioni utente, condivisione UI e call.

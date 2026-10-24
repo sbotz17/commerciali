@@ -172,6 +172,39 @@ service cloud.firestore {
       allow read: if memberOf(az) || isSuper();
       allow create, update, delete: if isAdminOf(az) || isSuper();
     }
+    match /integrazioni_azienda/{az} {
+      allow read: if isAdminOf(az) || isSuper();
+      allow create, update: if (isAdminOf(az) || isSuper())
+        && request.resource.data.azienda_id == az
+        && !request.resource.data.keys().hasAny(['client_secret', 'token', 'refresh_token', 'password']);
+      allow delete: if isAdminOf(az) || isSuper();
+    }
+    match /condivisioni_calendario/{id} {
+      allow read: if signedIn()
+        && memberOf(resource.data.azienda_id)
+        && (resource.data.proprietario_uid == uid()
+            || (resource.data.destinatario_uid == uid()
+                && resource.data.stato == 'attiva')
+            || isAdminOf(resource.data.azienda_id)
+            || isSuper());
+      allow create: if signedIn()
+        && memberOf(request.resource.data.azienda_id)
+        && request.resource.data.proprietario_uid == uid()
+        && request.resource.data.destinatario_uid != uid()
+        && request.resource.data.livello in ['libero_occupato', 'dettagli', 'modifica']
+        && request.resource.data.stato == 'attiva'
+        && exists(/databases/$(database)/documents/membri/$(request.resource.data.azienda_id + "_" + request.resource.data.destinatario_uid))
+        && id == request.resource.data.azienda_id + "_" + request.resource.data.proprietario_uid + "_" + request.resource.data.destinatario_uid;
+      allow update: if signedIn()
+        && (resource.data.proprietario_uid == uid()
+            || isAdminOf(resource.data.azienda_id)
+            || isSuper())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stato', 'revoked_at', 'revoked_by', 'updated_at']);
+      allow delete: if signedIn()
+        && (resource.data.proprietario_uid == uid()
+            || isAdminOf(resource.data.azienda_id)
+            || isSuper());
+    }
     match /integrazioni/{id} {
       allow read: if signedIn() && (resource.data.utente_uid == uid() || isSuper());
       allow write: if false;
