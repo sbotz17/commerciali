@@ -112,7 +112,7 @@ Dopo la chiusura e il commit della fetta calendario/ricorrenza, l’albero è pu
 | Controllo | Esito |
 |---|---|
 | `flutter analyze` | 0 problemi |
-| `flutter test` | **848 verdi** |
+| `flutter test` | **849 verdi** |
 | Commit | `f8dd54c` |
 | Indice | INDICE OK |
 
@@ -120,4 +120,4 @@ Il precedente verdetto `NON SUPERATO` era dovuto a modifiche non committate di u
 
 ## Validazione Web Push — 24/10/2026
 
-**APPROVATO TECNICO per staging/produzione** (non per rilascio ufficiale): gate tecnico verde (analyze 0, 848 verdi, indice OK, statici 200) e codice conforme. Restano a carico della squadra la consegna reale su dispositivo (Chrome/Android), la prova iOS PWA e l'E2E browser. Nota minore risolta: il pulsante “Disattiva” ora è disabilitato quando il push non è supportato nell’ambiente.
+**APPROVATO TECNICO per staging/produzione** (non per rilascio ufficiale): gate tecnico verde (analyze 0, 849 verdi, indice OK, statici 200) e codice conforme. Restano a carico della squadra la consegna reale su dispositivo (Chrome/Android), la prova iOS PWA e l'E2E browser. Nota minore risolta: il pulsante “Disattiva” ora è disabilitato quando il push non è supportato nell’ambiente.
