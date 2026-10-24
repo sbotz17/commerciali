@@ -31,6 +31,29 @@ void main() {
     });
   });
 
+  group('normalizzaStatoWhatsapp', () {
+    test('converte connesso e numero del server storico', () {
+      final stato = normalizzaStatoWhatsapp({
+        'connesso': true,
+        'numero': '393516722792',
+        'stato': 'aperta',
+      });
+
+      expect(stato['connected'], isTrue);
+      expect(stato['number'], '393516722792');
+    });
+
+    test('mantiene il formato connected/number', () {
+      final stato = normalizzaStatoWhatsapp({
+        'connected': false,
+        'number': null,
+      });
+
+      expect(stato['connected'], isFalse);
+      expect(stato['number'], isNull);
+    });
+  });
+
   group('uriInvioWhatsapp', () {
     test('aggiunge /send e toglie le barre finali', () {
       expect(

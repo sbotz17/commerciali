@@ -309,6 +309,22 @@ int confrontaCondivisioniPerData(
 String normalizzaNumeroWhatsapp(String? numero) =>
     (numero ?? '').replaceAll(RegExp(r'\D'), '');
 
+/// Normalizza la risposta del server WhatsApp.
+///
+/// Il server storico usa `connesso` e `numero`; la schermata usa
+/// `connected` e `number`. Accetta entrambi senza perdere gli altri campi.
+Map<String, dynamic> normalizzaStatoWhatsapp(Map<String, dynamic> dati) {
+  final connected = dati['connected'] == true ||
+      dati['connesso'] == true ||
+      dati['stato'] == 'aperta';
+  final numero = dati['number'] ?? dati['numero'];
+  return {
+    ...dati,
+    'connected': connected,
+    if (numero != null) 'number': numero.toString(),
+  };
+}
+
 /// URL `/send` del server WhatsApp a partire dall'indirizzo configurato.
 ///
 /// Ritorna `null` se l'indirizzo è vuoto, non è http/https o non è valido.
@@ -2312,8 +2328,10 @@ class SpService {
   }
 
   /// Stato del server WhatsApp (`GET /status` tramite Worker).
-  Future<Map<String, dynamic>> statoWhatsapp() =>
-      _chiamaWorker('/whatsapp/status');
+  Future<Map<String, dynamic>> statoWhatsapp() async {
+    final dati = await _chiamaWorker('/whatsapp/status');
+    return normalizzaStatoWhatsapp(dati);
+  }
 
   /// QR di pairing del server WhatsApp (`GET /qr` tramite Worker).
   Future<String?> qrWhatsapp() async {
