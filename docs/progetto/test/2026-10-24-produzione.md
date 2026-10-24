@@ -40,7 +40,7 @@ il default senza `APP_ENV`.
 | Bundle staging | contiene `commerciali-app` |
 | Firestore produzione | 1 utente, 1 azienda, 1 membership, 2 ruoli, 3 categorie |
 | Auth produzione | signup email/password + delete di prova: OK |
-| Test Flutter | 822 verdi |
+| Test Flutter | 833 verdi |
 | `flutter analyze` | 0 problemi |
 | Dati di test in produzione | nessuno |
 | Regole e indici | pubblicati su `commerciali-prod` |
@@ -69,3 +69,38 @@ il default senza `APP_ENV`.
 - Test trigger con sottoscrizione finta: funzione eseguita, notifica passata a `fallita` con `push: 1 errori` (atteso: endpoint finto), dati di prova rimossi.
 - Service worker verificato sul browser: registrazione attiva con scope `/push/`; `CloserPush.supportato` = true; senza permesso notifiche il client restituisce “Permesso notifiche negato”.
 - Residuo: la consegna reale al dispositivo richiede un browser con permesso notifiche; va provata dal tester su Chrome/Android e iPhone con PWA installata.
+
+## Verifica tester Web Push
+
+**Data**: 24/10/2026 · **Rif. codice**: commit `f910314` (`feature/agenda-notifiche-chat`) · **Deploy**: `commerciali-prod`
+
+### Comandi eseguiti ed esiti
+
+| # | Prova | Esito atteso | Esito ottenuto |
+|---|---|---|---|
+| 1 | `cd flutter_app && flutter analyze` | 0 problemi | **Sul commit `f910314`: 1 warning**, exit 1 (`lib/features/calendario/viste_calendario.dart:255` `unused_element_parameter`). Sull'albero di lavoro (modifiche **non committate** di un'altra fetta, calendario/agenda) l'esito è cambiato più volte durante la verifica: prima 2 errori `Undefined name '_durata'`, poi `No issues found!` |
+| 2 | `cd flutter_app && flutter test` | 833 verdi | **Su `f910314`: 833/833 verdi, 0 falliti.** Sull'albero di lavoro: 3 esecuzioni con 7, poi 1, poi 7 fallimenti, tutti in `test/appuntamento_form_test.dart` (fetta calendario in corso, estranea al push) |
+| 3 | `node scripts/controlla-indice.mjs` | INDICE OK | `INDICE OK` (19 nodi di memoria, 9 file chiave), exit 0 |
+| 4 | `curl -sI https://commerciali-prod.web.app/push/push-sw.js` e `push-client.js` | 200 | **200**, `content-type: text/javascript`; `diff` con i file del repo: **identici** |
+| 5 | `functions/index.js` | trigger `notifiche/{id}`, `dispositivi`, VAPID da env, 404/410, aggiorna `stato` | Conforme: `onDocumentCreated("notifiche/{id}")`, legge `dispositivi` (`utente_uid` + `attivo == true`), VAPID da `process.env` con guardia, 404/410 → `attivo: false`, scrive `stato` `inviata`/`fallita`, `tentativi`, `errore` |
+| 6 | Client + UI | endpoint/p256dh/auth in `dispositivi`, chiavi UI | Conforme: `salvaDispositivoWeb` scrive `endpoint`, `p256dh`, `auth`, `utente_uid`, `azienda_id`, `attivo`; regole `match /dispositivi/{id}` presenti; UI ha `notifiche-push-attiva`, `notifiche-push-disattiva`, `notifiche-push-esito` |
+| 7 | Ambiente | staging push disattivato, produzione `APP_ENV=prod` | Conforme: `pushDisponibileAmbiente` = `APP_ENV == 'prod'` con default `staging`; in staging il pulsante è disabilitato con messaggio "disponibili solo nell'ambiente di produzione". Bundle prod contiene solo la configurazione `commerciali-prod`, staging solo `commerciali-app`; `main.dart` sceglie `firebase_options_prod` quando `APP_ENV=prod` (prova indiretta: il `--dart-define` non è leggibile dal bundle compilato) |
+| 8 | Test già eseguiti | come da doc | Riportati e verificati dove possibile: log di produzione mostrano `Push fallita closer-prod_shISqKc6GCPlSrw9taq8cHnnbms1_smoke … The subscription p256dh value should be 65 bytes long` (trigger con sottoscrizione finta → `fallita`); funzione distribuita (`firebase functions:list --project prod`: `inviaPushNotifica` v2, `europe-west1`, `nodejs22`, trigger Firestore `europe-west8`). Firestore produzione: `dispositivi` 0 documenti, `notifiche` 0 → **dati di prova rimossi**; `utenti` 1, `membri` 1, `licenze` 1, `ruoli` 2, `categorie` 3 |
+| 9 | Segreti e dati di test | nessun segreto nel repo | `functions/.env` è ignorato da git (`.gitignore:66`); in repo solo `.env.example` con segnaposto; chiave privata VAPID assente; la chiave pubblica in `push-client.js` coincide con `VAPID_PUBLIC_KEY` di `.env` (pubblica per definizione) |
+
+### Note
+
+- Verifica in browser non ripetuta in questa sessione (nessun browser collegato). I controlli runtime di service worker (`scope /push/`), `CloserPush.supportato = true` e "Permesso notifiche negato" restano quelli registrati sopra e sono coerenti con il codice (`push-client.js` righe 20-51).
+- Il conteggio "833 verdi / 0 problemi" del riepilogo sopra è corretto per i test al commit `f910314`, ma **non** per `flutter analyze`: quel commit ha 1 warning.
+- L'albero di lavoro conteneva modifiche non committate di un'altra fetta (calendario/agenda) che hanno reso instabili analyze e test durante la verifica; non sono attribuibili al Web Push.
+
+### Residui (non da chiedere ad Andrea)
+
+- **Consegna reale della notifica su dispositivo** con permesso notifiche concesso (Chrome/Android) e **prova iOS con PWA installata**: da fare.
+- Prova E2E di produzione con login reale non eseguibile in questa sessione: nessun browser collegato e nessuna credenziale di test disponibile.
+
+### Verdetto
+
+**NON SUPERATO**
+
+Motivi: la fetta Web Push non presenta difetti (punti 4-9 tutti conformi), ma il gate della Definition of Done non è verde: al commit della fetta `flutter analyze` restituisce 1 warning (atteso 0) e l'albero di lavoro attuale non supera `flutter test` per la fetta calendario in corso. Da ripetere `flutter analyze` e `flutter test` a fetta calendario chiusa e committata, prima di qualsiasi validazione.

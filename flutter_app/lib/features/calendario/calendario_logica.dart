@@ -141,9 +141,7 @@ List<ElementoAgenda> elementiDaAppuntamenti(
     elementi.add(
       ElementoAgenda(
         data: data,
-        ora: appuntamento.tuttoIlGiorno
-            ? null
-            : _oraElemento(appuntamento.ora),
+        ora: appuntamento.tuttoIlGiorno ? null : _oraElemento(appuntamento.ora),
         titolo: _titoloElemento(appuntamento.titolo, 'Appuntamento'),
         tipo: tipoAppuntamento,
         appuntamento: appuntamento,
@@ -618,7 +616,8 @@ String dettaglioVisibileElemento(
   String? uid,
 ) {
   final appuntamento = elemento.appuntamento;
-  if (appuntamento != null && !puoVedereDettagliAppuntamento(appuntamento, uid)) {
+  if (appuntamento != null &&
+      !puoVedereDettagliAppuntamento(appuntamento, uid)) {
     return '—';
   }
   return dettaglioElemento(elemento, nomiOperatori);

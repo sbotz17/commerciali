@@ -287,9 +287,7 @@ String etichettaRipetizione(Map<String, dynamic>? regola) {
     case ripetizionePersonalizzata:
       final intervallo =
           int.tryParse(regola?['intervallo_settimane']?.toString() ?? '') ?? 1;
-      return intervallo <= 1
-          ? 'Personalizzata'
-          : 'Ogni $intervallo settimane';
+      return intervallo <= 1 ? 'Personalizzata' : 'Ogni $intervallo settimane';
     default:
       return 'Mai';
   }
@@ -324,7 +322,9 @@ DateTime? fineAppuntamento(Appuntamento a) {
   if (inizio == null) return null;
   if (a.tuttoIlGiorno) {
     final fine = _dataDaStringa(a.dataFine) ?? _dataDaStringa(a.data);
-    return fine == null ? inizio : DateTime(fine.year, fine.month, fine.day + 1);
+    return fine == null
+        ? inizio
+        : DateTime(fine.year, fine.month, fine.day + 1);
   }
   final fineEsplicita = _combinaDataOra(a.dataFine, a.oraFine);
   if (fineEsplicita != null && fineEsplicita.isAfter(inizio)) {
@@ -338,7 +338,9 @@ int durataEffettivaAppuntamento(Appuntamento a) {
   if (a.tuttoIlGiorno) return 24 * 60;
   final inizio = inizioAppuntamento(a);
   final fine = fineAppuntamento(a);
-  if (inizio == null || fine == null) return a.durataMin <= 0 ? 30 : a.durataMin;
+  if (inizio == null || fine == null) {
+    return a.durataMin <= 0 ? 30 : a.durataMin;
+  }
   final minuti = fine.difference(inizio).inMinutes;
   return minuti <= 0 ? 30 : minuti;
 }
@@ -372,11 +374,9 @@ List<DateTime> occorrenzeAppuntamento(
   final tipo = (regola['tipo'] ?? ripetizioneMai).toString();
   final giorni = giorniRipetizione(regola);
   final giorniEffettivi = giorni.isEmpty ? [inizio.weekday] : giorni;
-  final intervallo = (int.tryParse(
-            regola['intervallo_settimane']?.toString() ?? '',
-          ) ??
-          1)
-      .clamp(1, 52);
+  final intervallo =
+      (int.tryParse(regola['intervallo_settimane']?.toString() ?? '') ?? 1)
+          .clamp(1, 52);
 
   bool dentro(DateTime data) =>
       !data.isBefore(inizio) && !data.isBefore(da) && !data.isAfter(a2);
@@ -452,7 +452,11 @@ List<DateTime> occorrenzeAppuntamento(
   }
 
   if (tipo == ripetizioneAnnuale) {
-    for (var anno = inizio.year; anno <= a2.year && risultato.length < 1500; anno++) {
+    for (
+      var anno = inizio.year;
+      anno <= a2.year && risultato.length < 1500;
+      anno++
+    ) {
       final data = DateTime(anno, inizio.month, inizio.day);
       if (data.month == inizio.month) aggiungi(data);
     }

@@ -152,14 +152,6 @@ String? _validaOraAppuntamento(String? valore) {
   return null;
 }
 
-/// Validazione della durata: intera e maggiore di zero.
-String? _validaDurataAppuntamento(String? valore) {
-  final minuti = int.tryParse(valore?.trim() ?? '');
-  if (minuti == null) return 'Inserisci la durata in minuti';
-  if (minuti <= 0) return 'La durata deve essere maggiore di zero';
-  return null;
-}
-
 DateTime _soloGiorno(DateTime data) =>
     DateTime(data.year, data.month, data.day);
 
@@ -170,6 +162,49 @@ DateTime? _giornoAppuntamento(Appuntamento? appuntamento) {
   if (combinata != null) return _soloGiorno(combinata);
   final iso = DateTime.tryParse(appuntamento.data?.trim() ?? '');
   return iso == null ? null : _soloGiorno(iso);
+}
+
+/// Data di fine dell'appuntamento esistente, o `null` per i documenti vecchi.
+DateTime? _dataFineAppuntamento(Appuntamento? appuntamento) {
+  if (appuntamento == null) return null;
+  final esplicita = DateTime.tryParse(appuntamento.dataFine?.trim() ?? '');
+  if (esplicita != null) return _soloGiorno(esplicita);
+  if (appuntamento.tuttoIlGiorno) {
+    final inizio = DateTime.tryParse(appuntamento.data?.trim() ?? '');
+    return inizio == null ? null : _soloGiorno(inizio);
+  }
+  final fine = fineAppuntamento(appuntamento);
+  return fine == null ? null : _soloGiorno(fine);
+}
+
+/// Aggiunge [minuti] a un'ora `HH:MM`, restituendo `HH:MM` (o stringa vuota).
+String _aggiungiMinutiAllOra(String? ora, int minuti) {
+  final normalizzata = normalizzaOraVisita(ora);
+  if (normalizzata == null) return '';
+  final parti = normalizzata.split(':');
+  final base = DateTime(
+    2000,
+    1,
+    1,
+    int.tryParse(parti[0]) ?? 0,
+    int.tryParse(parti[1]) ?? 0,
+  );
+  final risultato = base.add(Duration(minutes: minuti));
+  return '${risultato.hour.toString().padLeft(2, '0')}:'
+      '${risultato.minute.toString().padLeft(2, '0')}';
+}
+
+DateTime? _combinaDataOraForm(DateTime data, String? ora) {
+  final normalizzata = normalizzaOraVisita(ora);
+  if (normalizzata == null) return null;
+  final parti = normalizzata.split(':');
+  return DateTime(
+    data.year,
+    data.month,
+    data.day,
+    int.tryParse(parti[0]) ?? 0,
+    int.tryParse(parti[1]) ?? 0,
+  );
 }
 
 /// Ora `HH:MM` di un testo già digitato; `null` se non è un'ora valida.
@@ -217,17 +252,26 @@ class _AppuntamentoFormScreenState
   late final TextEditingController _titolo;
   late final TextEditingController _data;
   late final TextEditingController _ora;
-  late final TextEditingController _durata;
+  late final TextEditingController _dataFine;
+  late final TextEditingController _oraFine;
+  late final TextEditingController _intervalloRipetizione;
+  late final TextEditingController _notificaPersonalizzata;
   late final TextEditingController _luogo;
   late final TextEditingController _indirizzo;
   late final TextEditingController _note;
   late final TextEditingController _callUrl;
 
   late DateTime _dataScelta;
+  late DateTime _dataFineScelta;
   late String _stato;
   late String _callProvider;
   String? _clienteId;
   String? _operatoreId;
+  bool _tuttoIlGiorno = false;
+  bool _privato = false;
+  String _ripetizioneTipo = ripetizioneMai;
+  Set<int> _giorniRipetizione = {};
+  String _notificaScelta = 'nessuna';
 
   List<Cliente> _clienti = const [];
   List<UserProfile> _utenti = const [];
@@ -261,13 +305,43 @@ class _AppuntamentoFormScreenState
     _dataScelta =
         _giornoAppuntamento(appuntamento) ??
         _soloGiorno(widget.dataIniziale ?? DateTime.now());
+    _dataFineScelta = _dataFineAppuntamento(appuntamento) ?? _dataScelta;
+    _tuttoIlGiorno = appuntamento?.tuttoIlGiorno == true;
+    _privato = appuntamento?.privato == true;
+    _ripetizioneTipo = (appuntamento?.ripetizione['tipo'] ?? ripetizioneMai)
+        .toString();
+    _giorniRipetizione = giorniRipetizione(appuntamento?.ripetizione).toSet();
+    if (_giorniRipetizione.isEmpty) {
+      _giorniRipetizione = {_dataScelta.weekday};
+    }
+    final notificaMin = appuntamento?.notificaMin;
+    if (notificaMin == null) {
+      _notificaScelta = 'nessuna';
+    } else if (const {0, 5, 10, 15, 30}.contains(notificaMin)) {
+      _notificaScelta = '$notificaMin';
+    } else {
+      _notificaScelta = 'personalizzata';
+    }
+    _notificaPersonalizzata = TextEditingController(
+      text:
+          notificaMin == null || const {0, 5, 10, 15, 30}.contains(notificaMin)
+          ? ''
+          : '$notificaMin',
+    );
+    _intervalloRipetizione = TextEditingController(
+      text: (appuntamento?.ripetizione['intervallo_settimane'] ?? 1).toString(),
+    );
     _titolo = TextEditingController(text: appuntamento?.titolo ?? '');
     _data = TextEditingController(text: formattaDataVisita(_dataScelta));
-    _ora = TextEditingController(
-      text: appuntamento?.ora ?? widget.oraIniziale ?? '',
-    );
-    _durata = TextEditingController(
-      text: (appuntamento?.durataMin ?? 60).toString(),
+    final oraIniziale = appuntamento?.ora ?? widget.oraIniziale ?? '09:00';
+    _ora = TextEditingController(text: _tuttoIlGiorno ? '' : oraIniziale);
+    final minutiFine = appuntamento?.durataMin ?? 60;
+    final oraFine =
+        appuntamento?.oraFine ??
+        _aggiungiMinutiAllOra(oraIniziale, minutiFine <= 0 ? 60 : minutiFine);
+    _oraFine = TextEditingController(text: _tuttoIlGiorno ? '' : oraFine);
+    _dataFine = TextEditingController(
+      text: formattaDataVisita(_dataFineScelta),
     );
     _luogo = TextEditingController(text: appuntamento?.luogo ?? '');
     _indirizzo = TextEditingController(text: appuntamento?.indirizzo ?? '');
@@ -297,7 +371,10 @@ class _AppuntamentoFormScreenState
     _titolo.dispose();
     _data.dispose();
     _ora.dispose();
-    _durata.dispose();
+    _dataFine.dispose();
+    _oraFine.dispose();
+    _intervalloRipetizione.dispose();
+    _notificaPersonalizzata.dispose();
     _luogo.dispose();
     _indirizzo.dispose();
     _note.dispose();
@@ -500,6 +577,31 @@ class _AppuntamentoFormScreenState
     setState(() {
       _dataScelta = giorno;
       _data.text = formattaDataVisita(giorno);
+      final fine = parseDataItaliana(_dataFine.text);
+      if (fine == null || fine.isBefore(giorno)) {
+        _dataFineScelta = giorno;
+        _dataFine.text = formattaDataVisita(giorno);
+      }
+    });
+  }
+
+  Future<void> _scegliDataFine() async {
+    final iniziale = parseDataItaliana(_dataFine.text) ?? _dataFineScelta;
+    final scelta = await showDatePicker(
+      context: context,
+      initialDate: iniziale,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'Scegli la data di fine',
+      cancelText: 'Annulla',
+      confirmText: 'Conferma',
+      fieldLabelText: 'Data fine',
+    );
+    if (scelta == null || !mounted) return;
+    final giorno = _soloGiorno(scelta);
+    setState(() {
+      _dataFineScelta = giorno;
+      _dataFine.text = formattaDataVisita(giorno);
     });
   }
 
@@ -523,10 +625,65 @@ class _AppuntamentoFormScreenState
       },
     );
     if (scelta == null || !mounted) return;
+    final ora =
+        '${scelta.hour.toString().padLeft(2, '0')}:'
+        '${scelta.minute.toString().padLeft(2, '0')}';
     setState(() {
-      _ora.text =
+      _ora.text = ora;
+      final fine = normalizzaOraVisita(_oraFine.text);
+      if (fine == null || fine.compareTo(ora) <= 0) {
+        _oraFine.text = _aggiungiMinutiAllOra(ora, 60);
+      }
+    });
+  }
+
+  Future<void> _scegliOraFine() async {
+    final scelta = await showTimePicker(
+      context: context,
+      initialTime:
+          _oraDaTesto(_oraFine.text) ??
+          _oraDaTesto(_aggiungiMinutiAllOra(_ora.text, 60)) ??
+          const TimeOfDay(hour: 10, minute: 0),
+      helpText: 'Scegli l\'ora di fine',
+      cancelText: 'Annulla',
+      confirmText: 'Conferma',
+      hourLabelText: 'Ore',
+      minuteLabelText: 'Minuti',
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        if (media.alwaysUse24HourFormat) return child ?? const SizedBox();
+        return MediaQuery(
+          data: media.copyWith(alwaysUse24HourFormat: true),
+          child: child ?? const SizedBox(),
+        );
+      },
+    );
+    if (scelta == null || !mounted) return;
+    setState(() {
+      _oraFine.text =
           '${scelta.hour.toString().padLeft(2, '0')}:'
           '${scelta.minute.toString().padLeft(2, '0')}';
+    });
+  }
+
+  void _cambiaTuttoIlGiorno(bool valore) {
+    setState(() {
+      _tuttoIlGiorno = valore;
+      if (valore) {
+        _ora.clear();
+        _oraFine.clear();
+      } else {
+        if (_ora.text.trim().isEmpty) _ora.text = '09:00';
+        if (_oraFine.text.trim().isEmpty) {
+          _oraFine.text = _aggiungiMinutiAllOra(_ora.text, 60);
+        }
+        final inizio = parseDataItaliana(_data.text);
+        final fine = parseDataItaliana(_dataFine.text);
+        if (inizio != null && (fine == null || fine.isBefore(inizio))) {
+          _dataFineScelta = inizio;
+          _dataFine.text = formattaDataVisita(inizio);
+        }
+      }
     });
   }
 
@@ -589,11 +746,72 @@ class _AppuntamentoFormScreenState
     if (!(_modulo.currentState?.validate() ?? false)) return;
 
     final giorno = parseDataItaliana(_data.text);
-    if (giorno == null) return;
+    final giornoFine = parseDataItaliana(_dataFine.text);
+    if (giorno == null || giornoFine == null) return;
+
+    final oraInizio = _tuttoIlGiorno ? null : normalizzaOraVisita(_ora.text);
+    final oraFine = _tuttoIlGiorno ? null : normalizzaOraVisita(_oraFine.text);
+    DateTime? inizio;
+    DateTime? fine;
+    if (!_tuttoIlGiorno) {
+      inizio = _combinaDataOraForm(giorno, oraInizio);
+      fine = _combinaDataOraForm(giornoFine, oraFine);
+      if (inizio == null || fine == null) {
+        setState(() => _errore = 'Inserisci un\'ora valida per inizio e fine.');
+        return;
+      }
+      if (!fine.isAfter(inizio)) {
+        setState(
+          () => _errore = 'L\'ora di fine deve essere successiva all\'inizio.',
+        );
+        return;
+      }
+    } else if (giornoFine.isBefore(giorno)) {
+      setState(() => _errore = 'La data di fine non può precedere l\'inizio.');
+      return;
+    }
+
+    if ((_ripetizioneTipo == ripetizioneSettimanale ||
+            _ripetizioneTipo == ripetizioneBisettimanale ||
+            _ripetizioneTipo == ripetizionePersonalizzata) &&
+        _giorniRipetizione.isEmpty) {
+      setState(() => _errore = 'Seleziona almeno un giorno della settimana.');
+      return;
+    }
+    final intervalloRipetizione =
+        int.tryParse(_intervalloRipetizione.text.trim()) ?? 1;
+    if (_ripetizioneTipo == ripetizionePersonalizzata &&
+        (intervalloRipetizione < 1 || intervalloRipetizione > 52)) {
+      setState(
+        () => _errore = 'L\'intervallo deve essere tra 1 e 52 settimane.',
+      );
+      return;
+    }
+
+    int? notificaMin;
+    if (_notificaScelta == 'personalizzata') {
+      notificaMin = int.tryParse(_notificaPersonalizzata.text.trim());
+      if (notificaMin == null || notificaMin < 0) {
+        setState(() => _errore = 'Inserisci i minuti della notifica.');
+        return;
+      }
+    } else if (_notificaScelta != 'nessuna') {
+      notificaMin = int.tryParse(_notificaScelta);
+    }
 
     final appuntamento = widget.appuntamento;
     final cliente = _clienteSelezionato;
-    final durata = int.tryParse(_durata.text.trim()) ?? 60;
+    final durata = _tuttoIlGiorno
+        ? (giornoFine.difference(giorno).inDays + 1) * 24 * 60
+        : fine!.difference(inizio!).inMinutes;
+
+    final ripetizione = <String, dynamic>{
+      'tipo': _ripetizioneTipo,
+      'giorni_settimana': [
+        for (final giorno in _giorniRipetizione.toList()..sort()) giorno,
+      ],
+      'intervallo_settimane': intervalloRipetizione.clamp(1, 52),
+    };
 
     setState(() => _salvando = true);
     final nuoviInvitati = [
@@ -605,8 +823,14 @@ class _AppuntamentoFormScreenState
       'titolo': _titolo.text,
       'tipo': appuntamento?.tipo ?? 'appuntamento',
       'data': dataIsoVisita(giorno),
-      'ora': normalizzaOraVisita(_ora.text),
+      'ora': oraInizio,
+      'data_fine': dataIsoVisita(giornoFine),
+      'ora_fine': oraFine,
+      'tutto_il_giorno': _tuttoIlGiorno,
       'durata_min': durata,
+      'ripetizione': ripetizione,
+      'notifica_min': notificaMin,
+      'privato': _privato,
       'cliente_id': _clienteId,
       'cliente_nome':
           cliente?.nome ?? (cliente == null ? appuntamento?.clienteNome : null),
@@ -663,13 +887,22 @@ class _AppuntamentoFormScreenState
 
     final titolo = _titolo.text.trim();
     final nome = titolo.isEmpty ? 'Appuntamento' : titolo;
+    final nomeVisibile = _privato ? 'Impegno privato' : nome;
     final giorno = dataIsoVisita(parseDataItaliana(_data.text) ?? _dataScelta);
     final data = DateTime.tryParse(giorno);
     final quando = data == null ? giorno : formattaDataVisita(data);
     final ora = normalizzaOraVisita(_ora.text);
-    final cliente = _clienteSelezionato?.nome?.trim() ?? '';
+    final oraFine = normalizzaOraVisita(_oraFine.text);
+    final cliente = _privato ? '' : (_clienteSelezionato?.nome?.trim() ?? '');
+    final orario = _tuttoIlGiorno
+        ? ' (tutto il giorno)'
+        : ora == null
+        ? ''
+        : oraFine == null
+        ? ' alle $ora'
+        : ' dalle $ora alle $oraFine';
     final testo = [
-      'Invito per "$nome" il $quando${ora == null ? '' : ' alle $ora'}',
+      'Invito per "$nomeVisibile" il $quando$orario',
       if (cliente.isNotEmpty) 'Cliente: $cliente',
       'Apri il calendario e conferma la disponibilità.',
     ].join('. ');
@@ -679,7 +912,7 @@ class _AppuntamentoFormScreenState
         await servizio.creaNotifica(
           utenteUid: uid,
           tipo: 'appuntamento',
-          titolo: 'Conferma disponibilità: $nome',
+          titolo: 'Conferma disponibilità: $nomeVisibile',
           testo: testo,
           targetTipo: 'appuntamento',
           targetId: id,
@@ -690,7 +923,7 @@ class _AppuntamentoFormScreenState
       try {
         await servizio.inviaWhatsappAUtente(
           utenteUid: uid,
-          messaggio: 'Closer · Invito appuntamento\n$nome\n$testo',
+          messaggio: 'Closer · Invito appuntamento\n$nomeVisibile\n$testo',
         );
       } catch (_) {
         // WhatsApp è best-effort e può non essere configurato.
@@ -734,9 +967,87 @@ class _AppuntamentoFormScreenState
                           ),
                           validator: validaTitoloAppuntamento,
                         ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                key: const Key('appuntamento-data'),
+                                controller: _data,
+                                enabled: !_salvando,
+                                textInputAction: TextInputAction.next,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[0-9/]'),
+                                  ),
+                                  LengthLimitingTextInputFormatter(10),
+                                ],
+                                decoration: InputDecoration(
+                                  labelText: 'Data inizio *',
+                                  hintText: 'gg/mm/aaaa',
+                                  suffixIcon: IconButton(
+                                    key: const Key('appuntamento-scegli-data'),
+                                    tooltip: 'Scegli la data di inizio',
+                                    onPressed: _salvando ? null : _scegliData,
+                                    icon: const Icon(
+                                      Icons.calendar_today_outlined,
+                                    ),
+                                  ),
+                                ),
+                                validator: validaDataAppuntamento,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpazi.xxs),
+                            Flexible(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Checkbox(
+                                    key: const Key(
+                                      'appuntamento-tutto-il-giorno',
+                                    ),
+                                    value: _tuttoIlGiorno,
+                                    onChanged: _salvando
+                                        ? null
+                                        : (valore) => _cambiaTuttoIlGiorno(
+                                            valore == true,
+                                          ),
+                                  ),
+                                  const Flexible(
+                                    child: Text('Tutto il giorno'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                         TextFormField(
-                          key: const Key('appuntamento-data'),
-                          controller: _data,
+                          key: const Key('appuntamento-ora'),
+                          controller: _ora,
+                          enabled: !_salvando && !_tuttoIlGiorno,
+                          textInputAction: TextInputAction.next,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9:]'),
+                            ),
+                            LengthLimitingTextInputFormatter(5),
+                          ],
+                          decoration: InputDecoration(
+                            labelText: 'Ora inizio',
+                            hintText: 'HH:MM',
+                            suffixIcon: IconButton(
+                              key: const Key('appuntamento-scegli-ora'),
+                              tooltip: 'Scegli l\'ora di inizio',
+                              onPressed: _salvando || _tuttoIlGiorno
+                                  ? null
+                                  : _scegliOra,
+                              icon: const Icon(Icons.schedule_outlined),
+                            ),
+                          ),
+                          validator: _validaOraAppuntamento,
+                        ),
+                        TextFormField(
+                          key: const Key('appuntamento-data-fine'),
+                          controller: _dataFine,
                           enabled: !_salvando,
                           textInputAction: TextInputAction.next,
                           inputFormatters: [
@@ -746,21 +1057,21 @@ class _AppuntamentoFormScreenState
                             LengthLimitingTextInputFormatter(10),
                           ],
                           decoration: InputDecoration(
-                            labelText: 'Data *',
+                            labelText: 'Data fine *',
                             hintText: 'gg/mm/aaaa',
                             suffixIcon: IconButton(
-                              key: const Key('appuntamento-scegli-data'),
-                              tooltip: 'Scegli la data',
-                              onPressed: _salvando ? null : _scegliData,
-                              icon: const Icon(Icons.calendar_today_outlined),
+                              key: const Key('appuntamento-scegli-data-fine'),
+                              tooltip: 'Scegli la data di fine',
+                              onPressed: _salvando ? null : _scegliDataFine,
+                              icon: const Icon(Icons.event_outlined),
                             ),
                           ),
                           validator: validaDataAppuntamento,
                         ),
                         TextFormField(
-                          key: const Key('appuntamento-ora'),
-                          controller: _ora,
-                          enabled: !_salvando,
+                          key: const Key('appuntamento-ora-fine'),
+                          controller: _oraFine,
+                          enabled: !_salvando && !_tuttoIlGiorno,
                           textInputAction: TextInputAction.next,
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(
@@ -769,32 +1080,18 @@ class _AppuntamentoFormScreenState
                             LengthLimitingTextInputFormatter(5),
                           ],
                           decoration: InputDecoration(
-                            labelText: 'Ora',
+                            labelText: 'Ora fine',
                             hintText: 'HH:MM',
                             suffixIcon: IconButton(
-                              key: const Key('appuntamento-scegli-ora'),
-                              tooltip: 'Scegli l\'ora',
-                              onPressed: _salvando ? null : _scegliOra,
+                              key: const Key('appuntamento-scegli-ora-fine'),
+                              tooltip: 'Scegli l\'ora di fine',
+                              onPressed: _salvando || _tuttoIlGiorno
+                                  ? null
+                                  : _scegliOraFine,
                               icon: const Icon(Icons.schedule_outlined),
                             ),
                           ),
                           validator: _validaOraAppuntamento,
-                        ),
-                        TextFormField(
-                          key: const Key('appuntamento-durata'),
-                          controller: _durata,
-                          enabled: !_salvando,
-                          keyboardType: TextInputType.number,
-                          textInputAction: TextInputAction.next,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(4),
-                          ],
-                          decoration: const InputDecoration(
-                            labelText: 'Durata (minuti)',
-                            hintText: '60',
-                          ),
-                          validator: _validaDurataAppuntamento,
                         ),
                         DropdownButtonFormField<String>(
                           key: const Key('appuntamento-stato'),
@@ -814,6 +1111,209 @@ class _AppuntamentoFormScreenState
                                   if (valore == null) return;
                                   setState(() => _stato = valore);
                                 },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Ripetizione',
+                      figli: [
+                        DropdownButtonFormField<String>(
+                          key: const Key('appuntamento-ripeti'),
+                          initialValue: _ripetizioneTipo,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Ripeti',
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: ripetizioneMai,
+                              child: Text('Mai'),
+                            ),
+                            DropdownMenuItem(
+                              value: ripetizioneGiornaliera,
+                              child: Text('Ogni giorno'),
+                            ),
+                            DropdownMenuItem(
+                              value: ripetizioneSettimanale,
+                              child: Text('Ogni settimana'),
+                            ),
+                            DropdownMenuItem(
+                              value: ripetizioneBisettimanale,
+                              child: Text('Ogni due settimane'),
+                            ),
+                            DropdownMenuItem(
+                              value: ripetizioneMensile,
+                              child: Text('Ogni mese'),
+                            ),
+                            DropdownMenuItem(
+                              value: ripetizioneAnnuale,
+                              child: Text('Ogni anno'),
+                            ),
+                            DropdownMenuItem(
+                              value: ripetizionePersonalizzata,
+                              child: Text('Personalizza'),
+                            ),
+                          ],
+                          onChanged: _salvando
+                              ? null
+                              : (valore) {
+                                  if (valore == null) return;
+                                  setState(() => _ripetizioneTipo = valore);
+                                },
+                        ),
+                        if (_ripetizioneTipo == ripetizionePersonalizzata)
+                          TextFormField(
+                            key: const Key(
+                              'appuntamento-intervallo-ripetizione',
+                            ),
+                            controller: _intervalloRipetizione,
+                            enabled: !_salvando,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(2),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Ogni quante settimane',
+                              hintText: '1',
+                            ),
+                          ),
+                      ],
+                      extra: [
+                        if (_ripetizioneTipo == ripetizioneGiornaliera ||
+                            _ripetizioneTipo == ripetizioneSettimanale ||
+                            _ripetizioneTipo == ripetizioneBisettimanale ||
+                            _ripetizioneTipo == ripetizionePersonalizzata) ...[
+                          Text(
+                            'Giorni della settimana',
+                            style: tema.textTheme.bodySmall?.copyWith(
+                              color: tema.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpazi.xs),
+                          Wrap(
+                            spacing: AppSpazi.xs,
+                            runSpacing: AppSpazi.xs,
+                            children: [
+                              for (var giorno = 1; giorno <= 7; giorno++)
+                                FilterChip(
+                                  key: Key(
+                                    'appuntamento-ripeti-giorno-$giorno',
+                                  ),
+                                  label: Text(
+                                    nomiGiorniRipetizione[giorno - 1],
+                                  ),
+                                  selected: _giorniRipetizione.contains(giorno),
+                                  onSelected: _salvando
+                                      ? null
+                                      : (scelto) => setState(() {
+                                          if (scelto) {
+                                            _giorniRipetizione.add(giorno);
+                                          } else {
+                                            _giorniRipetizione.remove(giorno);
+                                          }
+                                        }),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpazi.xs),
+                        ],
+                        Text(
+                          _ripetizioneTipo == ripetizioneMai
+                              ? "L'appuntamento non si ripete."
+                              : 'Ripetizione: '
+                                    '${etichettaRipetizione({'tipo': _ripetizioneTipo, 'intervallo_settimane': int.tryParse(_intervalloRipetizione.text) ?? 1})}.',
+                          style: tema.textTheme.bodySmall?.copyWith(
+                            color: tema.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Notifica',
+                      figli: [
+                        DropdownButtonFormField<String>(
+                          key: const Key('appuntamento-notifica'),
+                          initialValue: _notificaScelta,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Avvisami',
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'nessuna',
+                              child: Text('Nessuna notifica'),
+                            ),
+                            DropdownMenuItem(
+                              value: '0',
+                              child: Text("All'ora dell'evento"),
+                            ),
+                            DropdownMenuItem(
+                              value: '5',
+                              child: Text('5 minuti prima'),
+                            ),
+                            DropdownMenuItem(
+                              value: '10',
+                              child: Text('10 minuti prima'),
+                            ),
+                            DropdownMenuItem(
+                              value: '15',
+                              child: Text('15 minuti prima'),
+                            ),
+                            DropdownMenuItem(
+                              value: '30',
+                              child: Text('30 minuti prima'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'personalizzata',
+                              child: Text('Personalizza'),
+                            ),
+                          ],
+                          onChanged: _salvando
+                              ? null
+                              : (valore) {
+                                  if (valore == null) return;
+                                  setState(() => _notificaScelta = valore);
+                                },
+                        ),
+                        if (_notificaScelta == 'personalizzata')
+                          TextFormField(
+                            key: const Key('appuntamento-notifica-minuti'),
+                            controller: _notificaPersonalizzata,
+                            enabled: !_salvando,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.next,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                              LengthLimitingTextInputFormatter(4),
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Minuti prima',
+                              hintText: 'Es. 45',
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Privacy',
+                      figli: const [],
+                      extra: [
+                        SwitchListTile(
+                          key: const Key('appuntamento-privato'),
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Appuntamento privato'),
+                          subtitle: const Text(
+                            'Titolo, luogo e dettagli visibili solo a te e '
+                            "all'utente assegnato.",
+                          ),
+                          value: _privato,
+                          onChanged: _salvando
+                              ? null
+                              : (valore) => setState(() => _privato = valore),
                         ),
                       ],
                     ),

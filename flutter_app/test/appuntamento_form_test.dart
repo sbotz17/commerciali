@@ -188,7 +188,12 @@ void main() {
         'appuntamento-titolo',
         'appuntamento-data',
         'appuntamento-ora',
-        'appuntamento-durata',
+        'appuntamento-data-fine',
+        'appuntamento-ora-fine',
+        'appuntamento-tutto-il-giorno',
+        'appuntamento-ripeti',
+        'appuntamento-notifica',
+        'appuntamento-privato',
         'appuntamento-cliente',
         'appuntamento-nuovo-cliente',
         'appuntamento-operatore',
@@ -241,19 +246,20 @@ void main() {
       );
     });
 
-    testWidgets('propone la data iniziale e la durata di 60 minuti', (
+    testWidgets('propone data iniziale e orari di inizio e fine', (
       tester,
     ) async {
       await apriForm(tester);
 
-      expect(find.text('24/10/2026'), findsOneWidget);
-      expect(
-        tester
-            .widget<TextFormField>(find.byKey(const Key('appuntamento-durata')))
-            .controller!
-            .text,
-        '60',
-      );
+      String testo(String chiave) => tester
+          .widget<TextFormField>(find.byKey(Key(chiave)))
+          .controller!
+          .text;
+
+      expect(testo('appuntamento-data'), '24/10/2026');
+      expect(testo('appuntamento-data-fine'), '24/10/2026');
+      expect(testo('appuntamento-ora'), '09:00');
+      expect(testo('appuntamento-ora-fine'), '10:00');
       expect(find.text('Da fare'), findsOneWidget);
     });
 
@@ -318,9 +324,9 @@ void main() {
 
       expect(find.text('Modifica appuntamento'), findsOneWidget);
       expect(find.text('Visita ACME'), findsOneWidget);
-      expect(find.text('05/11/2026'), findsOneWidget);
+      expect(find.text('05/11/2026'), findsNWidgets(2));
       expect(find.text('09:30'), findsOneWidget);
-      expect(find.text('45'), findsOneWidget);
+      expect(find.text('10:15'), findsOneWidget);
       expect(find.text('Sede cliente'), findsOneWidget);
       expect(find.text('Via Roma 1, Milano'), findsOneWidget);
       expect(find.text('Portare il catalogo'), findsOneWidget);

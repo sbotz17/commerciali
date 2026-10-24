@@ -228,7 +228,11 @@ class _CellaMese extends StatelessWidget {
                       for (final voce in voci.take(massimoVoci))
                         Padding(
                           padding: const EdgeInsets.only(bottom: 2),
-                          child: _ChipMese(elemento: voce, onTap: onTapVoce),
+                          child: _ChipMese(
+                            elemento: voce,
+                            uidCorrente: uidCorrente,
+                            onTap: onTapVoce,
+                          ),
                         ),
                       if (voci.length > massimoVoci)
                         Text(
@@ -250,11 +254,7 @@ class _CellaMese extends StatelessWidget {
 
 /// Piccola voce nella cella del mese: ora e titolo.
 class _ChipMese extends StatelessWidget {
-  const _ChipMese({
-    required this.elemento,
-    this.uidCorrente,
-    this.onTap,
-  });
+  const _ChipMese({required this.elemento, this.uidCorrente, this.onTap});
 
   final ElementoAgenda elemento;
   final String? uidCorrente;

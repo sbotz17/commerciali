@@ -1156,9 +1156,7 @@ class _DialogoElemento extends StatelessWidget {
 
     return AlertDialog(
       key: const Key('calendario-dettaglio'),
-      title: Text(
-        dettagliVisibili ? elemento.titolo : 'Impegno privato',
-      ),
+      title: Text(dettagliVisibili ? elemento.titolo : 'Impegno privato'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1175,9 +1173,7 @@ class _DialogoElemento extends StatelessWidget {
             if (appuntamento?.privato == true)
               _RigaDettaglio(
                 etichetta: 'Privacy',
-                valore: dettagliVisibili
-                    ? 'Appuntamento privato'
-                    : 'Dettagli visibili solo al creatore e all\'utente assegnato',
+                valore: dettagliVisibili ? 'Appuntamento privato' : 'Dettagli visibili solo al creatore e all\'utente assegnato',
               ),
             if (dettagliVisibili)
               _RigaDettaglio(
