@@ -181,6 +181,7 @@ void main() {
         find.byKey(const Key('notifiche-consenso-whatsapp')),
         findsOneWidget,
       );
+      expect(find.byKey(const Key('notifiche-whatsapp-salva')), findsOneWidget);
       expect(
         find.byKey(const Key('notifiche-silenzio-inizio')),
         findsOneWidget,

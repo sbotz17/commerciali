@@ -571,8 +571,9 @@ class _CorpoNotifichePreferenzeState extends State<CorpoNotifichePreferenze> {
                     widget.pushSupportato
                         ? 'Attiva le notifiche per ricevere avvisi anche '
                             'quando Closer è chiuso.'
-                        : 'Le notifiche push sono disponibili solo '
-                            'nell\'ambiente di produzione.',
+                        : 'Push non disponibile in questo browser o in questa '
+                            'installazione. Su iPhone aggiungi Closer alla '
+                            'schermata Home; in staging il push è disattivato.',
                     style: tema.textTheme.bodyMedium?.copyWith(
                       color: tema.colorScheme.onSurfaceVariant,
                     ),
@@ -712,6 +713,19 @@ class _CorpoNotifichePreferenzeState extends State<CorpoNotifichePreferenze> {
                     style: tema.textTheme.bodySmall?.copyWith(
                       color: tema.colorScheme.onSurfaceVariant,
                     ),
+                  ),
+                  const SizedBox(height: AppSpazi.s),
+                  FilledButton.icon(
+                    key: const Key('notifiche-whatsapp-salva'),
+                    onPressed: widget.salvataggio ? null : widget.onSalva,
+                    icon: widget.salvataggio
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check),
+                    label: const Text('Salva numero e consenso WhatsApp'),
                   ),
                 ],
               ),
