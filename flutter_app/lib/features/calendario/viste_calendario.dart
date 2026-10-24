@@ -276,6 +276,14 @@ class _ChipMese extends StatelessWidget {
                   ),
                   const SizedBox(width: 3),
                 ],
+                if (elemento.appuntamento?.inAttesaDiConferma == true) ...[
+                  const Icon(
+                    Icons.hourglass_top,
+                    size: 9,
+                    color: AppColors.attesa,
+                  ),
+                  const SizedBox(width: 2),
+                ],
                 Expanded(
                   child: Text(
                     elemento.titolo,

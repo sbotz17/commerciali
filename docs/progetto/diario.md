@@ -455,3 +455,12 @@
 - La risposta passa da `rispondiInvitoAppuntamento` in transazione e ricalcola lo stato: `in_attesa` → `confermato` / `rifiutato`.
 - Badge “In attesa di conferma” sulle card e nel dettaglio; icona clessidra nella griglia.
 - `flutter analyze` 0; `flutter test` 822 verdi; `scripts/e2e-agenda.py` PASS con invito e conferma da un secondo utente.
+
+## 2026-10-24 — Ambiente di produzione: progetto creato, attivazione sospesa
+
+- Creato il progetto Firebase `commerciali-prod` (display name “Closer Produzione”) e l’app web `Closer Web`.
+- Hosting riservato: `https://commerciali-prod.web.app` (nessuna app pubblicata).
+- La creazione del database Firestore `(default)` e l’inizializzazione Auth richiedono billing/Identity Platform: non è stata attivata alcuna fatturazione.
+- Il database named `default` creato per errore è stato eliminato; il progetto resta vuoto.
+- `main` esiste ma non contiene l’app Flutter: la pubblicazione resta bloccata finché non c’è validazione e non viene aggiornato.
+- Staging `commerciali-app` resta l’unico ambiente operativo.
