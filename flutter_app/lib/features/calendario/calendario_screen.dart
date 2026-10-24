@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/stato_centrato.dart';
+import '../../data/models/allegato.dart';
 import '../../data/models/appuntamento.dart';
 import '../../data/models/task_item.dart';
 import '../../data/models/user_profile.dart';
@@ -251,12 +252,26 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
 
   /// Apre il dettaglio della voce e gestisce l'azione scelta.
   Future<void> _apriDettaglio(ElementoAgenda elemento) async {
+    var allegati = const <Allegato>[];
+    final appuntamentoPerAllegati = elemento.appuntamento;
+    if (appuntamentoPerAllegati != null) {
+      try {
+        final servizio = ref.read(spServiceProvider);
+        servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+        allegati = await servizio.getAllegati(appuntamentoPerAllegati.id);
+      } catch (_) {
+        // Il dettaglio resta disponibile anche senza allegati.
+      }
+    }
+    if (!mounted) return;
     final azione = await showDialog<String>(
       context: context,
       builder: (_) => _DialogoElemento(
         elemento: elemento,
         nomiOperatori: _nomiOperatori,
         uidCorrente: _uidCorrente,
+        allegati: allegati,
+        onApriAllegato: _apriAllegatoDaDettaglio,
       ),
     );
     if (!mounted || azione == null) return;
@@ -277,6 +292,21 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       await _rispondiInvito(
         appuntamento,
         disponibile: azione == azioneConfermaInvitoVoce,
+      );
+    }
+  }
+
+  Future<void> _apriAllegatoDaDettaglio(Allegato allegato) async {
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final link = await servizio.linkAllegato(allegato);
+      if (link == null) throw StateError('Link non disponibile');
+      await launchUrl(Uri.parse(link), mode: LaunchMode.externalApplication);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossibile aprire l\'allegato.')),
       );
     }
   }
@@ -1091,11 +1121,15 @@ class _DialogoElemento extends StatelessWidget {
     required this.elemento,
     required this.nomiOperatori,
     this.uidCorrente,
+    this.allegati = const [],
+    this.onApriAllegato,
   });
 
   final ElementoAgenda elemento;
   final Map<String, String> nomiOperatori;
   final String? uidCorrente;
+  final List<Allegato> allegati;
+  final ValueChanged<Allegato>? onApriAllegato;
 
   /// Apre [uri] nel browser/app esterna, con messaggio italiano in caso di
   /// errore.
@@ -1206,6 +1240,37 @@ class _DialogoElemento extends StatelessWidget {
               _RigaDettaglio(etichetta: 'Descrizione', valore: descrizione),
             if (note.isNotEmpty)
               _RigaDettaglio(etichetta: 'Note', valore: note),
+            if (dettagliVisibili && allegati.isNotEmpty) ...[
+              const SizedBox(height: AppSpazi.xs),
+              Text(
+                'Allegati',
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: AppSpazi.xxs),
+              Wrap(
+                spacing: AppSpazi.xs,
+                runSpacing: AppSpazi.xxs,
+                children: [
+                  for (final allegato in allegati)
+                    ActionChip(
+                      key: Key('calendario-allegato-${allegato.id}'),
+                      avatar: Icon(
+                        allegato.immagine
+                            ? Icons.image_outlined
+                            : allegato.video
+                            ? Icons.videocam_outlined
+                            : Icons.attach_file,
+                        size: 16,
+                      ),
+                      label: Text(allegato.nome),
+                      onPressed: onApriAllegato == null
+                          ? null
+                          : () => onApriAllegato!(allegato),
+                    ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

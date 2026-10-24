@@ -94,6 +94,7 @@ def main():
     )
     email = f"e2e-wa-worker-{suffisso}@commerciali.test"
     uid = None
+    config_originale = None
     errori = []
     try:
         admin = admin_token()
@@ -111,6 +112,13 @@ def main():
             return 1
         uid = dati["localId"]
         token = dati["idToken"]
+
+        # Backup della configurazione reale: il test non deve cancellarla.
+        st, config_originale = call(
+            "GET", f"{WORKER}/whatsapp/config", token=token
+        )
+        if st != 200:
+            config_originale = None
 
         # Profilo super admin temporaneo.
         stato, _ = call(
@@ -300,6 +308,25 @@ def main():
         if stato != 200:
             errori.append(f"annullamento promemoria: {stato}")
 
+        # Ripristina la configurazione reale e verifica il server.
+        if config_originale and config_originale.get("url"):
+            st, dati = call(
+                "POST",
+                f"{WORKER}/whatsapp/config",
+                {
+                    "url": config_originale.get("url"),
+                    "apiKey": config_originale.get("apiKey"),
+                },
+                token,
+            )
+            if st != 200:
+                errori.append(f"ripristino config reale: {st} {dati}")
+            stato, server = call("GET", f"{WORKER}/whatsapp/status", token=token)
+            if stato != 200 or server.get("connected") is not True:
+                errori.append(f"server WhatsApp reale non connesso: {stato} {server}")
+        else:
+            call("DELETE", f"{WORKER}/whatsapp/config", token=token)
+
         if errori:
             print("FAIL E2E Worker WhatsApp:")
             for errore in errori:
@@ -314,6 +341,16 @@ def main():
         try:
             admin = admin_token()
             if uid:
+                if config_originale and config_originale.get("url"):
+                    call(
+                        "POST",
+                        f"{WORKER}/whatsapp/config",
+                        {
+                            "url": config_originale.get("url"),
+                            "apiKey": config_originale.get("apiKey"),
+                        },
+                        token,
+                    )
                 azienda = "e2e-wa-" + suffisso
                 for percorso in (
                     f"contatti_notifiche/{azienda}_{uid}",
