@@ -9,7 +9,7 @@ disponibilità, apertura dell'appuntamento dalla notifica.
 | Verifica | Esito |
 |---|---|
 | `flutter analyze` | 0 problemi |
-| `flutter test` | 856 test verdi |
+| `flutter test` | 857 test verdi |
 | `scripts/e2e-agenda.py` su staging | PASS: invito e conferma tra due utenti, notifiche private e rubrica `contatti_notifiche` |
 | `scripts/e2e-whatsapp-worker.py` | PASS: config, allegati upload/link/download/delete e promemoria registra/annulla |
 | `scripts/controlla-indice.mjs` | INDICE OK |

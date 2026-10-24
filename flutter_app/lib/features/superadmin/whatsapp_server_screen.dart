@@ -285,8 +285,8 @@ class _WhatsappServerScreenState extends ConsumerState<WhatsappServerScreen> {
                             Text(
                               'Il server WhatsApp è unico per tutta la '
                               'piattaforma. URL e API key vengono salvati in '
-                              'Firebase e usati solo per parlare con il tuo '
-                              'server.',
+                              'modo sicuro nel Worker Cloudflare e usati solo '
+                              'per parlare con il tuo server.',
                               style: tema.textTheme.bodySmall?.copyWith(
                                 color: tema.colorScheme.onSurfaceVariant,
                               ),

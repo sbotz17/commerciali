@@ -46,7 +46,7 @@ impediscono il funzionamento della versione precedente.
   l'operatore assegnato; è stata recuperata anche la conferma già presente di Simone.
 - L'invio WhatsApp è configurato sul Worker e il server è connesso; serve solo che ogni utente imposti
   numero e consenso in Impostazioni → Notifiche.
-- I test sono della squadra: analyze, 856 test, E2E regole reali e Worker. Andrea deve solo validare l'esperienza.
+- I test sono della squadra: analyze, 857 test, E2E regole reali e Worker. Andrea deve solo validare l'esperienza.
 
 ### Aggiornamento — configurazione WhatsApp dal pannello Super Admin
 

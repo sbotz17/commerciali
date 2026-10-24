@@ -8,6 +8,15 @@ import 'package:commerciali_app/features/superadmin/whatsapp_server_screen.dart'
 import 'package:commerciali_app/state/auth_providers.dart';
 
 void main() {
+  test('apiKeyConfigWhatsapp legge apiKey e il fallback api_key', () {
+    expect(
+      apiKeyConfigWhatsapp({'url': 'https://wa.example', 'apiKey': 'segreta'}),
+      'segreta',
+    );
+    expect(apiKeyConfigWhatsapp({'api_key': 'vecchia'}), 'vecchia');
+    expect(apiKeyConfigWhatsapp(null), '');
+  });
+
   testWidgets('la configurazione WhatsApp è riservata al super admin', (
     tester,
   ) async {
