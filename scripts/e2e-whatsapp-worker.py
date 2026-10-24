@@ -158,6 +158,58 @@ def main():
         if stato < 500 and dati.get("connected") is not False:
             errori.append(f"status server finto: risposta inattesa {stato} {dati}")
 
+        # Invio: il Worker legge il contatto con il token del chiamante.
+        azienda = "e2e-wa-" + suffisso
+        stato, _ = call(
+            "PATCH",
+            f"{FIRESTORE}/aziende/{azienda}",
+            {"fields": {"nome": s("E2E WA"), "created_by": s(uid)}},
+            admin,
+        )
+        if stato != 200:
+            errori.append(f"azienda E2E: {stato}")
+        stato, _ = call(
+            "PATCH",
+            f"{FIRESTORE}/membri/{azienda}_{uid}",
+            {
+                "fields": {
+                    "azienda_id": s(azienda),
+                    "utente_id": s(uid),
+                    "ruolo": s("admin"),
+                }
+            },
+            admin,
+        )
+        if stato != 200:
+            errori.append(f"membership E2E: {stato}")
+        stato, _ = call(
+            "PATCH",
+            f"{FIRESTORE}/contatti_notifiche/{azienda}_{uid}",
+            {
+                "fields": {
+                    "azienda_id": s(azienda),
+                    "utente_uid": s(uid),
+                    "numero_whatsapp": s("393330000000"),
+                    "consenso_whatsapp": b(True),
+                }
+            },
+            admin,
+        )
+        if stato != 200:
+            errori.append(f"contatto E2E: {stato}")
+        stato, dati = call(
+            "POST",
+            f"{WORKER}/whatsapp/send",
+            {
+                "aziendaId": azienda,
+                "utenteUid": uid,
+                "message": "Test E2E",
+            },
+            token,
+        )
+        if stato < 400:
+            errori.append(f"invio con server finto: atteso errore, ottenuto {stato} {dati}")
+
         # Cancellazione riservata al super admin.
         stato, _ = call("DELETE", f"{WORKER}/whatsapp/config", token=token)
         if stato != 200:
@@ -180,7 +232,14 @@ def main():
         try:
             admin = admin_token()
             if uid:
-                call("DELETE", f"{FIRESTORE}/utenti/{uid}", token=admin)
+                azienda = "e2e-wa-" + suffisso
+                for percorso in (
+                    f"contatti_notifiche/{azienda}_{uid}",
+                    f"membri/{azienda}_{uid}",
+                    f"aziende/{azienda}",
+                    f"utenti/{uid}",
+                ):
+                    call("DELETE", f"{FIRESTORE}/{percorso}", token=admin)
                 call(
                     "POST",
                     f"https://identitytoolkit.googleapis.com/v1/projects/{PROJECT}/accounts:delete",
