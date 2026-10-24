@@ -464,3 +464,13 @@
 - Il database named `default` creato per errore è stato eliminato; il progetto resta vuoto.
 - `main` esiste ma non contiene l’app Flutter: la pubblicazione resta bloccata finché non c’è validazione e non viene aggiornato.
 - Staging `commerciali-app` resta l’unico ambiente operativo.
+
+## 2026-10-24 — Produzione attivata
+
+- Collegato l’account di fatturazione “Il mio account di fatturazione” al progetto `commerciali-prod`.
+- Creato Firestore `(default)` in `europe-west8`; pubblicate regole e indici.
+- Inizializzato Auth email/password; creato l’admin `bottiandrea83@gmail.com` (super admin) e l’azienda `Closer` (`closer-prod`) con ruoli, categorie e licenza iniziale. Inviata email per impostare la password.
+- Aggiunti `.firebaserc` con alias `prod`, `firebase_options_prod.dart` e scelta `APP_ENV=prod` in `main.dart`.
+- Pubblicata l’app su `https://commerciali-prod.web.app` con configurazione Firebase di produzione.
+- `main` non contiene ancora l’app Flutter: la pubblicazione è stata fatta dal ramo corrente; il passaggio ufficiale su `main` richiede la validazione finale.
+- Google Sign-In non è ancora configurato in produzione; l’accesso email/password funziona.

@@ -12,33 +12,34 @@
 | Proxy VIES | https://commerciali-vies.bottiandrea83.workers.dev |
 | Vecchio backend | Supabase `segbfdfoqxrnitboeyof` — dismesso |
 
-## Produzione (progetto creato, non ancora attivo)
-
-Il 24/10/2026 è stato creato il progetto Firebase separato:
+## Produzione (attiva)
 
 | Cosa | Dove |
 |---|---|
+| Ramo previsto | `main` (da aggiornare; oggi la produzione è stata pubblicata dal ramo Flutter corrente) |
+| Hosting | https://commerciali-prod.web.app |
 | Progetto Firebase | `commerciali-prod` |
-| Hosting riservato | https://commerciali-prod.web.app (non pubblicato) |
-| Web app Firebase | `Closer Web` |
-| Firestore | **non attivo**: la creazione del database `(default)` richiede billing |
-| Auth | **non inizializzato**: richiede Identity Platform/billing |
-| App pubblicata | no |
-| Ramo previsto | `main`, ma oggi non contiene ancora l’app Flutter |
+| Firestore | database `(default)`, regione `europe-west8` |
+| Auth | email/password attivo; Google non ancora configurato |
+| Admin | `bottiandrea83@gmail.com` (super admin) |
+| Azienda | `Closer`, id `closer-prod` |
+| Fatturazione | account “Il mio account di fatturazione” |
 
-**Blocco attuale**: un progetto Firebase nuovo richiede l’attivazione della fatturazione per creare il database
-Firestore `(default)` e inizializzare Auth. Non è stata attivata alcuna fatturazione e non è stata pubblicata
-l’app. Staging resta l’unico ambiente operativo.
+La produzione ha un progetto Firebase separato, quindi **non condivide dati, utenti o regole con lo staging**.
+L’app è pubblicata con `--dart-define=APP_ENV=prod` e `firebase_options_prod.dart`.
 
-Per completare servono, nell’ordine:
+**Nota di processo**: `main` non contiene ancora l’app Flutter. La prima pubblicazione è stata fatta dal ramo
+corrente per rendere operativo l’ambiente; prima del rilascio ufficiale il codice va portato su `main` con
+tester, validatore ed E2E. Google Sign-In in produzione va configurato prima di abilitarlo nell’interfaccia.
 
-1. autorizzazione all’uso di un account di fatturazione per `commerciali-prod`;
-2. creazione del database `(default)` in `europe-west8` e deploy di regole/indici;
-3. inizializzazione Auth e creazione del primo amministratore;
-4. build Flutter con `APP_ENV=prod` e configurazione Firebase di produzione;
-5. pubblicazione da `main` solo dopo tester, validatore ed E2E.
+## Pubblicazione produzione
 
-Le credenziali di produzione non vanno mai nel repository né nelle sessioni degli agenti.
+```sh
+cd flutter_app
+flutter build web --release --dart-define=APP_ENV=prod
+cd ..
+firebase deploy --only hosting:app,firestore:rules,firestore:indexes --project prod
+```
 
 ## Pubblicazione staging
 

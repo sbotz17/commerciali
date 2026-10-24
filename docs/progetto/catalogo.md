@@ -89,6 +89,8 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Call manuale | `flutter_app/lib/features/calendario/appuntamento_form_screen.dart` | Provider Meet/Teams/altro, link, copia, apertura, validazione |
 | Condivisione appuntamento | `flutter_app/lib/features/calendario/dialogo_condivisione_appuntamento.dart`, `appuntamento_form_screen.dart` | Invito di colleghi/gruppi, stato condivisione, rimozione partecipanti |
 | Pulizia dati test | `scripts/pulisci-dati-test.py` | Rimuove utenti `@commerciali.test`/`e2e-`, membership e account Auth |
+| Config produzione | `flutter_app/lib/firebase_options_prod.dart`, `main.dart` | Build `APP_ENV=prod` verso `commerciali-prod` |
+| Report produzione | `docs/progetto/test/2026-10-24-produzione.md` | Progetto, DB, Auth, hosting, admin e verifiche |
 | Report integrazioni/calendario | `docs/progetto/test/2026-10-24-integrazioni-calendario.md` | O01–O04, E2E regole, 806 test verdi |
 | Report amministrazione/bandi | `docs/progetto/test/2026-10-22-amministrazione-bandi.md` | E2E ruoli, utenti, azienda, import e ATECO |
 
