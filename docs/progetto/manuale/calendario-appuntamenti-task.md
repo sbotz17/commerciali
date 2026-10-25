@@ -47,6 +47,21 @@ Gli elementi senza orario compaiono in **Senza orario**.
 12. In **Allegati** puoi caricare immagini, video, PDF o file email (max 10 MB per file).
 13. Salva.
 
+### Avviso automatico al cliente
+
+Nel form, dopo **Partecipanti**, c'è la sezione **Avviso al cliente**:
+- **Avvisa il cliente** è attivo per impostazione predefinita;
+- **WhatsApp** e **Email** sono proposti se il cliente ha il recapito; un canale senza recapito non parte;
+- se il cliente ha sia telefono sia email, riceve entrambi i messaggi.
+
+Il messaggio parte **al salvataggio** e ogni volta che cambi **data o ora**. Se salvi senza cambiare
+l'orario non viene inviato di nuovo. Il testo contiene data, ora e luogo; per un appuntamento privato il
+titolo non viene scritto al cliente. L'esito (inviato, senza recapito, email non configurata, errore) compare
+nel dettaglio e con un avviso dopo il salvataggio.
+
+L'email richiede la configurazione **Super Admin → Server email** (Resend, mittente e API key). Se non è
+configurata, WhatsApp continua a funzionare e l'email viene segnalata come non disponibile.
+
 L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invitato non conferma la
 disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
 **Confermo** e **Non disponibile**.

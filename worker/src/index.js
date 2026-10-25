@@ -17,8 +17,18 @@
 // inviata ai client che non siano il super admin.
 // ============================================================
 
+import {
+  canaliCliente,
+  componiPromemoriaCliente,
+  emailValida,
+  normalizzaNumeroWhatsapp,
+} from "./promemoria.mjs";
+
 const VIES_BASE = "https://ec.europa.eu/taxation_customs/vies/rest-api/ms/IT/vat";
 const CONFIG_KEY = "server";
+const EMAIL_KEY = "server";
+const EMAIL_DEFAULT_URL = "https://api.resend.com/emails";
+const FIRESTORE_BASE = "https://firestore.googleapis.com/v1/projects";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -77,6 +87,72 @@ async function leggiConfig(env) {
 async function scriviConfig(env, config) {
   if (!env.WHATSAPP_CONFIG) throw new Error("KV WhatsApp non configurato");
   await env.WHATSAPP_CONFIG.put(CONFIG_KEY, JSON.stringify(config));
+}
+
+async function leggiConfigEmail(env) {
+  if (env.EMAIL_CONFIG) {
+    const raw = await env.EMAIL_CONFIG.get(EMAIL_KEY);
+    if (raw) {
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        // passa al fallback
+      }
+    }
+  }
+  if (env.EMAIL_API_KEY && env.EMAIL_FROM) {
+    return {
+      apiKey: env.EMAIL_API_KEY,
+      from: env.EMAIL_FROM,
+      nome: env.EMAIL_FROM_NAME || "",
+    };
+  }
+  return null;
+}
+
+async function scriviConfigEmail(env, config) {
+  if (!env.EMAIL_CONFIG) throw new Error("KV email non configurato");
+  await env.EMAIL_CONFIG.put(EMAIL_KEY, JSON.stringify(config));
+}
+
+function mittenteEmail(config) {
+  const email = String(config?.from || "").trim();
+  const nome = String(config?.nome || "").trim();
+  return nome ? `${nome} <${email}>` : email;
+}
+
+async function inviaEmail(config, { to, subject, text }) {
+  if (!config) throw new Error("Email non configurata");
+  const destinatario = String(to || "").trim();
+  if (!emailValida(destinatario)) throw new Error("Email destinatario non valida");
+  const url = normalizzaUrl(config.url) || EMAIL_DEFAULT_URL;
+  const risposta = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${String(config.apiKey || "")}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: mittenteEmail(config),
+      to: [destinatario],
+      subject,
+      text,
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+  const testo = await risposta.text();
+  let corpo = {};
+  try {
+    corpo = testo ? JSON.parse(testo) : {};
+  } catch (_) {
+    corpo = { raw: testo };
+  }
+  if (!risposta.ok) {
+    throw new Error(
+      corpo?.message || corpo?.error || `Email HTTP ${risposta.status}`,
+    );
+  }
+  return corpo;
 }
 
 async function utenteFirebase(request, env) {
@@ -139,6 +215,43 @@ async function eliminaDocumento(env, percorso, token) {
     },
   );
   return risposta.ok;
+}
+
+async function aggiornaDocumento(env, percorso, fields, token) {
+  const maschera = Object.keys(fields)
+    .map((campo) => `updateMask.fieldPaths=${encodeURIComponent(campo)}`)
+    .join("&");
+  const risposta = await fetch(
+    `${FIRESTORE_BASE}/${env.FIREBASE_PROJECT}/databases/(default)/documents/${percorso}?${maschera}`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ fields }),
+      signal: AbortSignal.timeout(10000),
+    },
+  );
+  return risposta.ok;
+}
+
+function stringaCampo(doc, nome) {
+  return doc?.fields?.[nome]?.stringValue || "";
+}
+
+function booleanoCampo(doc, nome) {
+  return doc?.fields?.[nome]?.booleanValue === true;
+}
+
+async function sha256Hex(testo) {
+  const buffer = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(testo),
+  );
+  return [...new Uint8Array(buffer)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 async function isMembro(env, aziendaId, utente) {
@@ -300,6 +413,304 @@ async function gestisciWhatsapp(request, env, url) {
   }
 
   return json({ error: "Endpoint non trovato" }, 404);
+}
+
+async function gestisciEmail(request, env, url) {
+  const utente = await utenteFirebase(request, env);
+  if (!utente) return json({ error: "Non autenticato" }, 401);
+  if (!(await isSuperAdmin(utente, env))) {
+    return json({ error: "Riservato al super admin" }, 403);
+  }
+
+  const percorso = url.pathname;
+
+  if (percorso === "/email/config") {
+    if (request.method === "GET") {
+      const config = await leggiConfigEmail(env);
+      return json({
+        url: config?.url || "",
+        from: config?.from || "",
+        nome: config?.nome || "",
+        apiKey: config?.apiKey || "",
+      });
+    }
+    if (request.method === "POST") {
+      const body = await corpoJson(request);
+      const from = String(body.from || "").trim().toLowerCase();
+      const apiKey = String(body.apiKey || "").trim();
+      const nome = String(body.nome || "").trim().slice(0, 120);
+      if (!emailValida(from)) {
+        return json({ error: "Inserisci l'email del mittente" }, 400);
+      }
+      if (!apiKey) {
+        return json({ error: "Inserisci la API key del servizio email" }, 400);
+      }
+      await scriviConfigEmail(env, { apiKey, from, nome });
+      return json({ ok: true });
+    }
+    if (request.method === "DELETE") {
+      if (env.EMAIL_CONFIG) await env.EMAIL_CONFIG.delete(EMAIL_KEY);
+      return json({ ok: true });
+    }
+  }
+
+  if (percorso === "/email/test" && request.method === "POST") {
+    const body = await corpoJson(request);
+    const to = String(body.to || "").trim();
+    if (!emailValida(to)) {
+      return json({ error: "Inserisci un'email valida per la prova" }, 400);
+    }
+    if (env.PROMEMORIA) {
+      const chiave = `email-test:${utente.uid}:${Math.floor(Date.now() / 60000)}`;
+      const usati = Number((await env.PROMEMORIA.get(chiave)) || 0);
+      if (usati >= 3) {
+        return json({ error: "Troppe prove in un minuto. Riprova." }, 429);
+      }
+      await env.PROMEMORIA.put(chiave, String(usati + 1), {
+        expirationTtl: 120,
+      });
+    }
+    const config = await leggiConfigEmail(env);
+    if (!config) return json({ error: "Email non configurata" }, 400);
+    try {
+      await inviaEmail(config, {
+        to,
+        subject: "Prova email Closer",
+        text: "Questa è una prova di invio email da Closer.",
+      });
+      return json({ ok: true });
+    } catch (e) {
+      return json({ error: String(e.message || e) }, 502);
+    }
+  }
+
+  return json({ error: "Endpoint non trovato" }, 404);
+}
+
+async function gestisciPromemoriaCliente(request, env, url) {
+  if (url.pathname !== "/promemoria-cliente") {
+    return json({ error: "Endpoint non trovato" }, 404);
+  }
+  if (request.method !== "POST") {
+    return json({ error: "Metodo non ammesso" }, 405);
+  }
+  const utente = await utenteFirebase(request, env);
+  if (!utente) return json({ error: "Non autenticato" }, 401);
+
+  const body = await corpoJson(request);
+  const aziendaId = String(body.aziendaId || "").trim();
+  const appuntamentoId = String(body.appuntamentoId || "").trim();
+  if (!aziendaId || !appuntamentoId) {
+    return json({ error: "aziendaId e appuntamentoId sono obbligatori" }, 400);
+  }
+  if (!(await isMembro(env, aziendaId, utente))) {
+    return json({ error: "Non appartieni all'azienda" }, 403);
+  }
+  if (!env.PROMEMORIA) return json({ error: "KV promemoria assente" }, 500);
+
+  // Limite di frequenza: l'invio costa e non deve diventare un modo per
+  // spedire molti messaggi in poco tempo.
+  const chiaveLimite = `cliente-rate:${env.FIREBASE_PROJECT}:${aziendaId}:${utente.uid}:${Math.floor(Date.now() / 60000)}`;
+  const usati = Number((await env.PROMEMORIA.get(chiaveLimite)) || 0);
+  if (usati >= 20) {
+    return json({ error: "Troppi invii in un minuto. Riprova tra poco." }, 429);
+  }
+  await env.PROMEMORIA.put(chiaveLimite, String(usati + 1), {
+    expirationTtl: 120,
+  });
+
+  const documento = await leggiDocumento(
+    env,
+    `appuntamenti/${encodeURIComponent(appuntamentoId)}`,
+    utente.token,
+  );
+  if (!documento) return json({ error: "Appuntamento non trovato" }, 404);
+  if (stringaCampo(documento, "azienda_id") !== aziendaId) {
+    return json({ error: "Appuntamento di un'altra azienda" }, 403);
+  }
+  if (booleanoCampo(documento, "avvisa_cliente") === false) {
+    return json({ ok: true, saltato: "disattivato" });
+  }
+
+  // Per gli appuntamenti privati il documento principale è redatto: i
+  // recapiti del cliente stanno nella sotto-collezione protetta, leggibile
+  // dal creatore e dall'operatore con il token dell'utente.
+  let dettagli = documento;
+  if (booleanoCampo(documento, "privato")) {
+    const privato = await leggiDocumento(
+      env,
+      `appuntamenti/${encodeURIComponent(appuntamentoId)}/privato/dettagli`,
+      utente.token,
+    );
+    if (privato?.fields) {
+      dettagli = { fields: { ...documento.fields, ...privato.fields } };
+    }
+  }
+
+  const data = stringaCampo(documento, "data");
+  if (!data) return json({ ok: true, saltato: "senza_data" });
+  if (data < new Date().toISOString().slice(0, 10)) {
+    return json({ ok: true, saltato: "passato" });
+  }
+
+  const consentiti = canaliCliente(
+    documento?.fields?.canali_cliente?.arrayValue?.values?.map(
+      (valore) => valore.stringValue,
+    ),
+  );
+  const richiesti = canaliCliente(body.canali);
+  const canali = consentiti.length
+    ? richiesti.filter((canale) => consentiti.includes(canale))
+    : richiesti;
+  if (!canali.length) return json({ ok: true, saltato: "nessun_canale" });
+
+  const clienteId = stringaCampo(dettagli, "cliente_id");
+  let cliente = null;
+  if (clienteId) {
+    cliente = await leggiDocumento(
+      env,
+      `clienti/${encodeURIComponent(clienteId)}`,
+      utente.token,
+    );
+    if (cliente && stringaCampo(cliente, "azienda_id") !== aziendaId) {
+      cliente = null;
+    }
+  }
+  const numero = normalizzaNumeroWhatsapp(
+    stringaCampo(dettagli, "cliente_telefono") ||
+      stringaCampo(cliente, "telefono"),
+  );
+  const email = (
+    stringaCampo(dettagli, "cliente_email") ||
+    stringaCampo(cliente, "email")
+  ).trim();
+
+  const impronta = await sha256Hex(
+    [
+      data,
+      stringaCampo(documento, "ora"),
+      stringaCampo(documento, "data_fine"),
+      stringaCampo(documento, "ora_fine"),
+      booleanoCampo(documento, "tutto_il_giorno") ? "1" : "0",
+    ].join("|"),
+  );
+  const baseKey = `${env.FIREBASE_PROJECT}:cliente:${appuntamentoId}:${impronta}`;
+  const fattoKey = `cliente-fatto:${baseKey}`;
+  const lockKey = `cliente-lock:${baseKey}`;
+
+  if (await env.PROMEMORIA.get(fattoKey)) {
+    return json({ ok: true, saltato: "gia_inviato" });
+  }
+  if (await env.PROMEMORIA.get(lockKey)) {
+    return json({ ok: true, saltato: "in_corso" });
+  }
+  await env.PROMEMORIA.put(lockKey, "1", { expirationTtl: 90 });
+
+  const contenuto = componiPromemoriaCliente({
+    titolo: stringaCampo(dettagli, "titolo"),
+    privato: booleanoCampo(documento, "privato"),
+    data,
+    ora: stringaCampo(documento, "ora"),
+    dataFine: stringaCampo(documento, "data_fine"),
+    oraFine: stringaCampo(documento, "ora_fine"),
+    tuttoIlGiorno: booleanoCampo(documento, "tutto_il_giorno"),
+    luogo: stringaCampo(dettagli, "luogo"),
+    indirizzo: stringaCampo(dettagli, "indirizzo"),
+    modifica: body.modifica === true,
+  });
+
+  const risultati = {};
+  let inviato = false;
+
+  if (canali.includes("whatsapp")) {
+    if (!numero) {
+      risultati.whatsapp = { stato: "senza_recapito" };
+    } else {
+      try {
+        const config = await leggiConfig(env);
+        if (!config) throw new Error("Server WhatsApp non configurato");
+        await inoltraAlServer(config, "/send", {
+          method: "POST",
+          body: { to: numero, message: contenuto.testo },
+        });
+        risultati.whatsapp = { stato: "inviato" };
+        inviato = true;
+      } catch (e) {
+        risultati.whatsapp = {
+          stato: "errore",
+          errore: String(e.message || e).slice(0, 300),
+        };
+      }
+    }
+  } else {
+    risultati.whatsapp = { stato: "non_selezionato" };
+  }
+
+  if (canali.includes("email")) {
+    if (!emailValida(email)) {
+      risultati.email = { stato: "senza_recapito" };
+    } else {
+      try {
+        const config = await leggiConfigEmail(env);
+        if (!config) throw new Error("Email non configurata");
+        await inviaEmail(config, {
+          to: email,
+          subject: contenuto.oggetto,
+          text: contenuto.testo,
+        });
+        risultati.email = { stato: "inviato" };
+        inviato = true;
+      } catch (e) {
+        const messaggio = String(e.message || e);
+        risultati.email = {
+          stato: messaggio.toLowerCase().includes("non configurata")
+            ? "non_configurata"
+            : "errore",
+          errore: messaggio.slice(0, 300),
+        };
+      }
+    }
+  } else {
+    risultati.email = { stato: "non_selezionato" };
+  }
+
+  if (inviato) {
+    await env.PROMEMORIA.put(fattoKey, "1", {
+      expirationTtl: 30 * 24 * 60 * 60,
+    });
+  }
+  await env.PROMEMORIA.delete(lockKey);
+
+  // Registro sull'appuntamento: solo stati, nessun recapito.
+  const canaliLog = {};
+  for (const [canale, esito] of Object.entries(risultati)) {
+    canaliLog[canale] = {
+      mapValue: {
+        fields: {
+          stato: stringa(esito.stato),
+          ...(esito.errore ? { errore: stringa(esito.errore) } : {}),
+        },
+      },
+    };
+  }
+  await aggiornaDocumento(
+    env,
+    `appuntamenti/${encodeURIComponent(appuntamentoId)}`,
+    {
+      promemoria_cliente: {
+        mapValue: {
+          fields: {
+            inviato_at: stringa(new Date().toISOString()),
+            impronta: stringa(impronta),
+            canali: { mapValue: { fields: canaliLog } },
+          },
+        },
+      },
+    },
+    utente.token,
+  ).catch(() => false);
+
+  return json({ ok: inviato, risultati });
 }
 
 async function gestisciPromemoria(request, env, url) {
@@ -535,6 +946,22 @@ export default {
     }
 
     const url = new URL(request.url);
+    if (url.pathname === "/promemoria-cliente") {
+      try {
+        return await gestisciPromemoriaCliente(request, env, url);
+      } catch (e) {
+        return json({ error: String(e.message || e) }, 500);
+      }
+    }
+
+    if (url.pathname.startsWith("/email/")) {
+      try {
+        return await gestisciEmail(request, env, url);
+      } catch (e) {
+        return json({ error: String(e.message || e) }, 500);
+      }
+    }
+
     if (url.pathname === "/promemoria" || url.pathname === "/promemoria/annulla") {
       try {
         return await gestisciPromemoria(request, env, url);

@@ -126,7 +126,8 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 | H12 | Worker | Scheduler promemoria e notifiche | Cron Worker ogni minuto, KV `PROMEMORIA`, invio WhatsApp; push/In-App richiede Blaze | sviluppatore-backend | IN CORSO |
 | H13 | WhatsApp | Invio operatore via server Volty | endpoint, secret, template, errore/retry | sviluppatore-backend | IN CORSO |
 | H13b | WhatsApp | Configurazione Super Admin e proxy Worker | URL/API key nel KV, QR/stato, invio autenticato, rubrica consenso; test app + E2E Worker | sviluppatore-backend | FATTO |
-| H14 | Email | SMTP per azienda e invio prova | settings, secret server, template, retry | sviluppatore-backend | DA FARE |
+| H13c | WhatsApp + Email | Promemoria automatico al cliente | avviso alla creazione e al cambio data/ora, WhatsApp+email, idempotenza, log nel dettaglio, config Resend; test | sviluppatore-backend + frontend | FATTO |
+| H14 | Email | SMTP per azienda e invio prova | settings, secret server, template, retry; oggi c'è il mittente unico Resend, lo SMTP per azienda resta da fare | sviluppatore-backend | IN CORSO |
 | H15 | Google | OAuth Google Calendar/Meet | collega/scollega, evento+Meet, sync, conflitti | sviluppatore-backend | DA FARE |
 | H16 | Microsoft | OAuth Microsoft/Teams | collega/scollega, online meeting, sync, conflitti | sviluppatore-backend | DA FARE |
 | H17 | R2 | Upload immagini firmato | limiti, formati, URL firmati, pulizia | sviluppatore-backend | DA FARE |

@@ -13,6 +13,8 @@
 | Proxy WhatsApp | Worker staging `commerciali-vies`; produzione `commerciali-vies-prod` |
 | Server WhatsApp | VM Google Cloud `whatsapp-server`, HTTPS `https://35.188.136.131.sslip.io`, numero `393516722792` |
 | Config WhatsApp | KV `WHATSAPP_CONFIG`, chiave `server` (URL + API key); API key anche in `.env` della VM |
+| Email clienti | Worker + Resend; mittente e API key in KV `EMAIL_CONFIG`, configurazione in Super Admin → Server email |
+| Promemoria clienti | KV `PROMEMORIA` (idempotenza e limite di frequenza), endpoint Worker `/promemoria-cliente` |
 | Vecchio backend | Supabase `segbfdfoqxrnitboeyof` — dismesso |
 
 ## Produzione (attiva)

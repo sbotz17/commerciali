@@ -99,3 +99,18 @@ UI pubblicata, report tester e validazione. Un'area senza prova UI è `BLOCCATA`
 ricostruisce con prove ripetibili, non con nuove funzioni.
 
 **Effetto**: nessun rilascio e nessuna nuova funzione fino alla chiusura delle aree AU01–AU15.
+
+## 2026-10-25 — Promemoria automatico al cliente
+
+- Andrea ha chiesto che il cliente riceva il promemoria **automaticamente** al salvataggio e alla modifica
+  di data/ora, su **WhatsApp, email o entrambi** in base ai recapiti presenti.
+- Canali scelti per singolo appuntamento (interruttore "Avvisa il cliente" + WhatsApp/Email), predefiniti
+  entrambi; il form scarta i canali senza recapito.
+- L'invio non parte dal browser: il Worker legge appuntamento e cliente, compone il testo e chiama il server
+  WhatsApp o il provider email. Nessun testo libero o destinatario arbitrario dal client.
+- Email tramite **Resend** con un mittente unico di piattaforma configurato in **Super Admin → Server email**
+  (API key nel KV `EMAIL_CONFIG`). È una scelta MVP: resta aperta la configurazione SMTP per singola azienda
+  prevista dall'architettura.
+- Idempotenza per appuntamento + impronta di data/ora e limite di frequenza per utente; nessun doppio invio
+  sullo stesso orario.
+- Stato: attivo su staging; l'email resta da attivare inserendo la API key Resend.

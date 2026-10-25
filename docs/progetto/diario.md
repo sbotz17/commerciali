@@ -624,3 +624,29 @@
 - **Apri in Google Maps**, **Apri call** e **Modifica cliente** sono diventati pulsanti nel contenuto:
   la barra in fondo resta libera per le azioni principali.
 - Verifica in browser reale a 390×844 e 900×900; `flutter analyze` 0; `flutter test` 867 verdi.
+
+## 2026-10-25 — Bug R-1: riaprire un preventivo apriva un editor vuoto
+
+- `_apriPreventivo` in `flutter_app/lib/features/preventivi/preventivi_screen.dart` navigava sempre a
+  `/preventivi/nuovo`, ignorando il preventivo cliccato: ora usa `/preventivi/<id>` (id ripulito dagli spazi);
+  con id vuoto non si naviga e si resta sull'elenco, senza crash.
+- Nessun'altra modifica: rotte, editor, layout e regole restano com'erano.
+- Test in `flutter_app/test/preventivi_screen_test.dart`: la schermata vera è montata su un router minimo con
+  `spServiceProvider` sostituito da un servizio finto (solo `getPreventivi`/`setAziendaAttiva`), quindi senza
+  Firebase; cliccando la card `p2` si arriva a `/preventivi/p2`, non a `/preventivi/nuovo`. Verificato che il
+  test fallisce con il codice precedente e passa con la correzione.
+- `flutter analyze` 0; `flutter test test/preventivi_screen_test.dart` 20 verdi; suite intera 882 verdi.
+
+## 2026-10-25 — Promemoria automatico al cliente
+
+- Nuova sezione **Avviso al cliente** nel form appuntamento: interruttore, WhatsApp ed Email in base ai
+  recapiti del cliente; snapshot di telefono/email sull'appuntamento.
+- Alla creazione e al cambio di data/ora il form chiama il Worker; il Worker compone il testo dal documento e
+  invia su WhatsApp (server esistente) ed email (Resend). Lo stesso orario non viene inviato due volte.
+- Esito salvato in `promemoria_cliente` e mostrato nel dettaglio; avviso dopo il salvataggio.
+- Configurazione **Super Admin → Server email** (mittente, API key Resend, prova) e KV `EMAIL_CONFIG`.
+- Verifiche: 9 test Node sul testo/idempotenza di base; E2E locale con WhatsApp finto (invio, log, dedupe,
+  spostamento, 403 cross-azienda) ed email finta; UI staging con form, invio e log; `flutter test` 883 verdi,
+  `flutter analyze` 0.
+- Nota: l'email resta non attiva su staging finché non viene inserita una API key Resend; WhatsApp usa il
+  server reale.

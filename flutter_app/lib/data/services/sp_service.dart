@@ -364,6 +364,8 @@ Map<String, dynamic> redigiAppuntamentoPrivato(Map<String, dynamic> payload) {
     'titolo': 'Impegno privato',
     'cliente_id': null,
     'cliente_nome': '',
+    'cliente_telefono': null,
+    'cliente_email': null,
     'luogo': null,
     'indirizzo': null,
     'note': null,
@@ -379,6 +381,8 @@ Map<String, dynamic> dettagliPrivatiAppuntamento(Map<String, dynamic> payload) {
     'titolo': payload['titolo'],
     'cliente_id': payload['cliente_id'],
     'cliente_nome': payload['cliente_nome'],
+    'cliente_telefono': payload['cliente_telefono'],
+    'cliente_email': payload['cliente_email'],
     'luogo': payload['luogo'],
     'indirizzo': payload['indirizzo'],
     'note': payload['note'],
@@ -1189,8 +1193,24 @@ class SpService {
   /// Usato quando si modifica il cliente dal dettaglio dell'appuntamento:
   /// evita di riscrivere tutti gli altri campi.
   Future<void> aggiornaNomeClienteAppuntamento(String id, String? nome) async {
+    await aggiornaContattiClienteAppuntamento(id, nome: nome);
+  }
+
+  /// Aggiorna i dati del cliente denormalizzati sull'appuntamento.
+  ///
+  /// Usato dopo la modifica della scheda cliente: evita di riscrivere tutti
+  /// gli altri campi dell'appuntamento. I parametri `null` cancellano il
+  /// valore corrispondente.
+  Future<void> aggiornaContattiClienteAppuntamento(
+    String id, {
+    String? nome,
+    String? telefono,
+    String? email,
+  }) async {
     await _firestore.collection('appuntamenti').doc(id).update({
       'cliente_nome': (nome ?? '').trim(),
+      'cliente_telefono': (telefono ?? '').trim(),
+      'cliente_email': (email ?? '').trim(),
       'updated_at': _now(),
     });
   }
@@ -1323,6 +1343,10 @@ class SpService {
       'privato': dati['privato'] == true,
       'cliente_id': _stringaNull(dati['cliente_id']),
       'cliente_nome': _stringa(dati['cliente_nome']),
+      'cliente_telefono': _stringaNull(dati['cliente_telefono']),
+      'cliente_email': _stringaNull(dati['cliente_email']),
+      'avvisa_cliente': dati['avvisa_cliente'] != false,
+      'canali_cliente': normalizzaCanaliCliente(dati['canali_cliente']),
       'operatore_id': _stringaNull(dati['operatore_id']),
       'luogo': _stringaNull(dati['luogo']),
       'indirizzo': _stringaNull(dati['indirizzo']),
@@ -2325,6 +2349,74 @@ class SpService {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Invia al cliente il promemoria dell'appuntamento appena salvato.
+  ///
+  /// Il Worker legge recapiti, canali e testo dal documento, quindi il client
+  /// non può usare questo endpoint per inviare messaggi arbitrari. Restituisce
+  /// l'esito per canale; `saltato` vale `gia_inviato` quando data e ora non
+  /// sono cambiate.
+  Future<Map<String, dynamic>> inviaPromemoriaCliente({
+    required String appuntamentoId,
+    required List<String> canali,
+    required bool modifica,
+  }) async {
+    final aziendaId = _aziendaAttiva;
+    final id = appuntamentoId.trim();
+    if (aziendaId == null || id.isEmpty || canali.isEmpty) {
+      return const {'ok': false, 'saltato': 'nessun_canale'};
+    }
+    return _chiamaWorker(
+      '/promemoria-cliente',
+      metodo: 'POST',
+      corpo: {
+        'aziendaId': aziendaId,
+        'appuntamentoId': id,
+        'canali': normalizzaCanaliCliente(canali),
+        'modifica': modifica,
+      },
+    );
+  }
+
+  /// Configurazione del servizio email salvata nel KV del Worker.
+  Future<Map<String, dynamic>?> getEmailConfig() async {
+    final dati = await _chiamaWorker('/email/config');
+    if (dati.isEmpty) return null;
+    return dati;
+  }
+
+  /// Salva mittente e API key del servizio email. Riservato al super admin.
+  Future<void> salvaEmailConfig({
+    required String from,
+    required String nome,
+    required String apiKey,
+  }) async {
+    final mittente = from.trim();
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(mittente)) {
+      throw StateError('Inserisci un indirizzo email valido.');
+    }
+    if (apiKey.trim().isEmpty) {
+      throw StateError('Inserisci la API key del servizio email.');
+    }
+    await _chiamaWorker(
+      '/email/config',
+      metodo: 'POST',
+      corpo: {'from': mittente, 'nome': nome.trim(), 'apiKey': apiKey.trim()},
+    );
+  }
+
+  /// Invia un'email di prova all'indirizzo indicato. Solo super admin.
+  Future<void> inviaEmailProva(String to) async {
+    final destinatario = to.trim();
+    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(destinatario)) {
+      throw StateError('Inserisci un indirizzo email valido per la prova.');
+    }
+    await _chiamaWorker(
+      '/email/test',
+      metodo: 'POST',
+      corpo: {'to': destinatario},
+    );
   }
 
   /// Configurazione del server WhatsApp salvata nel KV del Worker.

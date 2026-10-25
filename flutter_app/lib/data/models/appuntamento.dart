@@ -33,6 +33,11 @@ class Appuntamento {
     this.privato = false,
     this.clienteId,
     this.clienteNome,
+    this.clienteTelefono,
+    this.clienteEmail,
+    this.avvisaCliente = true,
+    this.canaliCliente = const ['whatsapp', 'email'],
+    this.promemoriaCliente = const {},
     this.operatoreId,
     this.luogo,
     this.indirizzo,
@@ -70,6 +75,11 @@ class Appuntamento {
       privato: map['privato'] == true,
       clienteId: map['cliente_id'] as String?,
       clienteNome: map['cliente_nome'] as String?,
+      clienteTelefono: map['cliente_telefono'] as String?,
+      clienteEmail: map['cliente_email'] as String?,
+      avvisaCliente: map['avvisa_cliente'] != false,
+      canaliCliente: normalizzaCanaliCliente(map['canali_cliente']),
+      promemoriaCliente: _mappaPromemoriaCliente(map['promemoria_cliente']),
       operatoreId: map['operatore_id'] as String?,
       luogo: map['luogo'] as String?,
       indirizzo: map['indirizzo'] as String?,
@@ -142,6 +152,25 @@ class Appuntamento {
 
   /// Nome del cliente denormalizzato (campo `cliente_nome`).
   final String? clienteNome;
+
+  /// Telefono del cliente al momento del salvataggio (campo
+  /// `cliente_telefono`). Serve per l'avviso anche se la scheda cliente
+  /// cambia in seguito.
+  final String? clienteTelefono;
+
+  /// Email del cliente al momento del salvataggio (campo `cliente_email`).
+  final String? clienteEmail;
+
+  /// `true` se al salvataggio va avvisato il cliente (campo
+  /// `avvisa_cliente`, default `true`).
+  final bool avvisaCliente;
+
+  /// Canali scelti per avvisare il cliente (campo `canali_cliente`);
+  /// valori ammessi: `whatsapp`, `email`.
+  final List<String> canaliCliente;
+
+  /// Ultimo esito dell'avviso al cliente (campo `promemoria_cliente`).
+  final Map<String, dynamic> promemoriaCliente;
 
   /// Id dell'operatore assegnato (campo `operatore_id`).
   final String? operatoreId;
@@ -232,6 +261,11 @@ class Appuntamento {
       privato: privato,
       clienteId: testo('cliente_id', clienteId),
       clienteNome: testo('cliente_nome', clienteNome),
+      clienteTelefono: testo('cliente_telefono', clienteTelefono),
+      clienteEmail: testo('cliente_email', clienteEmail),
+      avvisaCliente: avvisaCliente,
+      canaliCliente: canaliCliente,
+      promemoriaCliente: promemoriaCliente,
       operatoreId: operatoreId,
       luogo: testo('luogo', luogo),
       indirizzo: testo('indirizzo', indirizzo),
@@ -269,6 +303,11 @@ class Appuntamento {
     'privato': privato,
     'cliente_id': clienteId,
     'cliente_nome': clienteNome,
+    'cliente_telefono': clienteTelefono,
+    'cliente_email': clienteEmail,
+    'avvisa_cliente': avvisaCliente,
+    'canali_cliente': canaliCliente,
+    'promemoria_cliente': promemoriaCliente,
     'operatore_id': operatoreId,
     'luogo': luogo,
     'indirizzo': indirizzo,
@@ -287,6 +326,96 @@ class Appuntamento {
     'created_at': createdAt,
     'updated_at': updatedAt,
   };
+}
+
+/// Canali ammessi per l'avviso al cliente, nell'ordine in cui compaiono.
+const List<String> canaliClienteAppuntamento = ['whatsapp', 'email'];
+
+/// Normalizza i canali salvati su un appuntamento.
+///
+/// Scarta valori sconosciuti e duplicati; se il campo è assente restituisce
+/// entrambi i canali, così i documenti vecchi continuano a funzionare.
+List<String> normalizzaCanaliCliente(dynamic valore) {
+  if (valore is! Iterable) return const ['whatsapp', 'email'];
+  final scelti = <String>{};
+  for (final voce in valore) {
+    final canale = voce.toString().trim().toLowerCase();
+    if (canaliClienteAppuntamento.contains(canale)) scelti.add(canale);
+  }
+  return [
+    for (final canale in canaliClienteAppuntamento)
+      if (scelti.contains(canale)) canale,
+  ];
+}
+
+Map<String, dynamic> _mappaPromemoriaCliente(dynamic valore) {
+  if (valore is Map) return Map<String, dynamic>.from(valore);
+  return const {};
+}
+
+/// `true` se data, ora o durata sono diverse da [precedente].
+///
+/// Con [precedente] `null` (nuovo appuntamento) restituisce sempre `true`.
+bool orarioAppuntamentoCambiato(
+  Appuntamento? precedente, {
+  required String? data,
+  String? ora,
+  String? dataFine,
+  String? oraFine,
+  bool tuttoIlGiorno = false,
+}) {
+  if (precedente == null) return true;
+  String pulisci(String? valore) => (valore ?? '').trim();
+  return pulisci(precedente.data) != pulisci(data) ||
+      pulisci(precedente.ora) != pulisci(ora) ||
+      pulisci(precedente.dataFine) != pulisci(dataFine) ||
+      pulisci(precedente.oraFine) != pulisci(oraFine) ||
+      precedente.tuttoIlGiorno != tuttoIlGiorno;
+}
+
+/// Etichetta breve dell'esito dell'ultimo avviso al cliente.
+///
+/// Esempio: `Inviato su WhatsApp · Email non configurata`.
+String etichettaPromemoriaCliente(Map<String, dynamic>? log) {
+  if (log == null || log.isEmpty) return '';
+  final canali = log['canali'];
+  if (canali is! Map) return '';
+  final inviati = <String>[];
+  final problemi = <String>[];
+  for (final voce in canali.entries) {
+    final canale = voce.key.toString();
+    final nome = canale == 'whatsapp' ? 'WhatsApp' : 'Email';
+    final dati = voce.value;
+    final stato = dati is Map ? (dati['stato'] ?? '').toString() : '';
+    switch (stato) {
+      case 'inviato':
+        inviati.add(nome);
+      case 'senza_recapito':
+        problemi.add('$nome senza recapito');
+      case 'non_configurata':
+        problemi.add('$nome non configurata');
+      case 'errore':
+        problemi.add('$nome non inviata');
+    }
+  }
+  if (inviati.isNotEmpty && problemi.isEmpty) {
+    return 'Inviato su ${inviati.join(' e ')}';
+  }
+  if (inviati.isNotEmpty) {
+    return 'Inviato su ${inviati.join(' e ')} · ${problemi.join(' · ')}';
+  }
+  return problemi.isEmpty ? '' : 'Non inviato: ${problemi.join(' · ')}';
+}
+
+/// Data e ora italiane dell'ultimo avviso al cliente, se presenti.
+String dataPromemoriaCliente(Map<String, dynamic>? log) {
+  final grezza = (log?['inviato_at'] ?? '').toString().trim();
+  if (grezza.isEmpty) return '';
+  final data = DateTime.tryParse(grezza)?.toLocal();
+  if (data == null) return '';
+  String due(int valore) => valore.toString().padLeft(2, '0');
+  return '${due(data.day)}/${due(data.month)}/${data.year} '
+      '${due(data.hour)}:${due(data.minute)}';
 }
 
 /// Combina [data] (`YYYY-MM-DD`) e [ora] (`HH:MM`) in un [DateTime].

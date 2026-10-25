@@ -81,6 +81,18 @@ Le **password e i token** non vanno mai incollati in chat, in Firestore o nel co
 - alcuni permessi richiedono consenso amministratore del tenant;
 - costi e disponibilità dipendono dal piano Microsoft.
 
+## 2bis. Email clienti (Resend)
+
+Per l'MVP l'email ai clienti usa un unico mittente di piattaforma tramite **Resend**.
+
+1. Apri **Super Admin → Server email**.
+2. Inserisci l'**email mittente** (dominio verificato su Resend), il **nome mittente** e la **API key**.
+3. Salva e usa **Invia email di prova** verso un indirizzo tuo.
+4. La chiave resta nel KV `EMAIL_CONFIG` del Worker e non viene salvata in Firestore.
+
+Senza questa configurazione il canale email risulta **non configurato** e WhatsApp resta l'unico canale
+esterno disponibile. La configurazione SMTP per singola azienda resta un'evoluzione separata.
+
 ## 3. Email SMTP per azienda
 
 ### Cosa serve

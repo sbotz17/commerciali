@@ -241,7 +241,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
 
   /// Apre il form di un nuovo appuntamento con data (e ora) già impostate.
   Future<void> _apriNuovoAppuntamento({DateTime? giorno, String? ora}) async {
-    final salvato = await Navigator.of(context).push<bool>(
+    final esito = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
         builder: (_) => AppuntamentoFormScreen(
           dataIniziale: giorno ?? _giorno,
@@ -249,7 +249,17 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
         ),
       ),
     );
-    if (salvato == true) await _carica();
+    if (esito?['salvato'] == true) {
+      await _carica();
+      _mostraMessaggioAvvisoCliente(esito?['messaggio']);
+    }
+  }
+
+  /// Mostra l'esito dell'avviso al cliente dopo il ritorno dal form.
+  void _mostraMessaggioAvvisoCliente(Object? messaggio) {
+    final testo = messaggio?.toString().trim() ?? '';
+    if (testo.isEmpty || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(testo)));
   }
 
   /// Apre il dettaglio della voce e gestisce l'azione scelta.
@@ -330,10 +340,17 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
       final aggiornato = await servizio.getCliente(cliente.id);
       if (aggiornato != null &&
-          (aggiornato.nome ?? '') != (appuntamento.clienteNome ?? '')) {
-        await servizio.aggiornaNomeClienteAppuntamento(
+          ((aggiornato.nome ?? '').trim() !=
+                  (appuntamento.clienteNome ?? '').trim() ||
+              (aggiornato.telefono ?? '').trim() !=
+                  (appuntamento.clienteTelefono ?? '').trim() ||
+              (aggiornato.email ?? '').trim() !=
+                  (appuntamento.clienteEmail ?? '').trim())) {
+        await servizio.aggiornaContattiClienteAppuntamento(
           appuntamento.id,
-          aggiornato.nome,
+          nome: aggiornato.nome,
+          telefono: aggiornato.telefono,
+          email: aggiornato.email,
         );
       }
       await _carica();
@@ -397,12 +414,15 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
 
   /// Apre il form in modifica e ricarica se il salvataggio è andato a buon fine.
   Future<void> _modificaAppuntamento(Appuntamento appuntamento) async {
-    final salvato = await Navigator.of(context).push<bool>(
+    final esito = await Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
         builder: (_) => AppuntamentoFormScreen(appuntamento: appuntamento),
       ),
     );
-    if (salvato == true) await _carica();
+    if (esito?['salvato'] == true) {
+      await _carica();
+      _mostraMessaggioAvvisoCliente(esito?['messaggio']);
+    }
   }
 
   /// Chiede conferma, elimina l'appuntamento e ricarica l'agenda.
@@ -1248,6 +1268,13 @@ class DettaglioElementoDialog extends StatelessWidget {
       return nome.isEmpty ? uid : nome;
     }
 
+    final avvisoCliente = etichettaPromemoriaCliente(
+      appuntamento?.promemoriaCliente,
+    );
+    final dataAvvisoCliente = dataPromemoriaCliente(
+      appuntamento?.promemoriaCliente,
+    );
+
     final panoramica = <Widget>[
       if (appuntamento?.privato == true)
         _RigaDettaglio(
@@ -1260,6 +1287,13 @@ class DettaglioElementoDialog extends StatelessWidget {
         _RigaDettaglio(
           etichetta: 'Cliente e utente',
           valore: dettaglioElemento(elemento, nomiOperatori),
+        ),
+      if (dettagliVisibili && avvisoCliente.isNotEmpty)
+        _RigaDettaglio(
+          etichetta: 'Promemoria cliente',
+          valore: dataAvvisoCliente.isEmpty
+              ? avvisoCliente
+              : '$avvisoCliente · $dataAvvisoCliente',
         ),
       if (dettagliVisibili && appuntamento != null) ...[
         _RigaDettaglio(

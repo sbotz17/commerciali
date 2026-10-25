@@ -267,6 +267,22 @@ N tentativi poi `fallito`; idempotenza con `runTransaction` su `promemoria/{id}`
 assoluto calcolato dal `fuso_orario` azienda; il cron legge un intervallo UTC. Niente Cloud
 Functions/Blaze.
 
+### 4bis. Promemoria automatico al cliente (WhatsApp + email)
+
+Il client chiama `POST /promemoria-cliente` dopo il salvataggio dell'appuntamento. Il Worker:
+1. verifica utente e appartenenza all'azienda;
+2. legge `appuntamenti/{id}` (e, se privato, `privato/dettagli`) con il token dell'utente;
+3. ricava recapiti da `cliente_telefono`/`cliente_email` o dalla scheda `clienti`;
+4. compone il testo dal documento (mai da un testo libero del client);
+5. invia su WhatsApp con il server configurato e su email con Resend;
+6. scrive su `promemoria_cliente` solo stati e data, senza recapiti.
+
+L'idempotenza usa una chiave KV `cliente-fatto:{progetto}:{appuntamento}:{hash(data,ora,fine,tutto_il_giorno)}`,
+quindi lo stesso orario non parte due volte e una nuova data/ora genera un nuovo invio. C'è un limite di
+20 invii al minuto per utente. L'email usa `EMAIL_CONFIG` (KV) con `{apiKey, from, nome}`; l'endpoint
+`/email/config` e `/email/test` è riservato al super admin. Per gli appuntamenti privati il titolo non
+compare nel messaggio.
+
 ### 4. Email SMTP per azienda
 
 Campi in `impostazioni_agenda` (o `integrazioni`): smtp_host, smtp_port, smtp_user, mittente,

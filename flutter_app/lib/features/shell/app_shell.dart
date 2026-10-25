@@ -189,6 +189,8 @@ class AppShell extends StatelessWidget {
     '/impostazioni/integrazioni': 'Calendario e integrazioni',
     '/impostazioni/condivisioni-calendario': 'Condivisione calendario',
     '/superadmin': 'Super admin',
+    '/superadmin/whatsapp': 'Server WhatsApp',
+    '/superadmin/email': 'Server email',
   };
 
   String get _titolo {

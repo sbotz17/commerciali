@@ -22,6 +22,7 @@ void main() {
     List<String> invitatiUids = const [],
     Map<String, dynamic> conferme = const {},
     String statoCondivisione = statoCondivisioneNonCondiviso,
+    Map<String, dynamic> promemoriaCliente = const {},
   }) {
     return Appuntamento(
       id: id,
@@ -35,6 +36,7 @@ void main() {
       invitatiUids: invitatiUids,
       conferme: conferme,
       statoCondivisione: statoCondivisione,
+      promemoriaCliente: promemoriaCliente,
     );
   }
 
@@ -473,6 +475,13 @@ void main() {
             'u1': {'stato': 'confermato'},
           },
           statoCondivisione: statoCondivisioneInAttesa,
+          promemoriaCliente: const {
+            'inviato_at': '2026-10-25T08:00:00.000Z',
+            'canali': {
+              'whatsapp': {'stato': 'inviato'},
+              'email': {'stato': 'inviato'},
+            },
+          },
         ),
       ]).single;
 
@@ -535,6 +544,16 @@ void main() {
       expect(find.text('Nome: ACME'), findsOneWidget);
       expect(find.text('Andrea'), findsOneWidget);
       expect(find.text('Simone'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              (widget.textSpan?.toPlainText() ?? widget.data ?? '').contains(
+                'Promemoria cliente: Inviato su WhatsApp e Email',
+              ),
+        ),
+        findsOneWidget,
+      );
 
       final confermo = find.byKey(const Key('calendario-conferma-invito'));
       final rifiuta = find.byKey(const Key('calendario-rifiuta-invito'));

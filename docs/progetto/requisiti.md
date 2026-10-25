@@ -295,14 +295,22 @@ cosa succede agli allegati quando l'elemento viene eliminato (da decidere).
 senza riscrivere ogni volta il messaggio.
 
 **Criteri**
-1. Se l'appuntamento ha email o telefono, l'app propone l'invio; il testo è un template modificabile.
-2. Invio immediato dopo la creazione solo con conferma dell'utente (o automatico se l'impostazione è attiva:
-   da decidere).
-3. Invio programmato all'orario configurato (es. giorno prima alle 18:00) con traccia di invio o errore.
-4. Il messaggio contiene data, ora, luogo, nome azienda e riferimento; nessun dato di altri clienti.
-5. Senza email/telefono o senza canale configurato il pulsante è disabilitato con spiegazione.
-6. Un invio fallito non blocca l'appuntamento e può essere ritentato.
-7. Nessun messaggio parte verso clienti di altre aziende o senza consenso registrato (vedi GDPR).
+1. Se l'appuntamento ha email o telefono del cliente, l'app propone l'invio; l'operatore può disattivarlo
+   per quel singolo appuntamento.
+2. Invio automatico alla creazione e alla modifica di data/ora, senza passare da una conferma: è il
+   comportamento approvato da Andrea il 25/10/2026.
+3. Se il cliente ha sia telefono sia email e sono selezionati entrambi i canali, riceve **entrambi** i
+   messaggi; se ne ha uno solo, parte solo quel canale.
+4. Lo stesso orario non viene inviato due volte (chiave di idempotenza per appuntamento + data/ora).
+5. Il messaggio contiene data, ora e luogo; per gli appuntamenti privati il titolo non esce dall'azienda.
+   Nessun dato di altri clienti.
+6. Senza email/telefono o senza canale configurato il canale è segnalato come non disponibile e l'invio non
+   blocca il salvataggio.
+7. Un invio fallito non blocca l'appuntamento; l'esito è visibile nel dettaglio e si può riprovare
+   modificando nuovamente data o ora.
+8. Nessun messaggio parte verso clienti di altre aziende: il Worker ricava destinatario e testo dal
+   documento, non da un testo libero del client.
+9. Il promemoria programmato (giorno prima) resta un task separato; questa funzione invia subito.
 
 **Casi limite**: email non valida; numero senza prefisso internazionale; più appuntamenti lo stesso giorno;
 orario di invio già passato.
@@ -415,14 +423,18 @@ auto-gestione in MVP); fuso orario del cliente.
 **Domande aperte per Andrea**
 1. Nell'MVP le visite attuali diventano appuntamenti o restano due cose separate?
 2. L'"operatore" è un utente Closer con login o anche un contatto esterno senza account?
-3. Il promemoria al cliente va via email, WhatsApp o entrambi? Con quale indirizzo mittente?
+3. ~~Il promemoria al cliente va via email, WhatsApp o entrambi?~~ **Risposto il 25/10/2026: entrambi se il
+   cliente ha sia telefono sia email; altrimenti il canale disponibile. Mittente email configurato dal super
+   admin (Resend).**
 4. La creazione di appuntamenti/task è per tutti o solo per chi ha un permesso dedicato?
 5. ~~Serve la vista mese nell'MVP o bastano giorno e settimana?~~ **Sì: approvata il 24/10/2026,** insieme alle viste classiche e allo stile card.
 6. Per Teams/Meet basta incollare il link nell'MVP, con creazione automatica in Fase 2?
 7. La pagina di prenotazione deve essere pubblica senza login?Chi conferma lo slot?
 8. Quanti allegati e quale dimensione massima per appuntamento/task?
 9. Google e Microsoft: un solo account aziendale o ogni utente collega il proprio?
-10. Il promemoria al cliente deve partire automaticamente o sempre dopo conferma dell'utente?
+10. ~~Il promemoria al cliente deve partire automaticamente o sempre dopo conferma dell'utente?~~
+    **Risposto il 25/10/2026: automaticamente al salvataggio e quando cambiano data o ora, con interruttore
+    "Avvisa il cliente" nel form.**
 
 **Funzionalità aggiuntive consigliate**
 - **Utile subito**: rilevamento conflitti di orario, durata predefinita, conferma cliente con un tocco,

@@ -197,6 +197,8 @@ void main() {
         'appuntamento-cliente',
         'appuntamento-nuovo-cliente',
         'appuntamento-operatore',
+        'appuntamento-avvisa-cliente',
+        'appuntamento-avviso-senza-cliente',
         'appuntamento-condivisione',
         'appuntamento-call-provider',
         'appuntamento-call-url',
@@ -211,6 +213,14 @@ void main() {
       ]) {
         expect(find.byKey(Key(chiave)), findsOneWidget, reason: chiave);
       }
+    });
+
+    testWidgets('mostra la sezione Avviso al cliente', (tester) async {
+      await apriForm(tester);
+
+      expect(find.text('AVVISO AL CLIENTE'), findsOneWidget);
+      expect(find.text('Avvisa il cliente'), findsOneWidget);
+      expect(find.textContaining('Seleziona un cliente'), findsOneWidget);
     });
 
     testWidgets('il campo note occupa tutta la larghezza', (tester) async {

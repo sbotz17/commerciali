@@ -271,6 +271,8 @@ class _AppuntamentoFormScreenState
   String? _operatoreId;
   bool _tuttoIlGiorno = false;
   bool _privato = false;
+  bool _avvisaCliente = true;
+  Set<String> _canaliCliente = {'whatsapp', 'email'};
   String _ripetizioneTipo = ripetizioneMai;
   Set<int> _giorniRipetizione = {};
   String _notificaScelta = 'nessuna';
@@ -302,6 +304,7 @@ class _AppuntamentoFormScreenState
 
   bool _salvando = false;
   String? _errore;
+  String? _messaggioAvvisoCliente;
 
   bool get _modifica => widget.appuntamento != null;
 
@@ -316,6 +319,9 @@ class _AppuntamentoFormScreenState
     _dataFineScelta = _dataFineAppuntamento(appuntamento) ?? _dataScelta;
     _tuttoIlGiorno = appuntamento?.tuttoIlGiorno == true;
     _privato = appuntamento?.privato == true;
+    _avvisaCliente = appuntamento?.avvisaCliente ?? true;
+    _canaliCliente =
+        (appuntamento?.canaliCliente ?? const ['whatsapp', 'email']).toSet();
     _ripetizioneTipo = (appuntamento?.ripetizione['tipo'] ?? ripetizioneMai)
         .toString();
     _giorniRipetizione = giorniRipetizione(appuntamento?.ripetizione).toSet();
@@ -488,6 +494,27 @@ class _AppuntamentoFormScreenState
       if (cliente.id == _clienteId) return cliente;
     }
     return null;
+  }
+
+  /// Telefono del cliente: scheda caricata o copia salvata sull'appuntamento
+  /// (utile se la scheda non è ancora disponibile o è stata eliminata).
+  String get _telefonoCliente {
+    final selezionato = _clienteSelezionato;
+    if (selezionato != null) return (selezionato.telefono ?? '').trim();
+    if (widget.appuntamento?.clienteId == _clienteId) {
+      return (widget.appuntamento?.clienteTelefono ?? '').trim();
+    }
+    return '';
+  }
+
+  /// Email del cliente, con la stessa regola del telefono.
+  String get _emailCliente {
+    final selezionato = _clienteSelezionato;
+    if (selezionato != null) return (selezionato.email ?? '').trim();
+    if (widget.appuntamento?.clienteId == _clienteId) {
+      return (widget.appuntamento?.clienteEmail ?? '').trim();
+    }
+    return '';
   }
 
   /// Voci della tendina cliente, compreso il cliente salvato se non è più in
@@ -1086,6 +1113,13 @@ class _AppuntamentoFormScreenState
       'cliente_id': _clienteId,
       'cliente_nome':
           cliente?.nome ?? (cliente == null ? appuntamento?.clienteNome : null),
+      'cliente_telefono': _telefonoCliente.isEmpty ? null : _telefonoCliente,
+      'cliente_email': _emailCliente.isEmpty ? null : _emailCliente,
+      'avvisa_cliente': _avvisaCliente,
+      'canali_cliente': [
+        for (final canale in canaliClienteAppuntamento)
+          if (_canaliCliente.contains(canale)) canale,
+      ],
       'operatore_id': _operatoreId,
       'luogo': _luogo.text,
       'indirizzo': _indirizzo.text,
@@ -1115,6 +1149,20 @@ class _AppuntamentoFormScreenState
         _idCreato = salvato['id']?.toString();
       }
       final id = salvato['id']?.toString();
+      final orarioCambiato = orarioAppuntamentoCambiato(
+        appuntamento,
+        data: dataIsoVisita(giorno),
+        ora: oraInizio,
+        dataFine: dataIsoVisita(giornoFine),
+        oraFine: oraFine,
+        tuttoIlGiorno: _tuttoIlGiorno,
+      );
+      await _avvisaClienteDopoSalvataggio(
+        servizio,
+        id,
+        modifica: appuntamento != null,
+        orarioCambiato: orarioCambiato,
+      );
       final allegatiOk = await _caricaAllegatiNuovi(servizio, id ?? '');
       if (!mounted) return;
       if (!allegatiOk) return;
@@ -1138,13 +1186,54 @@ class _AppuntamentoFormScreenState
         await _inviaInviti(servizio, id, nuoviInvitati);
       }
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      Navigator.of(context).pop({
+        'salvato': true,
+        if (_messaggioAvvisoCliente != null)
+          'messaggio': _messaggioAvvisoCliente,
+      });
       return;
     } catch (errore) {
       if (!mounted) return;
       setState(() => _errore = messaggioErroreAppuntamenti(errore));
     } finally {
       if (mounted) setState(() => _salvando = false);
+    }
+  }
+
+  /// Avvisa il cliente dell'appuntamento appena salvato.
+  ///
+  /// Parte alla creazione e quando cambiano data o ora. Il Worker ricava
+  /// recapiti e testo dal documento e non invia due volte lo stesso orario.
+  /// Un errore non annulla mai il salvataggio.
+  Future<void> _avvisaClienteDopoSalvataggio(
+    SpService servizio,
+    String? appuntamentoId, {
+    required bool modifica,
+    required bool orarioCambiato,
+  }) async {
+    if (!_avvisaCliente || !orarioCambiato) return;
+    final id = appuntamentoId?.trim() ?? '';
+    if (id.isEmpty) return;
+    final canali = <String>[
+      if (_canaliCliente.contains('whatsapp') && _telefonoCliente.isNotEmpty)
+        'whatsapp',
+      if (_canaliCliente.contains('email') && _emailCliente.isNotEmpty) 'email',
+    ];
+    if (canali.isEmpty) return;
+    try {
+      final esito = await servizio.inviaPromemoriaCliente(
+        appuntamentoId: id,
+        canali: canali,
+        modifica: modifica,
+      );
+      final risultati = esito['risultati'];
+      final etichetta = etichettaPromemoriaCliente(
+        risultati is Map ? {'canali': risultati} : null,
+      );
+      if (etichetta.isEmpty || !mounted) return;
+      _messaggioAvvisoCliente = 'Promemoria cliente: $etichetta';
+    } catch (_) {
+      // L'avviso è best-effort: l'appuntamento resta salvato.
     }
   }
 
@@ -1778,6 +1867,121 @@ class _AppuntamentoFormScreenState
                               label: const Text('Riprova clienti'),
                             ),
                           ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Avviso al cliente',
+                      figli: const [],
+                      extra: [
+                        SwitchListTile(
+                          key: const Key('appuntamento-avvisa-cliente'),
+                          contentPadding: EdgeInsets.zero,
+                          value: _avvisaCliente,
+                          onChanged: _salvando
+                              ? null
+                              : (valore) =>
+                                    setState(() => _avvisaCliente = valore),
+                          title: const Text('Avvisa il cliente'),
+                          subtitle: const Text(
+                            'Invia un messaggio al salvataggio e quando cambi '
+                            'data o ora.',
+                          ),
+                        ),
+                        if (_avvisaCliente) ...[
+                          if (_clienteId == null || _clienteId!.trim().isEmpty)
+                            Text(
+                              'Seleziona un cliente per inviare l\'avviso.',
+                              key: const Key(
+                                'appuntamento-avviso-senza-cliente',
+                              ),
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            )
+                          else ...[
+                            CheckboxListTile(
+                              key: const Key('appuntamento-canale-whatsapp'),
+                              contentPadding: EdgeInsets.zero,
+                              value: _canaliCliente.contains('whatsapp'),
+                              onChanged: _salvando || _telefonoCliente.isEmpty
+                                  ? null
+                                  : (valore) => setState(() {
+                                      if (valore == true) {
+                                        _canaliCliente.add('whatsapp');
+                                      } else {
+                                        _canaliCliente.remove('whatsapp');
+                                      }
+                                    }),
+                              title: const Text('WhatsApp'),
+                              subtitle: Text(
+                                _telefonoCliente.isEmpty
+                                    ? 'Nessun telefono nel cliente'
+                                    : _telefonoCliente,
+                              ),
+                            ),
+                            CheckboxListTile(
+                              key: const Key('appuntamento-canale-email'),
+                              contentPadding: EdgeInsets.zero,
+                              value: _canaliCliente.contains('email'),
+                              onChanged: _salvando || _emailCliente.isEmpty
+                                  ? null
+                                  : (valore) => setState(() {
+                                      if (valore == true) {
+                                        _canaliCliente.add('email');
+                                      } else {
+                                        _canaliCliente.remove('email');
+                                      }
+                                    }),
+                              title: const Text('Email'),
+                              subtitle: Text(
+                                _emailCliente.isEmpty
+                                    ? 'Nessuna email nel cliente'
+                                    : _emailCliente,
+                              ),
+                            ),
+                            if (_canaliCliente.contains('email'))
+                              Text(
+                                'L\'email parte dal mittente configurato in '
+                                'Super Admin → Server email.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            if (_telefonoCliente.isEmpty &&
+                                _emailCliente.isEmpty)
+                              Text(
+                                'Il cliente non ha un telefono o un\'email: '
+                                'non riceverà l\'avviso.',
+                                key: const Key(
+                                  'appuntamento-avviso-senza-recapiti',
+                                ),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              )
+                            else
+                              Text(
+                                'Se ci sono sia telefono sia email, il '
+                                'cliente riceve entrambi i messaggi.',
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                          ],
                         ],
                       ],
                     ),

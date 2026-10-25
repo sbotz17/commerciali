@@ -91,3 +91,21 @@ scorrere il contenuto, controllare i dati del cliente e i pulsanti **Confermo**,
 **Rischi**: nessuna modifica a dati, regole o collezioni; cambia solo il dialogo di dettaglio.
 
 **Come tornare indietro**: ripristinare `calendario_screen.dart` dal commit precedente.
+
+## 2026-10-25 — Promemoria automatico al cliente
+
+**Cosa fa**: quando salvi un appuntamento con un cliente, il cliente riceve un messaggio con data, ora e
+luogo. Parte alla creazione e quando cambi data o ora; se il cliente ha telefono ed email riceve entrambi.
+Puoi spegnere l'avviso con **Avvisa il cliente** e scegliere i canali. Lo stesso orario non viene inviato due
+volte. L'esito compare nel dettaglio dell'appuntamento.
+
+**Come provarlo**: crea un appuntamento con un cliente che ha telefono o email; salva e controlla il
+messaggio; modifica l'ora e salva di nuovo; riapri il dettaglio e controlla **Promemoria cliente**. Per
+l'email serve **Super Admin → Server email** con mittente e API key Resend; senza configurazione l'email
+risulta non disponibile ma WhatsApp funziona.
+
+**Rischi**: nuovi campi su `appuntamenti` (solo aggiunte, documenti vecchi validi); nessuna nuova collezione;
+la API key email sta nel KV del Worker, non in Firestore; limite di 20 invii al minuto per utente.
+
+**Come tornare indietro**: rimuovere la chiamata a `/promemoria-cliente` dal form; i campi nuovi restano
+innocui. L'endpoint può restare senza essere chiamato.

@@ -19,5 +19,9 @@ id = "abfb75d75cfe4b5ba82a31c75fc9a5c8"
 binding = "PROMEMORIA"
 id = "b014f6a7ea764ccb910ba15d452d5f29"
 
+[[kv_namespaces]]
+binding = "EMAIL_CONFIG"
+id = "f70b070a45ee437ab21beaca321c169b"
+
 [triggers]
 crons = ["* * * * *"]
