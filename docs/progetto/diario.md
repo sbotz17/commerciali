@@ -650,3 +650,10 @@
   `flutter analyze` 0.
 - Nota: l'email resta non attiva su staging finché non viene inserita una API key Resend; WhatsApp usa il
   server reale.
+
+## 2026-10-25 — Correzione R-1
+
+- `preventivi_screen.dart`: la lista apre il preventivo scelto con `/preventivi/<id>` invece di `/preventivi/nuovo`.
+- Test di regressione in `test/preventivi_screen_test.dart`, verificato che fallisce senza la correzione.
+- `flutter analyze` 0, `flutter test` 882 verdi.
+- Prova UI sulla build pubblicata non eseguibile senza deploy su staging: rimandata, R-1 resta "corretto, prova UI in sospeso".

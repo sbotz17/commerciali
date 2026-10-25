@@ -31,7 +31,9 @@ async function cliccaTesto(page, needle, { timeout = 15000 } = {}) {
 }
 
 async function cliccaAria(page, label, { timeout = 15000 } = {}) {
-  const el = page.locator(`flt-semantics[aria-label="${label}"]`).first();
+  let el = page.locator(`flt-semantics[aria-label="${label}"]`).first();
+  const trovato = await el.count().then(n => n > 0).catch(() => false);
+  if (!trovato) el = page.locator('flt-semantics', { hasText: label }).last();
   await el.waitFor({ state: 'attached', timeout });
   await el.scrollIntoViewIfNeeded().catch(() => {});
   await page.waitForTimeout(200);
