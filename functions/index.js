@@ -134,3 +134,6 @@ exports.inviaPushNotifica = onDocumentCreated(
     );
   }
 );
+
+// Accesso con Face ID (passkey WebAuthn): funzioni in webauthn.js.
+Object.assign(exports, require("./webauthn"));
