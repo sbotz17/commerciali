@@ -144,3 +144,11 @@ rilascio resta bloccato finché `audit-completa.md` non è chiuso.
   con id deterministico; WhatsApp usa la coda KV del Worker e il cron esistente.
 - Gli orari di silenzio non sono applicati alla coda WhatsApp in questa fetta: dichiarato come residuo,
   non come funzione superata.
+
+## 2026-10-26 — Registro Avanza: task creato, webhook assente
+
+Il task **T-14** è stato creato in Avanza con il workflow `registra-ore.yml` (progetto Commerciali) e le ore
+sono state dichiarate per analista, sviluppatore-backend, sviluppatore-frontend e tester. Il repository
+`commerciali` **non ha il webhook GitHub** di Avanza: lo stato del task non si aggiorna da solo con ramo e
+PR. Va installato con l'azione `collegamento` del workflow (operazione di configurazione, senza segreti in
+chat); fino ad allora il coordinatore aggiorna lo stato a mano.
