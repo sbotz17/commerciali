@@ -73,6 +73,22 @@ comportamento voluto o se manca un'informazione nella UI.
 | Cliente | `xKBhY92L0ulvEQvScS2w` — "Audit Cliente 2026-10-25" |
 | Preventivo | `vSIzlNVigkQjffxgmgDi` — `PRV-0001`, 98,00 € |
 
+## Verifica della correzione R-1 (canale di anteprima)
+
+Build locale pubblicata su canale di anteprima (staging ospita ancora la versione precedente, come da gate):
+`https://commerciali-app--r1-preventivo-a20lnjm1.web.app` (scade il 28/10/2026).
+
+| Prova | Prima (build staging vecchia) | Dopo (build con correzione) |
+|---|---|---|
+| Clic su `PRV-0001` in elenco | "Nuovo preventivo", "Seleziona un cliente", "Nessuna riga" | **"Modifica preventivo"**, `Numero: PRV-0001`, `Revisione: 0` |
+| Cliente | assente | `Cliente R1 46200` |
+| Righe | nessuna | una riga presente (Scegli dal catalogo / Rimuovi riga) |
+| Totali | 0,00 € | `Subtotale 100,00 € · Imponibile 100,00 € · Totale 100,00 €` |
+| Azioni | solo "Salva preventivo" | **PDF** e "Salva preventivo" |
+
+Esito: **correzione verificata nella UI reale**. Il test automatico di regressione resta la difesa contro il
+ritorno del difetto.
+
 ## Nota: instabilità degli account di prova (chiarita)
 
 Durante le prove due utenti creati dallo script sono spariti e l'onboarding è sembrato incoerente. Causa:

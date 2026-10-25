@@ -677,3 +677,9 @@
 - Non era l'app: due sessioni usavano lo stesso file di stato e il cleanup di una cancellava l'utente dell'altra.
 - `scripts/e2e-ui-dati.py` ora crea un file di stato per esecuzione; `cleanup` accetta `E2E_STATO=<file>`.
 - Prova di controllo: utente creato con lo stesso metodo ancora attivo dopo 10 minuti.
+
+## 2026-10-25 — R-1 verificato in UI su canale di anteprima
+
+- Pubblicata la build con la correzione su `commerciali-app--r1-preventivo-a20lnjm1.web.app` (scade 28/10), senza toccare staging.
+- Clic su PRV-0001: si apre "Modifica preventivo" con numero, cliente, riga, totali 100,00 € e pulsante PDF.
+- R-1 CHIUSO. AU05 resta in corso: mancano revisioni e PDF nell'audit.
