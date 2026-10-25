@@ -109,3 +109,10 @@ ricostruisce con prove ripetibili, non con nuove funzioni.
 - **Blaze (decisione di Andrea del 25/10/2026)**: il progetto di staging `commerciali-app` era su **Spark**, quindi le Cloud Functions non si potevano pubblicare. Andrea ha scelto e attivato **Blaze** (stesso account di fatturazione della produzione). Alternativa scartata: Worker Cloudflare con chiave di servizio Firebase (credenziale di produzione in più e JWT firmati a mano) — più rischiosa.
 - **Pubblicato**: funzioni passkey e regole Firestore su `commerciali-app`; app su `https://commerciali-app.web.app`. Controllo live: sfida con RP ID corretto, bundle passkeys servito, pulsante presente nel codice. La funzione push esistente non è stata modificata.
 - **Stato**: codice nel ramo `feature/face-id-login` (base `feature/agenda-notifiche-chat`), 893 test verdi, analyze 0, build web OK. Manca solo la prova su iPhone (strumento di prova della squadra) e poi la produzione.
+
+## 2026-10-25 — Aggiornamento automatico della web app (richiesta di Andrea)
+
+- **Problema**: dopo una pubblicazione la web app installata poteva servire la versione vecchia finché non la si chiudeva e riapriva due volte. Andrea vuole che si aggiorni da sola al primo accesso, o automaticamente se è già collegato.
+- **Soluzione**: script `flutter_app/web/aggiornamento.js` caricato **prima** di Flutter. Confronta l'impronta di `flutter_service_worker.js` (fetch con cache bypassata) con quella salvata; se cambia, cancella cache e service worker e ricarica **una volta** (guardia di 60 secondi per evitare cicli). Controllo all'apertura e al ritorno in primo piano, al massimo una volta al minuto. La sessione Firebase resta.
+- **Prima adozione**: questa stessa pubblicazione non può auto-aggiornarsi, perché il codice precedente non ha il meccanismo; serve un ultimo aggiornamento manuale. Dalla prossima in poi è automatico.
+- **Limite**: se l'utente sta compilando un modulo e l'app torna visibile con una versione nuova, il ricaricamento può perdere i dati non salvati. Scelta accettata da Andrea (aggiornamento automatico); in cambio nessun dato viene inviato al server né salvato in automatico.

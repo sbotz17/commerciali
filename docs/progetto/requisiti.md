@@ -818,3 +818,13 @@ Requisiti:
 5. La passkey è legata all'indirizzo ufficiale (RP ID): indirizzi diversi sono siti diversi. Staging `commerciali-app.web.app`, produzione `commerciali-prod.web.app`; ognuno ha le sue passkey.
 6. Nessun dato biometrico nell'app o su Firebase: la chiave privata resta sul dispositivo, il server conserva solo la chiave pubblica. Mai token nei log.
 7. Password sempre come riserva e per il recupero account.
+
+## Aggiornamento automatico della web app — 2026-10-25
+
+Requisito di Andrea: la web app deve aggiornarsi da sola, **senza chiudere e riaprire due volte**; al primo accesso dopo una pubblicazione deve già essere la versione nuova, e se l'utente è collegato l'aggiornamento deve essere trovato in automatico senza fargli rifare il login.
+
+Come funziona:
+1. All'apertura, prima di caricare Flutter, l'app confronta l'impronta del service worker sul server con quella dell'ultima apertura.
+2. Se è cambiata, cancella cache e service worker e ricarica una volta sola: la sessione Firebase resta (nessun nuovo login).
+3. Il controllo si ripete quando l'app torna visibile, al massimo una volta al minuto.
+4. La primissima adozione del meccanismo richiede un ultimo aggiornamento manuale: il codice vecchio non può aggiornarsi da solo. Dalla successiva pubblicazione in poi è automatico.
