@@ -173,7 +173,7 @@ automatici, prova E2E reale nella UI, report tester e validazione. Piano: `docs/
 | AU01 | Auth e onboarding | login/reset/Google/onboarding/ruoli provati nella UI | tester | BLOCCATO (Google OAuth) |
 | AU02 | Dashboard | conteggi e dati corretti per azienda | tester | DA FARE |
 | AU03 | Clienti | CRUD, VIES, duplicati, persistenza | tester | FATTO (SUPERATA, report 25/10) |
-| AU04 | Catalogo | prodotti, categorie, panieri, immagini | tester | DA FARE |
+| AU04 | Catalogo | prodotti, categorie, panieri, immagini | tester | FATTO (SUPERATA; immagini e eliminazione da provare) |
 | AU05 | Preventivi | numero, totali, revisioni, PDF | tester | IN CORSO (R-1 corretto e verificato; restano revisioni e PDF) |
 | AU06 | Visite | CRUD, riordino, stati, calendario | tester | DA FARE |
 | AU07 | Calendario | viste, ricorrenza, privato, partecipanti, call, allegati | tester | DA FARE |

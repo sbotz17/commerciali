@@ -700,3 +700,9 @@
   al vecchio `/send`. Aggiunto **Invia di nuovo** nel dettaglio con conferma.
 - Regole `utenti` rafforzate contro l'auto-promozione a super admin (test E2E 403).
 - CI GitHub Actions per analisi e test; `flutter test` 900 verdi; test Worker 13 verdi.
+
+## 2026-10-26 — Audit ondata 2: Catalogo
+
+- AU04 SUPERATA sulle voci provate: categoria, tre prodotti con codice/prezzo/categoria, ricerca, filtro con stato vuoto, paniere con 2 figli, persistenza dopo ricarica.
+- Non provati: immagine prodotto ed eliminazione.
+- Prova su canale di anteprima, staging non toccato; dati di test rimossi.
