@@ -654,6 +654,9 @@ const String azioneModificaVoce = 'modifica';
 const String azioneEliminaVoce = 'elimina';
 const String azioneApriTaskVoce = 'apri-task';
 
+/// Azione di modifica del cliente collegato all'appuntamento.
+const String azioneModificaClienteVoce = 'modifica-cliente';
+
 /// Azioni di risposta a un invito di condivisione.
 const String azioneConfermaInvitoVoce = 'conferma-invito';
 const String azioneRifiutaInvitoVoce = 'rifiuta-invito';

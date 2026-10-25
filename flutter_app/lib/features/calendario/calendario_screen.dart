@@ -16,11 +16,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/stato_centrato.dart';
 import '../../data/models/allegato.dart';
+import '../../data/models/cliente.dart';
 import '../../data/models/appuntamento.dart';
 import '../../data/models/task_item.dart';
 import '../../data/models/user_profile.dart';
 import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
+import '../clienti/clienti_screen.dart' show ClienteFormScreen;
 import '../visite/visite_screen.dart' show dataIsoVisita, formattaDataVisita;
 import 'appuntamento_form_screen.dart'
     show
@@ -263,6 +265,20 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
         // Il dettaglio resta disponibile anche senza allegati.
       }
     }
+    Cliente? cliente;
+    final appuntamento = elemento.appuntamento;
+    final clienteId = appuntamento?.clienteId?.trim() ?? '';
+    if (appuntamento != null &&
+        clienteId.isNotEmpty &&
+        puoVedereDettagliAppuntamento(appuntamento, _uidCorrente)) {
+      try {
+        final servizio = ref.read(spServiceProvider);
+        servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+        cliente = await servizio.getCliente(clienteId);
+      } catch (_) {
+        // Il dettaglio resta disponibile anche senza i dati del cliente.
+      }
+    }
     if (!mounted) return;
     final azione = await showDialog<String>(
       context: context,
@@ -270,6 +286,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
         elemento: elemento,
         nomiOperatori: _nomiOperatori,
         uidCorrente: _uidCorrente,
+        cliente: cliente,
         allegati: allegati,
         onApriAllegato: _apriAllegatoDaDettaglio,
       ),
@@ -281,17 +298,52 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       return;
     }
 
-    final appuntamento = elemento.appuntamento;
     if (appuntamento == null) return;
     if (azione == azioneModificaVoce) {
       await _modificaAppuntamento(appuntamento);
     } else if (azione == azioneEliminaVoce) {
       await _eliminaAppuntamento(appuntamento);
+    } else if (azione == azioneModificaClienteVoce) {
+      if (cliente != null) await _modificaCliente(cliente, appuntamento);
     } else if (azione == azioneConfermaInvitoVoce ||
         azione == azioneRifiutaInvitoVoce) {
       await _rispondiInvito(
         appuntamento,
         disponibile: azione == azioneConfermaInvitoVoce,
+      );
+    }
+  }
+
+  /// Apre il cliente collegato, salva e aggiorna il nome denormalizzato
+  /// nell'appuntamento.
+  Future<void> _modificaCliente(
+    Cliente cliente,
+    Appuntamento appuntamento,
+  ) async {
+    final salvato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => ClienteFormScreen(cliente: cliente)),
+    );
+    if (salvato != true || !mounted) return;
+
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final aggiornato = await servizio.getCliente(cliente.id);
+      if (aggiornato != null &&
+          (aggiornato.nome ?? '') != (appuntamento.clienteNome ?? '')) {
+        await servizio.aggiornaNomeClienteAppuntamento(
+          appuntamento.id,
+          aggiornato.nome,
+        );
+      }
+      await _carica();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Cliente aggiornato')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cliente non aggiornato. Riprova.')),
       );
     }
   }
@@ -1121,6 +1173,7 @@ class _DialogoElemento extends StatelessWidget {
     required this.elemento,
     required this.nomiOperatori,
     this.uidCorrente,
+    this.cliente,
     this.allegati = const [],
     this.onApriAllegato,
   });
@@ -1128,6 +1181,7 @@ class _DialogoElemento extends StatelessWidget {
   final ElementoAgenda elemento;
   final Map<String, String> nomiOperatori;
   final String? uidCorrente;
+  final Cliente? cliente;
   final List<Allegato> allegati;
   final ValueChanged<Allegato>? onApriAllegato;
 
@@ -1215,6 +1269,81 @@ class _DialogoElemento extends StatelessWidget {
                 etichetta: 'Cliente e utente',
                 valore: dettaglioElemento(elemento, nomiOperatori),
               ),
+            if (dettagliVisibili && cliente != null) ...[
+              const Divider(height: AppSpazi.l),
+              Text('Cliente', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: AppSpazi.xs),
+              if (cliente!.tipoCliente.trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Tipo',
+                  valore: cliente!.tipoCliente.trim(),
+                ),
+              if ((cliente!.nome ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Nome',
+                  valore: cliente!.nome!.trim(),
+                ),
+              if ((cliente!.referente ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Referente',
+                  valore: cliente!.referente!.trim(),
+                ),
+              if ((cliente!.telefono ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Telefono',
+                  valore: cliente!.telefono!.trim(),
+                ),
+              if ((cliente!.email ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Email',
+                  valore: cliente!.email!.trim(),
+                ),
+              if ((cliente!.piva ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'P.IVA',
+                  valore: cliente!.piva!.trim(),
+                ),
+              if ((cliente!.codiceFiscale ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Codice fiscale',
+                  valore: cliente!.codiceFiscale!.trim(),
+                ),
+              if (indirizzoCliente(cliente!).isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Indirizzo',
+                  valore: indirizzoCliente(cliente!),
+                ),
+              if ((cliente!.settore ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Settore',
+                  valore: cliente!.settore!.trim(),
+                ),
+              if ((cliente!.ateco ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'ATECO',
+                  valore: cliente!.ateco!.trim(),
+                ),
+              if ((cliente!.regione ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Regione',
+                  valore: cliente!.regione!.trim(),
+                ),
+              if ((cliente!.note ?? '').trim().isNotEmpty)
+                _RigaDettaglio(
+                  etichetta: 'Note cliente',
+                  valore: cliente!.note!.trim(),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  key: const Key('calendario-modifica-cliente'),
+                  onPressed: () =>
+                      Navigator.of(context).pop(azioneModificaClienteVoce),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Modifica cliente'),
+                ),
+              ),
+            ],
             if (dettagliVisibili && invitati.isNotEmpty) ...[
               _RigaDettaglio(
                 etichetta: 'Condivisione',
@@ -1337,6 +1466,21 @@ class _DialogoElemento extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Indirizzo completo del cliente, con le parti presenti.
+String indirizzoCliente(Cliente cliente) {
+  final parti =
+      [
+            cliente.indirizzo,
+            cliente.civico,
+            cliente.cap,
+            cliente.citta,
+            cliente.provincia,
+          ]
+          .where((parte) => (parte ?? '').trim().isNotEmpty)
+          .map((parte) => parte!.trim());
+  return parti.join(', ');
 }
 
 /// Riga etichetta/valore del dialogo di dettaglio.

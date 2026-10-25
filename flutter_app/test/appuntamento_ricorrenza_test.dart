@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:commerciali_app/core/theme/app_theme.dart';
 import 'package:commerciali_app/data/models/appuntamento.dart';
+import 'package:commerciali_app/data/models/cliente.dart';
 import 'package:commerciali_app/data/services/sp_service.dart';
 import 'package:commerciali_app/features/calendario/calendario_screen.dart';
 
@@ -239,6 +240,25 @@ void main() {
       expect(dettagli['titolo'], 'Visita riservata');
       expect(dettagli['luogo'], 'Sede');
       expect(dettagli['note'], 'Segreto');
+    });
+  });
+
+  group('dettagli cliente nel dettaglio appuntamento', () {
+    test('compone l\'indirizzo con le parti presenti', () {
+      const cliente = Cliente(
+        id: 'c1',
+        nome: 'ACME',
+        indirizzo: 'Via Roma',
+        civico: '1',
+        cap: '20100',
+        citta: 'Milano',
+        provincia: 'MI',
+      );
+      expect(indirizzoCliente(cliente), 'Via Roma, 1, 20100, Milano, MI');
+      expect(
+        indirizzoCliente(const Cliente(id: 'c2', citta: 'Torino')),
+        'Torino',
+      );
     });
   });
 

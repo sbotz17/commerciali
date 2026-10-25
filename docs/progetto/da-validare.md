@@ -70,3 +70,9 @@ impediscono il funzionamento della versione precedente.
 - **Appuntamento privato**: dettagli in sotto-collezione protetta; gli altri vedono solo la fascia occupata.
 - R2 e Cloud Functions/Blaze non sono attivi: la soluzione attuale usa KV e Worker. I promemoria partono
   via WhatsApp dal Cron; il push/in-App programmato richiede Blaze. I test sono della squadra.
+
+### Aggiornamento — cliente dall’appuntamento
+
+- Aprendo un appuntamento si vedono i dettagli del cliente collegato.
+- Il pulsante **Modifica cliente** apre la scheda cliente e aggiorna l’appuntamento.
+- I test sono della squadra (863 test, analyze 0); non serve eseguirli.

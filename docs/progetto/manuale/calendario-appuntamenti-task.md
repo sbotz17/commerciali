@@ -48,6 +48,10 @@ L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invit
 disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
 **Confermo** e **Non disponibile**.
 
+Nel dettaglio dell'appuntamento trovi anche i **dati del cliente collegato** (nome, referente, contatti,
+P.IVA, indirizzo e note). Il pulsante **Modifica cliente** apre la scheda del cliente; dopo il salvataggio
+il nome aggiornato viene riportato anche sull'appuntamento.
+
 Quando un invitato risponde, chi ha creato l'appuntamento e l'utente assegnato ricevono una **notifica
 In-App**. Se hanno attivato WhatsApp nelle proprie preferenze, ricevono anche un messaggio WhatsApp.
 Per attivarlo: **Impostazioni → Notifiche → WhatsApp**, inserisci il numero e attiva il consenso.

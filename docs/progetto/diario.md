@@ -598,3 +598,12 @@
 - `squadraalphalab` riorganizzato: `CLAUDE.md` di 92 righe e sei skill `/squadra-*` caricate solo quando servono; testo integrale in `archive/`.
 - Installate su questo Mac in `~/.claude/CLAUDE.md` e `~/.claude/skills/` con `local-setup/sync-regole.sh` (provato: 6 skill).
 - La sincronizzazione automatica via GitHub Action era rotta da sempre (secret `SYNC_TOKEN` assente): ora il workflow scrive nel file giusto (`AGENTS.md` se c'è) e copia le skill in `.claude/skills/`; serve il token di Andrea.
+
+## 2026-10-25 — Dettaglio cliente dall’appuntamento
+
+- Il dettaglio appuntamento carica il cliente collegato con `getCliente` e mostra nome, referente, telefono,
+  email, P.IVA, codice fiscale, indirizzo, settore, ATECO, regione e note.
+- Pulsante **Modifica cliente**: apre `ClienteFormScreen`; dopo il salvataggio aggiorna il nome
+  denormalizzato sull’appuntamento e ricarica l’agenda.
+- Nessun dato cliente viene mostrato se l’appuntamento privato non è visibile all’utente.
+- `flutter analyze` 0; `flutter test` 863 verdi; app pubblicata.

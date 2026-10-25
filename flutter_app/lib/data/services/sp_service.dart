@@ -314,7 +314,8 @@ String normalizzaNumeroWhatsapp(String? numero) =>
 /// Il server storico usa `connesso` e `numero`; la schermata usa
 /// `connected` e `number`. Accetta entrambi senza perdere gli altri campi.
 Map<String, dynamic> normalizzaStatoWhatsapp(Map<String, dynamic> dati) {
-  final connected = dati['connected'] == true ||
+  final connected =
+      dati['connected'] == true ||
       dati['connesso'] == true ||
       dati['stato'] == 'aperta';
   final numero = dati['number'] ?? dati['numero'];
@@ -821,6 +822,20 @@ class SpService {
     return clienti;
   }
 
+  /// Legge un singolo cliente dell'azienda attiva.
+  ///
+  /// Ritorna `null` se non esiste o se non appartiene all'azienda attiva.
+  Future<Cliente?> getCliente(String id) async {
+    final aziendaId = _aziendaAttiva;
+    final clienteId = id.trim();
+    if (aziendaId == null || clienteId.isEmpty) return null;
+    final snap = await _firestore.collection('clienti').doc(clienteId).get();
+    final dati = snap.data();
+    if (!snap.exists || dati == null) return null;
+    if ((dati['azienda_id'] ?? '').toString() != aziendaId) return null;
+    return Cliente.fromMap(dati, id: snap.id);
+  }
+
   /// Cerca un cliente duplicato nell'azienda attiva.
   ///
   /// Il confronto usa [clienteDuplicato] (P.IVA, poi nome, poi codice fiscale).
@@ -1167,6 +1182,17 @@ class SpService {
       }
     }
     return {'id': id, ...patch};
+  }
+
+  /// Aggiorna solo il nome cliente denormalizzato di un appuntamento.
+  ///
+  /// Usato quando si modifica il cliente dal dettaglio dell'appuntamento:
+  /// evita di riscrivere tutti gli altri campi.
+  Future<void> aggiornaNomeClienteAppuntamento(String id, String? nome) async {
+    await _firestore.collection('appuntamenti').doc(id).update({
+      'cliente_nome': (nome ?? '').trim(),
+      'updated_at': _now(),
+    });
   }
 
   /// Elimina l'appuntamento con l'[id] indicato.
