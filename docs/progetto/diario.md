@@ -671,3 +671,9 @@
 - Nessun file è stato perso. Stato del ramo dopo il fatto: `flutter analyze` 0, `flutter test` 894 verdi (882 + 12 test della funzione passkey).
 - La funzione passkey resta **non validata**: deve passare da tester e validatore con prova UI prima di entrare nell'audit o in un rilascio.
 - Da ora i commit si fanno con percorsi espliciti, mai `git add -A`.
+
+## 2026-10-25 — Causa degli account di prova che sparivano
+
+- Non era l'app: due sessioni usavano lo stesso file di stato e il cleanup di una cancellava l'utente dell'altra.
+- `scripts/e2e-ui-dati.py` ora crea un file di stato per esecuzione; `cleanup` accetta `E2E_STATO=<file>`.
+- Prova di controllo: utente creato con lo stesso metodo ancora attivo dopo 10 minuti.

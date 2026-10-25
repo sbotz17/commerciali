@@ -10,7 +10,15 @@ npm install
 ```
 
 L'utente di prova si crea con `python3 scripts/e2e-ui-dati.py setup` (solo staging), che stampa email,
-password e azienda.
+password e percorso del file di stato.
+
+Ogni setup scrive un file di stato suo (`e2e-ui-<suffisso>.json`). Per pulire:
+
+```bash
+E2E_STATO=<file stampato> python3 scripts/e2e-ui-dati.py cleanup
+```
+
+Non usare un file di stato condiviso: due sessioni in parallelo si cancellerebbero l'utente a vicenda.
 
 ## Esecuzione
 

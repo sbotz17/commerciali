@@ -22,7 +22,26 @@ from pathlib import Path
 API_KEY = "AIzaSyC1u1OVQxcgHXoKx_oWq_9Rv_YUqW43da4"
 PROJECT = "commerciali-app"
 BASE = f"https://firestore.googleapis.com/v1/projects/{PROJECT}/databases/(default)/documents"
-STATO = Path("/private/var/folders/7y/_z37qnm16b73jbqgc5kysdvw0000gn/T/opencode/e2e-ui.json")
+# Ogni esecuzione usa un file di stato suo, salvo E2E_STATO esplicito.
+# Serve a non far cancellare l'utente di una sessione da un cleanup di un'altra.
+BASE_STATO = Path("/private/var/folders/7y/_z37qnm16b73jbqgc5kysdvw0000gn/T/opencode")
+
+
+def percorso_stato(suffisso: str | None = None) -> Path:
+    """File di stato della prova.
+
+    Con `E2E_STATO` si usa quel percorso. Altrimenti ogni setup crea il suo file
+    (`e2e-ui-<suffisso>.json`), cosi' il cleanup di una sessione non cancella
+    l'utente di un'altra. Il cleanup senza suffisso usa il file legacy.
+    """
+    esplicito = os.environ.get("E2E_STATO")
+    if esplicito:
+        return Path(esplicito)
+    if suffisso:
+        return BASE_STATO / f"e2e-ui-{suffisso}.json"
+    legacy = BASE_STATO / "e2e-ui-legacy.json"
+    vecchio = BASE_STATO / "e2e-ui.json"
+    return legacy if legacy.exists() else vecchio
 PASSWORD = "E2eTest12345!"
 
 
@@ -133,12 +152,13 @@ def setup():
             print("setup:", st, d)
             return 1
 
-        STATO.parent.mkdir(parents=True, exist_ok=True)
-        STATO.write_text(json.dumps({
+        stato = percorso_stato(suffix)
+        stato.parent.mkdir(parents=True, exist_ok=True)
+        stato.write_text(json.dumps({
             "uid": uid, "azienda": az, "email": email, "password": PASSWORD,
         }, indent=2))
         print("PRONTO", email, az)
-        print("stato:", STATO)
+        print("stato:", stato)
         return 0
     except Exception as e:
         print("ERRORE setup:", e)
@@ -146,10 +166,16 @@ def setup():
 
 
 def cleanup():
-    if not STATO.exists():
+    stato = percorso_stato()
+    if not stato.exists():
         print("nessuno stato da pulire")
+        candidati = sorted(BASE_STATO.glob("e2e-ui-*.json"))
+        if candidati:
+            print("file di stato disponibili (usa E2E_STATO=<file>):")
+            for c in candidati:
+                print(" -", c)
         return 0
-    dati = json.loads(STATO.read_text())
+    dati = json.loads(stato.read_text())
     admin = admin_token()
     uid, az = dati["uid"], dati["azienda"]
     # Elimina tutti i documenti delle collezioni per azienda creati dalla prova.
@@ -174,7 +200,7 @@ def cleanup():
         call("DELETE", f"{BASE}/{path}", token=admin)
     call("POST", f"https://identitytoolkit.googleapis.com/v1/projects/{PROJECT}/accounts:delete",
          {"localId": uid}, admin)
-    STATO.unlink(missing_ok=True)
+    stato.unlink(missing_ok=True)
     print("PULITO")
     return 0
 

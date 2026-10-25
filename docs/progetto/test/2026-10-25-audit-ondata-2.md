@@ -73,6 +73,19 @@ comportamento voluto o se manca un'informazione nella UI.
 | Cliente | `xKBhY92L0ulvEQvScS2w` — "Audit Cliente 2026-10-25" |
 | Preventivo | `vSIzlNVigkQjffxgmgDi` — `PRV-0001`, 98,00 € |
 
+## Nota: instabilità degli account di prova (chiarita)
+
+Durante le prove due utenti creati dallo script sono spariti e l'onboarding è sembrato incoerente. Causa:
+**due sessioni di lavoro hanno usato lo stesso file di stato** (`/tmp/opencode/e2e-ui.json`); il `cleanup`
+di una sessione ha cancellato utente e azienda dell'altra mentre la prova era in corso.
+
+Non è un difetto dell'app. Verificato con una prova dedicata: un utente creato con lo stesso metodo è
+ancora presente e funzionante dopo 10 minuti.
+
+Correzione nello strumento: `scripts/e2e-ui-dati.py` ora crea un file di stato per esecuzione
+(`e2e-ui-<suffisso>.json`) e `cleanup` accetta `E2E_STATO=<file>`. Le sessioni in parallelo non si
+cancellano più a vicenda.
+
 ## Verdetto
 
 - **AU03 Clienti**: `SUPERATA`.
