@@ -89,6 +89,26 @@ Staging non è una sandbox: è ciò che Andrea apre per vedere il prodotto. Non 
   indietro e si corregge.
 - La produzione resta più stretta: guardiano `GO`, backup verificato, rollback pronto.
 
+## Un blocco funzionale per volta
+
+Più sessioni possono lavorare **solo** su blocchi funzionali diversi. Lo stesso blocco non si tocca da due
+sessioni: la seconda richiesta si **blocca e si mette in coda**, senza ramo, senza codice e senza pubblicare.
+
+- La mappa è in `docs/progetto/blocchi.md`; se la richiesta non rientra in un blocco, il coordinatore lo
+  aggiunge **prima** di iniziare. Anche routing, shell, regole, CI, `pubspec` e deploy sono blocchi condivisi.
+- Prima di iniziare: `python3 scripts/blocco-squadra.py stato` e `coda-lista`. Se lo script manca, **non si
+  lavora**: si segnala e si usa la copia globale `~/.claude/scripts/blocco-squadra.py`. Se c'è già qualcuno
+  in coda, ci si mette in coda anche a blocco libero.
+- Blocco libero e coda vuota: `occupa` con richiesta e sessione. Blocco occupato: `coda` e si risponde ad
+  Andrea: «Non posso partire: sul blocco <X> è già in corso <richiesta> (sessione <Y>, iniziata <data>).
+  Ho messo la tua in coda al posto N. Posso lavorare su un altro blocco, se vuoi.»
+- Se la richiesta tocca più blocchi: si divide; se non si può, si occupano in ordine alfabetico. Se il
+  secondo è occupato, si rilascia subito il primo e si aspetta: non si tengono blocchi mentre si aspetta.
+- `rilascia` lo fa solo la sessione che ha occupato, con un motivo. Un blocco fermo da più di 24 ore non si
+  libera senza prova che non c'è lavoro in corso e senza avvisare Andrea.
+- Un solo rilascio alla volta. La coda è FIFO; solo Andrea cambia priorità. Anche un hotfix occupa il blocco:
+  l'urgenza autorizzata da Andrea salta la coda, non il blocco.
+
 ## Il validatore approva solo con prove
 
 - Non approva leggendo il codice: riesegue almeno il flusso principale nell'ambiente di prova.
