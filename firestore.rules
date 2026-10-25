@@ -205,7 +205,14 @@ service cloud.firestore {
         && request.resource.data.utente_uid == uid();
     }
     match /impostazioni_notifiche/{id} {
-      allow read: if signedIn() && (resource.data.utente_uid == uid() || isSuper());
+      // `resource == null` copre il primo accesso: il documento non esiste
+      // ancora e senza questa condizione Firestore risponde `permission-denied`
+      // anche se l'utente sta leggendo solo le proprie preferenze. Il controllo
+      // sul suffisso `_<uid>` evita di rivelare l'esistenza delle preferenze
+      // di altri utenti.
+      allow read: if signedIn() && (
+        (resource == null && id.matches('.*_' + uid()))
+        || resource.data.utente_uid == uid() || isSuper());
       allow create: if signedIn() && request.resource.data.utente_uid == uid();
       allow update: if signedIn() && resource.data.utente_uid == uid();
       allow delete: if signedIn() && resource.data.utente_uid == uid();

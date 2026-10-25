@@ -1,7 +1,9 @@
 # Audit completo dell'applicazione — piano di verifica
 
 **Data**: 24/10/2026
-**Stato**: in corso — due audit bloccanti aperti; prove del 25/10 eseguite, entrambe BLOCCATE
+**Stato**: in corso — registro per funzione aggiornato al 26/10 in
+`docs/progetto/test/2026-10-26-registro-funzionalita.md`; AU03 e AU04 SUPERATE (con voci residue),
+AU05/AU01/AU06/AU07/AU08/AU12 IN CORSO, AU09 FALLITA (R-2), AU10/AU15 BLOCCATE.
 **Gate**: obbligatorio prima di **ogni pubblicazione su staging e produzione**.
 **Regola**: nessuna nuova funzione e nessun rilascio finché un'area non ha report tester + validatore.
 **Responsabilità**: la squadra esegue i test; Andrea riceve solo la validazione finale.
