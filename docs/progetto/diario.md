@@ -683,3 +683,9 @@
 - Pubblicata la build con la correzione su `commerciali-app--r1-preventivo-a20lnjm1.web.app` (scade 28/10), senza toccare staging.
 - Clic su PRV-0001: si apre "Modifica preventivo" con numero, cliente, riga, totali 100,00 € e pulsante PDF.
 - R-1 CHIUSO. AU05 resta in corso: mancano revisioni e PDF nell'audit.
+
+## 2026-10-25 — R-1 chiuso, tester e validatore
+
+- Tester: `SUPERATO` con prova UI su canale di anteprima, report `test/2026-10-25-r1-esito.md` e screenshot.
+- Validatore: `APPROVATO`; non ha potuto rieseguire i comandi per un limite di permessi dell'ambiente, ha verificato codice, test e coerenza delle prove.
+- Dati di prova rimossi da staging con `E2E_STATO`.
