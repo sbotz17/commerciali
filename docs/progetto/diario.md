@@ -607,3 +607,10 @@
   denormalizzato sull’appuntamento e ricarica l’agenda.
 - Nessun dato cliente viene mostrato se l’appuntamento privato non è visibile all’utente.
 - `flutter analyze` 0; `flutter test` 863 verdi; app pubblicata.
+
+## 2026-10-25 — Audit ondata 2: Clienti e Preventivi
+
+- AU03 Clienti SUPERATA: creazione, elenco, ricerca, duplicati, VIES valida e non valida, modifica, persistenza (prove UI reali).
+- AU05 Preventivi FALLITA: creazione, numerazione PRV-0001 e totali con sconto OK, ma riaprire un preventivo apre un editor vuoto. Bug R-1 confermato, causa `preventivi_screen.dart:160`.
+- Creato il banco di prova UI riutilizzabile `scripts/audit-ui/` (Playwright su staging).
+- Report: `docs/progetto/test/2026-10-25-audit-ondata-2.md`.
