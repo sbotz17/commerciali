@@ -706,3 +706,10 @@
 - AU04 SUPERATA sulle voci provate: categoria, tre prodotti con codice/prezzo/categoria, ricerca, filtro con stato vuoto, paniere con 2 figli, persistenza dopo ricarica.
 - Non provati: immagine prodotto ed eliminazione.
 - Prova su canale di anteprima, staging non toccato; dati di test rimossi.
+
+## 2026-10-25 — Prima card cliente con titolo
+
+- La card **Cliente e appuntamento** è la prima del form: contiene il **titolo** come primo campo, poi
+  cliente (con **+** nuovo cliente) e operatore.
+- La card **Data e ora** segue; **Luogo e note** resta subito sotto.
+- Test widget aggiornato sull'ordine; screenshot `2026-10-25-form-luogo-note-ordine.png` rifatto.

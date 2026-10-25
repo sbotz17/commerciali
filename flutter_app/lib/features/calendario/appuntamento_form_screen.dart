@@ -1446,7 +1446,7 @@ class _AppuntamentoFormScreenState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _SezioneAppuntamento(
-                      titolo: 'Appuntamento',
+                      titolo: 'Cliente e appuntamento',
                       figli: [
                         TextFormField(
                           key: const Key('appuntamento-titolo'),
@@ -1460,6 +1460,103 @@ class _AppuntamentoFormScreenState
                           ),
                           validator: validaTitoloAppuntamento,
                         ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                key: const Key('appuntamento-cliente'),
+                                initialValue: _clienteId ?? '',
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Cliente',
+                                  helperText: _caricamentoClienti
+                                      ? 'Caricamento clienti…'
+                                      : null,
+                                ),
+                                items: [
+                                  const DropdownMenuItem(
+                                    value: '',
+                                    child: Text('Nessun cliente'),
+                                  ),
+                                  for (final voce in opzioniClienti.entries)
+                                    DropdownMenuItem(
+                                      value: voce.key,
+                                      child: Text(
+                                        voce.value,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                ],
+                                onChanged: _salvando || _caricamentoClienti
+                                    ? null
+                                    : (valore) => setState(() {
+                                        _clienteId =
+                                            (valore == null || valore.isEmpty)
+                                            ? null
+                                            : valore;
+                                      }),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpazi.xxs),
+                            IconButton.filledTonal(
+                              key: const Key('appuntamento-nuovo-cliente'),
+                              tooltip: 'Nuovo cliente',
+                              onPressed: _salvando ? null : _creaCliente,
+                              icon: const Icon(Icons.add),
+                            ),
+                          ],
+                        ),
+                        DropdownButtonFormField<String>(
+                          key: const Key('appuntamento-operatore'),
+                          initialValue: _operatoreId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: 'Utente',
+                            hintText: 'Scegli un utente',
+                            helperText: _caricamentoUtenti
+                                ? 'Caricamento utenti…'
+                                : null,
+                          ),
+                          items: [
+                            for (final voce in opzioniOperatori.entries)
+                              DropdownMenuItem(
+                                value: voce.key,
+                                child: Text(
+                                  voce.value,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                          ],
+                          onChanged: _salvando || _caricamentoUtenti
+                              ? null
+                              : (valore) =>
+                                    setState(() => _operatoreId = valore),
+                        ),
+                      ],
+                      extra: [
+                        if (_erroreClienti != null) ...[
+                          AvvisoErrore(
+                            key: const Key('errore-clienti-appuntamento'),
+                            testo: messaggioErroreAppuntamenti(_erroreClienti!),
+                          ),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              key: const Key('riprova-clienti-appuntamento'),
+                              onPressed: _salvando ? null : _caricaDati,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Riprova clienti'),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: AppSpazi.m),
+                    _SezioneAppuntamento(
+                      titolo: 'Data e ora',
+                      figli: [
                         Row(
                           children: [
                             Expanded(
@@ -1951,102 +2048,6 @@ class _AppuntamentoFormScreenState
                       ],
                     ),
                     const SizedBox(height: AppSpazi.m),
-                    _SezioneAppuntamento(
-                      titolo: 'Partecipanti',
-                      figli: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                key: const Key('appuntamento-cliente'),
-                                initialValue: _clienteId ?? '',
-                                isExpanded: true,
-                                decoration: InputDecoration(
-                                  labelText: 'Cliente',
-                                  helperText: _caricamentoClienti
-                                      ? 'Caricamento clienti…'
-                                      : null,
-                                ),
-                                items: [
-                                  const DropdownMenuItem(
-                                    value: '',
-                                    child: Text('Nessun cliente'),
-                                  ),
-                                  for (final voce in opzioniClienti.entries)
-                                    DropdownMenuItem(
-                                      value: voce.key,
-                                      child: Text(
-                                        voce.value,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                ],
-                                onChanged: _salvando || _caricamentoClienti
-                                    ? null
-                                    : (valore) => setState(() {
-                                        _clienteId =
-                                            (valore == null || valore.isEmpty)
-                                            ? null
-                                            : valore;
-                                      }),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpazi.xxs),
-                            IconButton.filledTonal(
-                              key: const Key('appuntamento-nuovo-cliente'),
-                              tooltip: 'Nuovo cliente',
-                              onPressed: _salvando ? null : _creaCliente,
-                              icon: const Icon(Icons.add),
-                            ),
-                          ],
-                        ),
-                        DropdownButtonFormField<String>(
-                          key: const Key('appuntamento-operatore'),
-                          initialValue: _operatoreId,
-                          isExpanded: true,
-                          decoration: InputDecoration(
-                            labelText: 'Utente',
-                            hintText: 'Scegli un utente',
-                            helperText: _caricamentoUtenti
-                                ? 'Caricamento utenti…'
-                                : null,
-                          ),
-                          items: [
-                            for (final voce in opzioniOperatori.entries)
-                              DropdownMenuItem(
-                                value: voce.key,
-                                child: Text(
-                                  voce.value,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                          ],
-                          onChanged: _salvando || _caricamentoUtenti
-                              ? null
-                              : (valore) =>
-                                    setState(() => _operatoreId = valore),
-                        ),
-                      ],
-                      extra: [
-                        if (_erroreClienti != null) ...[
-                          AvvisoErrore(
-                            key: const Key('errore-clienti-appuntamento'),
-                            testo: messaggioErroreAppuntamenti(_erroreClienti!),
-                          ),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton.icon(
-                              key: const Key('riprova-clienti-appuntamento'),
-                              onPressed: _salvando ? null : _caricaDati,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Riprova clienti'),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
                     const SizedBox(height: AppSpazi.m),
                     _SezioneAppuntamento(
                       titolo: 'Avviso al cliente',

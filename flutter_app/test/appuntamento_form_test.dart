@@ -153,8 +153,9 @@ void main() {
     Future<void> apriForm(
       WidgetTester tester, {
       Appuntamento? appuntamento,
+      Size dimensione = const Size(1000, 2400),
     }) async {
-      tester.view.physicalSize = const Size(1000, 2400);
+      tester.view.physicalSize = dimensione;
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
@@ -223,14 +224,26 @@ void main() {
       expect(find.textContaining('Seleziona un cliente'), findsOneWidget);
     });
 
-    testWidgets('Luogo e note sta subito sotto data e ora', (tester) async {
-      await apriForm(tester);
+    testWidgets('cliente e titolo sono nella prima card, luogo sotto data', (
+      tester,
+    ) async {
+      await apriForm(tester, dimensione: const Size(400, 2400));
 
-      final appuntamento = tester.getTopLeft(find.text('APPUNTAMENTO')).dy;
+      final cliente = tester.getTopLeft(find.text('CLIENTE E APPUNTAMENTO')).dy;
+      final titolo = tester
+          .getTopLeft(find.byKey(const Key('appuntamento-titolo')))
+          .dy;
+      final clienteCampo = tester
+          .getTopLeft(find.byKey(const Key('appuntamento-cliente')))
+          .dy;
+      final dataEOra = tester.getTopLeft(find.text('DATA E ORA')).dy;
       final luogo = tester.getTopLeft(find.text('LUOGO E NOTE')).dy;
       final ripetizione = tester.getTopLeft(find.text('RIPETIZIONE')).dy;
 
-      expect(luogo, greaterThan(appuntamento));
+      expect(titolo, greaterThan(cliente));
+      expect(titolo, lessThan(clienteCampo));
+      expect(dataEOra, greaterThan(titolo));
+      expect(luogo, greaterThan(dataEOra));
       expect(luogo, lessThan(ripetizione));
     });
 

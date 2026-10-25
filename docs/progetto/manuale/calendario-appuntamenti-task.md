@@ -31,25 +31,24 @@ Gli elementi senza orario compaiono in **Senza orario**.
 ## Creare un appuntamento
 
 1. Premi **+** accanto a **Card** nella barra del calendario.
-2. Inserisci il **titolo** (obbligatorio).
-3. Scegli **data e ora di inizio** e **data e ora di fine**. Il flag **Tutto il giorno** accanto alla data
-   disattiva gli orari.
-4. Se serve, imposta **Ripeti**: mai, ogni giorno, ogni settimana, ogni due settimane, ogni mese, ogni anno
+2. La **prima card** è **Cliente e appuntamento**: il **titolo** è il primo campo (obbligatorio). Subito
+   sotto scegli il **cliente**; con il **+** puoi crearne uno nuovo e selezionarlo subito.
+3. Assegna un **operatore**.
+4. Nella card **Data e ora** scegli **data e ora di inizio** e **data e ora di fine**. Il flag
+   **Tutto il giorno** disattiva gli orari.
+5. Inserisci **luogo e note**: la card è subito sotto data e ora.
+6. Se serve, imposta **Ripeti**: mai, ogni giorno, ogni settimana, ogni due settimane, ogni mese, ogni anno
    o personalizza scegliendo i giorni della settimana e ogni quante settimane.
-5. Scegli la **notifica**: all'ora dell'evento, 5/10/15/30 minuti prima oppure personalizzata.
-6. Collega un cliente, se serve. Con il **+** accanto al campo Cliente puoi crearne uno nuovo e selezionarlo subito.
-7. Assegna un **operatore**.
-8. Inserisci **luogo e note** (la sezione è subito sotto data e ora).
-9. In **Condivisione** scegli una o più persone oppure un gruppo: ricevono una notifica e devono confermare.
-10. Attiva **Appuntamento privato** se titolo, luogo e dettagli devono essere visibili solo a te e
-    all'utente assegnato.
-11. Aggiungi note.
-12. In **Allegati** puoi caricare immagini, video, PDF o file email (max 10 MB per file).
-13. Salva.
+7. Scegli la **notifica**: all'ora dell'evento, 5/10/15/30 minuti prima oppure personalizzata.
+8. In **Condivisione** scegli una o più persone oppure un gruppo: ricevono una notifica e devono confermare.
+9. Attiva **Appuntamento privato** se titolo, luogo e dettagli devono essere visibili solo a te e
+   all'utente assegnato.
+10. In **Allegati** puoi caricare immagini, video, PDF o file email (max 10 MB per file).
+11. Salva.
 
 ### Avviso automatico al cliente
 
-Nel form, dopo **Partecipanti**, c'è la sezione **Avviso al cliente**:
+Nel form c'è la sezione **Avviso al cliente**:
 - **Avvisa il cliente** è attivo per impostazione predefinita;
 - **WhatsApp** e **Email** sono proposti se il cliente ha il recapito; un canale senza recapito non parte;
 - se il cliente ha sia telefono sia email, riceve entrambi i messaggi.

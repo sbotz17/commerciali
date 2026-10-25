@@ -119,3 +119,8 @@ innocui. L'endpoint può restare senza essere chiamato.
 - Il **Server WhatsApp** reale parla VOLTY (`/invia`); il Worker ora invia correttamente e il dettaglio ha
   **Invia di nuovo** per ritentare, con conferma.
 - Test automatici in CI su ogni push; `flutter test` 900 verdi, test Worker 13 verdi.
+
+### Aggiornamento — prima card
+
+- La prima card del form è **Cliente e appuntamento**, con il **titolo** come primo campo, poi cliente e
+  operatore; subito dopo **Data e ora** e **Luogo e note**.
