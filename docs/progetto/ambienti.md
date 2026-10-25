@@ -42,6 +42,9 @@ tester, validatore ed E2E. Google Sign-In in produzione va configurato prima di 
 
 ## Pubblicazione produzione
 
+Prima di ogni deploy: `docs/progetto/test/audit-completa.md` eseguito, tester SUPERATO, validatore APPROVATO, guardiano GO, backup verificato e rollback pronto.
+
+
 ```sh
 cd flutter_app
 flutter build web --release --dart-define=APP_ENV=prod
@@ -53,6 +56,9 @@ firebase deploy --only functions --project prod
 La build di produzione include `--dart-define=APP_ENV=prod`; lo staging resta senza questa define.
 
 ## Pubblicazione staging
+
+Prima di ogni deploy: `docs/progetto/test/audit-completa.md` eseguito, tester SUPERATO, validatore APPROVATO. Senza audit il deploy è bloccato.
+
 
 ```sh
 firebase deploy --only hosting,firestore:rules --project commerciali-app

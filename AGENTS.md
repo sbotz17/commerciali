@@ -120,6 +120,16 @@ tutto il repository a ogni richiesta.
   l'endpoint con `curl`.
 - Se la UI non è provabile, il task è **BLOCCATO**, non “SUPERATO con residuo”.
 
+### Audit obbligatorio prima di ogni rilascio
+
+- `docs/progetto/test/audit-completa.md` è il gate obbligatorio **prima di ogni pubblicazione**, sia su
+  **staging** sia su **produzione**.
+- Nessun deploy hosting, nessuna promozione e nessun rilascio senza audit-completa eseguito.
+- Il report dell'audit deve essere aggiornato con esiti reali, prove UI e residui.
+- Tester: `SUPERATO`; validatore: `APPROVATO`.
+- Per la produzione servono in più guardiano `GO`, backup verificato e rollback pronto.
+- Un'area non provata è **BLOCCATA**: non si pubblica “con residuo”.
+
 ### Audit bloccanti prima di nuovi sviluppi
 
 - Prima di nuovi sviluppi chiudere, con prova reale nella UI, l'audit **Google login produzione** e

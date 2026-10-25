@@ -580,3 +580,9 @@
 - Push: permesso concesso, service worker attivo, ma `iscrivi()` va in timeout nel browser di prova; nessuna sottoscrizione, audit BLOCCATO.
 - Google: provider produzione assente e client staging non riutilizzabile; login reale non eseguibile, audit BLOCCATO.
 - Nessun nuovo sviluppo ammesso finché i due audit non sono chiusi.
+
+## 2026-10-25 — Audit-completa come gate di ogni pubblicazione
+
+- `docs/progetto/test/audit-completa.md` è obbligatorio prima di ogni deploy su staging e produzione.
+- Nessun deploy “con residuo”: aree non provate bloccano la pubblicazione.
+- Regola sincronizzata in `squadraalphalab` e `AGENTS.md`.

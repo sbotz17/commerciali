@@ -2,8 +2,21 @@
 
 **Data**: 24/10/2026
 **Stato**: in corso — due audit bloccanti aperti; prove del 25/10 eseguite, entrambe BLOCCATE
+**Gate**: obbligatorio prima di **ogni pubblicazione su staging e produzione**.
 **Regola**: nessuna nuova funzione e nessun rilascio finché un'area non ha report tester + validatore.
 **Responsabilità**: la squadra esegue i test; Andrea riceve solo la validazione finale.
+
+## Gate di pubblicazione
+
+Nessun deploy hosting su staging o produzione è consentito senza:
+
+1. audit-completa eseguito e report aggiornato;
+2. esiti reali per le aree pubblicate, con prove UI;
+3. tester `SUPERATO`;
+4. validatore `APPROVATO`;
+5. per la produzione: guardiano `GO`, backup verificato e rollback pronto.
+
+Se un'area non è provata, il deploy è **BLOCCATO**. Non esiste “pubblico con residuo”.
 
 ## Perché questo audit
 

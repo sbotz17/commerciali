@@ -41,6 +41,17 @@ Per ogni schermata che usa un servizio esterno (Worker, server WhatsApp, OAuth, 
 - un test unitario con una risposta inventata non sostituisce la prova UI;
 - se la UI non è provabile, il task è **BLOCCATO**, non "SUPERATO con residuo": non si dichiara FATTO.
 
+## Audit obbligatorio prima di ogni rilascio
+
+`docs/progetto/test/audit-completa.md` è il gate obbligatorio prima di ogni pubblicazione, **staging e
+produzione**.
+
+- Nessun deploy hosting, nessuna promozione e nessun rilascio senza audit-completa eseguito.
+- Il report deve avere esiti reali, prove UI e residui elencati.
+- Tester `SUPERATO` + validatore `APPROVATO`.
+- Per la produzione: guardiano `GO`, backup verificato, rollback pronto.
+- Un'area non provata è **BLOCCATA**: non si pubblica “con residuo”.
+
 ## Produzione: zero bug noti
 
 - Nessun bug noto aperto può entrare in produzione.
