@@ -663,3 +663,11 @@
 - Regola nuova: si prova su build locale o canale di anteprima; su staging si pubblica solo con audit chiuso (tester SUPERATO, validatore APPROVATO, prove UI allegate).
 - Il validatore non approva più leggendo il codice: riesegue i test e pretende prove UI con evidenze.
 - Regola sincronizzata in `squadraalphalab` e in `AGENTS.md`.
+
+## 2026-10-25 — Nota di trasparenza: commit 9a050cb
+
+- Mentre lavoravo, un'altra sessione stava scrivendo la funzione "Accesso con Face ID / passkey" negli stessi file (`passkey_service.dart`, `accesso_face_id_card.dart`, `functions/webauthn.js`, `firestore.rules`, ecc.).
+- Il mio `git add -A` ha incluso quei file nel commit `9a050cb`, che doveva contenere solo la regola su staging e il validatore. Il messaggio del commit non descrive quel lavoro.
+- Nessun file è stato perso. Stato del ramo dopo il fatto: `flutter analyze` 0, `flutter test` 894 verdi (882 + 12 test della funzione passkey).
+- La funzione passkey resta **non validata**: deve passare da tester e validatore con prova UI prima di entrare nell'audit o in un rilascio.
+- Da ora i commit si fanno con percorsi espliciti, mai `git add -A`.
