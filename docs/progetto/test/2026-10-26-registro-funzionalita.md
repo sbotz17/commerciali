@@ -1,7 +1,7 @@
 # Registro delle funzionalità — Closer staging
 
 **Data**: 26/10/2026
-**Build provata**: `v1.0.0+1 · 2026.10.25-2359 · 551c6c7` (live `https://commerciali-app.web.app`)
+**Build provata**: `v1.0.0+1 · 2026.10.25-2359 · 551c6c7` (prime prove) e `v1.0.0+1 · 2026.10.26-0014 · be113b2` (preferenze notifiche), live `https://commerciali-app.web.app`
 **Utente di prova**: `e2e-ui-kdl5c715@commerciali.test` (azienda `cg3EiOl20WDXIw0mjl03`)
 **Metodo**: Chrome reale automatizzato (Playwright) sulla UI pubblicata, più lettura diretta di Firestore/REST
 per confermare i permessi. Nessun dato preesistente modificato: solo record di prova aggiunti.
