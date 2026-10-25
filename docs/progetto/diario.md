@@ -592,3 +592,9 @@
 - L’audit resta obbligatorio ma viene eseguito a ondate, con sessioni riusate e senza rileggere tutto il progetto.
 - Test una volta per blocco, poi mirati; screenshot solo sui fallimenti; massimo 2 tentativi per area.
 - Regola sincronizzata in `squadraalphalab` e `AGENTS.md`.
+
+## 2026-10-25 — Regole in nucleo breve + skill
+
+- `squadraalphalab` riorganizzato: `CLAUDE.md` di 92 righe e sei skill `/squadra-*` caricate solo quando servono; testo integrale in `archive/`.
+- Installate su questo Mac in `~/.claude/CLAUDE.md` e `~/.claude/skills/` con `local-setup/sync-regole.sh` (provato: 6 skill).
+- La sincronizzazione automatica via GitHub Action era rotta da sempre (secret `SYNC_TOKEN` assente): ora il workflow scrive nel file giusto (`AGENTS.md` se c'è) e copia le skill in `.claude/skills/`; serve il token di Andrea.
