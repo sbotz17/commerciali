@@ -137,6 +137,7 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 | H21 | Chat | Notifiche chat in-app/push | notifiche in-app create per i destinatari; push FCM ancora da fare | sviluppatore-backend | IN CORSO |
 | H22 | Impostazioni | Sezione Calendario e notifiche | fuso, promemoria, template, slot, allegati, Maps; test | sviluppatore-frontend | FATTO |
 | H23 | Qualità | E2E agenda/notifiche/chat | appuntamento, task, promemoria, chat, Maps, push | tester | DA FARE |
+| H24 | Qualità | Test automatici in CI | workflow GitHub Actions: `flutter analyze`, `flutter test`, controlli e test Worker | sviluppatore-backend | FATTO |
 
 ## Calendario per operatore, condivisione e OAuth aziendale (F32)
 

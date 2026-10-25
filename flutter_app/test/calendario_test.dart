@@ -554,6 +554,10 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(
+        find.byKey(const Key('calendario-invia-promemoria-cliente')),
+        findsOneWidget,
+      );
 
       final confermo = find.byKey(const Key('calendario-conferma-invito'));
       final rifiuta = find.byKey(const Key('calendario-rifiuta-invito'));

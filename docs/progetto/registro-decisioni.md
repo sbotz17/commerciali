@@ -114,3 +114,16 @@ ricostruisce con prove ripetibili, non con nuove funzioni.
 - Idempotenza per appuntamento + impronta di data/ora e limite di frequenza per utente; nessun doppio invio
   sullo stesso orario.
 - Stato: attivo su staging; l'email resta da attivare inserendo la API key Resend.
+
+## 2026-10-25 — Correzioni agenda: lingua, luogo/note, ripetizione e WhatsApp
+
+- Il calendario e i selettori di data usano **italiano** anche nei testi Material (mese, giorni, pulsanti),
+  tramite `flutter_localizations` e locale `it`.
+- **Luogo e note** è la sezione subito sotto data/ora; la ripetizione viene dopo.
+- Il giorno di inizio di una ripetizione settimanale è sempre selezionato; cambiando la data il giorno
+  automatico precedente viene sostituito, non aggiunto. I giorni scelti a mano restano.
+- Il server WhatsApp in uso è **VOLTY** (`/invia`), non il vecchio `/send`: il Worker supporta entrambi e
+  normalizza lo stato; l'invio manuale dal dettaglio permette di ritentare con conferma.
+- Le regole `utenti` impediscono l'auto-assegnazione di `super_admin`, `ruolo` e `attivo`; test E2E su
+  staging conferma 403.
+- Aggiunto workflow GitHub Actions `Test automatici` per `flutter analyze`, `flutter test` e test Worker.

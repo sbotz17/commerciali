@@ -23,6 +23,10 @@ import {
   emailValida,
   normalizzaNumeroWhatsapp,
 } from "./promemoria.mjs";
+import {
+  inviaWhatsapp,
+  normalizzaStatoServerWhatsapp,
+} from "./whatsapp.mjs";
 
 const VIES_BASE = "https://ec.europa.eu/taxation_customs/vies/rest-api/ms/IT/vat";
 const CONFIG_KEY = "server";
@@ -359,7 +363,8 @@ async function gestisciWhatsapp(request, env, url) {
     const config = await leggiConfig(env);
     if (!config) return json({ connected: false, number: null });
     try {
-      return json(await inoltraAlServer(config, "/status"));
+      const dati = await inoltraAlServer(config, "/status");
+      return json(normalizzaStatoServerWhatsapp(dati));
     } catch (e) {
       return json({ error: String(e.message || e) }, 502);
     }
@@ -380,9 +385,22 @@ async function gestisciWhatsapp(request, env, url) {
     const body = await corpoJson(request);
     const aziendaId = String(body.aziendaId || "").trim();
     const utenteUid = String(body.utenteUid || "").trim();
-    const messaggio = String(body.message || "").trim();
+    const messaggio = String(body.message || "").trim().slice(0, 1000);
     if (!aziendaId || !utenteUid || !messaggio) {
       return json({ error: "aziendaId, utenteUid e message sono obbligatori" }, 400);
+    }
+    if (!(await isMembro(env, aziendaId, utente))) {
+      return json({ error: "Non appartieni all'azienda" }, 403);
+    }
+    if (env.PROMEMORIA) {
+      const chiave = `whatsapp-send:${env.FIREBASE_PROJECT}:${aziendaId}:${utente.uid}:${Math.floor(Date.now() / 60000)}`;
+      const usati = Number((await env.PROMEMORIA.get(chiave)) || 0);
+      if (usati >= 10) {
+        return json({ error: "Troppi messaggi in un minuto. Riprova." }, 429);
+      }
+      await env.PROMEMORIA.put(chiave, String(usati + 1), {
+        expirationTtl: 120,
+      });
     }
 
     // Il numero non arriva dal client: si legge la rubrica aziendale con il
@@ -393,6 +411,9 @@ async function gestisciWhatsapp(request, env, url) {
       utente.token,
     );
     if (!documento) return json({ ok: false, error: "Contatto non trovato" }, 404);
+    if (stringaCampo(documento, "azienda_id") !== aziendaId) {
+      return json({ error: "Contatto di un'altra azienda" }, 403);
+    }
     if (valoreCampo(documento, "consenso_whatsapp")?.booleanValue !== true) {
       return json({ ok: false, error: "Consenso WhatsApp assente" }, 403);
     }
@@ -402,10 +423,7 @@ async function gestisciWhatsapp(request, env, url) {
     const config = await leggiConfig(env);
     if (!config) return json({ error: "Server WhatsApp non configurato" }, 400);
     try {
-      const esito = await inoltraAlServer(config, "/send", {
-        method: "POST",
-        body: { to: numero, message: messaggio },
-      });
+      const esito = await inviaWhatsapp(config, numero, messaggio);
       return json({ ok: true, id: esito?.id || null });
     } catch (e) {
       return json({ ok: false, error: String(e.message || e) }, 502);
@@ -438,7 +456,10 @@ async function gestisciEmail(request, env, url) {
       const body = await corpoJson(request);
       const from = String(body.from || "").trim().toLowerCase();
       const apiKey = String(body.apiKey || "").trim();
-      const nome = String(body.nome || "").trim().slice(0, 120);
+      const nome = String(body.nome || "")
+        .replace(/[\r\n<>]/g, " ")
+        .trim()
+        .slice(0, 120);
       if (!emailValida(from)) {
         return json({ error: "Inserisci l'email del mittente" }, 400);
       }
@@ -598,7 +619,7 @@ async function gestisciPromemoriaCliente(request, env, url) {
   const fattoKey = `cliente-fatto:${baseKey}`;
   const lockKey = `cliente-lock:${baseKey}`;
 
-  if (await env.PROMEMORIA.get(fattoKey)) {
+  if (!body.forza && (await env.PROMEMORIA.get(fattoKey))) {
     return json({ ok: true, saltato: "gia_inviato" });
   }
   if (await env.PROMEMORIA.get(lockKey)) {
@@ -629,10 +650,7 @@ async function gestisciPromemoriaCliente(request, env, url) {
       try {
         const config = await leggiConfig(env);
         if (!config) throw new Error("Server WhatsApp non configurato");
-        await inoltraAlServer(config, "/send", {
-          method: "POST",
-          body: { to: numero, message: contenuto.testo },
-        });
+        await inviaWhatsapp(config, numero, contenuto.testo);
         risultati.whatsapp = { stato: "inviato" };
         inviato = true;
       } catch (e) {
@@ -808,10 +826,7 @@ async function inviaPromemoriaScaduti(env) {
     }
     if (Number(dato.due) > adesso) continue;
     try {
-      await inoltraAlServer(config, "/send", {
-        method: "POST",
-        body: { to: dato.numero, message: dato.testo },
-      });
+      await inviaWhatsapp(config, dato.numero, dato.testo);
       await env.PROMEMORIA.delete(voce.name);
     } catch (_) {
       // Se il server è irraggiungibile riprova; dopo 24h scarta.

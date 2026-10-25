@@ -18,15 +18,19 @@
 
 | Prova | Esito |
 |---|---|
-| `node --test worker/test/promemoria.test.mjs` | 9 test verdi (formato data, numeri, email, canali, testo creazione/modifica/privato) |
-| `flutter test` | 883 test verdi |
+| `node --test worker/test/promemoria.test.mjs worker/test/whatsapp.test.mjs` | 13 test verdi (testo, data, numeri, email, canali e contratto WhatsApp VOLTY/legacy) |
+| `flutter test` | 900 test verdi |
 | `flutter analyze` | 0 problemi |
 | E2E locale Worker + WhatsApp finto | primo invio `inviato`; seconda chiamata `gia_inviato`; cambio data invia il testo "nuova data"; log Firestore corretto |
 | E2E locale Worker + email finta | `/email/config`, `/email/test` e invio con mittente/nome corretti |
 | E2E locale sicurezza | utente estraneo: 403; `/email/config` non super admin: 403 |
 | UI staging reale | form con Avviso al cliente, WhatsApp disabilitato senza telefono, invio al cambio data, avviso "Promemoria cliente: Non inviato: Email non configurata", log nel dettaglio |
+| Server WhatsApp reale | stato `connected: true`, numero `393516722792`; invio di prova riuscito con `messageId` |
+| Regole `utenti` | auto-assegnazione `super_admin`/`ruolo`/`attivo` bloccata con 403; modifica `nome` consentita |
+| Data picker | mese e giorni in italiano ("ottobre 2026", "lunedì") |
+| Ripetizione | giorno di inizio protetto, sostituzione al cambio data, anteprima date |
 
-Screenshot: `2026-10-25-promemoria-cliente-form.png`, `2026-10-25-promemoria-cliente-esito.png`.
+Screenshot: `2026-10-25-promemoria-cliente-form.png`, `2026-10-25-promemoria-cliente-esito.png`, `2026-10-25-form-luogo-note-ordine.png`, `2026-10-25-date-picker-italiano.png`.
 I dati di prova (utenti, aziende, clienti, appuntamenti) sono stati eliminati; backup staging di
 `appuntamenti` e `clienti` eseguito prima delle prove.
 

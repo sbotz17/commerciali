@@ -109,3 +109,13 @@ la API key email sta nel KV del Worker, non in Firestore; limite di 20 invii al 
 
 **Come tornare indietro**: rimuovere la chiamata a `/promemoria-cliente` dal form; i campi nuovi restano
 innocui. L'endpoint può restare senza essere chiamato.
+
+### Aggiornamento — correzioni dopo la prova
+
+- Date picker e agenda in **italiano**.
+- **Luogo e note** subito sotto data/ora.
+- Ripetizione più chiara: giorno di inizio sempre selezionato e sostituito al cambio data, anteprima delle
+  prossime date.
+- Il **Server WhatsApp** reale parla VOLTY (`/invia`); il Worker ora invia correttamente e il dettaglio ha
+  **Invia di nuovo** per ritentare, con conferma.
+- Test automatici in CI su ogni push; `flutter test` 900 verdi, test Worker 13 verdi.

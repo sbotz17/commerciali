@@ -39,7 +39,7 @@ Gli elementi senza orario compaiono in **Senza orario**.
 5. Scegli la **notifica**: all'ora dell'evento, 5/10/15/30 minuti prima oppure personalizzata.
 6. Collega un cliente, se serve. Con il **+** accanto al campo Cliente puoi crearne uno nuovo e selezionarlo subito.
 7. Assegna un **operatore**.
-8. Inserisci luogo e indirizzo.
+8. Inserisci **luogo e note** (la sezione è subito sotto data e ora).
 9. In **Condivisione** scegli una o più persone oppure un gruppo: ricevono una notifica e devono confermare.
 10. Attiva **Appuntamento privato** se titolo, luogo e dettagli devono essere visibili solo a te e
     all'utente assegnato.
@@ -57,7 +57,8 @@ Nel form, dopo **Partecipanti**, c'è la sezione **Avviso al cliente**:
 Il messaggio parte **al salvataggio** e ogni volta che cambi **data o ora**. Se salvi senza cambiare
 l'orario non viene inviato di nuovo. Il testo contiene data, ora e luogo; per un appuntamento privato il
 titolo non viene scritto al cliente. L'esito (inviato, senza recapito, email non configurata, errore) compare
-nel dettaglio e con un avviso dopo il salvataggio.
+nel dettaglio e con un avviso dopo il salvataggio. Nel dettaglio puoi usare **Invia di nuovo** per ripetere
+l'invio, con conferma del destinatario.
 
 L'email richiede la configurazione **Super Admin → Server email** (Resend, mittente e API key). Se non è
 configurata, WhatsApp continua a funzionare e l'email viene segnalata come non disponibile.
@@ -65,6 +66,13 @@ configurata, WhatsApp continua a funzionare e l'email viene segnalata come non d
 L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invitato non conferma la
 disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
 **Confermo** e **Non disponibile**.
+
+### Ripetizione
+
+La sezione **Ripetizione** è sotto luogo e note. Scegli **Mai**, ogni giorno, ogni settimana, ogni due
+settimane, ogni mese, ogni anno o **Personalizza**. Per le ripetizioni settimanali scegli i giorni: il giorno
+di inizio resta sempre selezionato e viene aggiornato quando cambi la data, così l'appuntamento non sparisce
+dal calendario. Sotto trovi l'anteprima delle prossime date.
 
 Nel dettaglio dell'appuntamento trovi anche i **dati del cliente collegato** (nome, referente, contatti,
 P.IVA, indirizzo e note). Il pulsante **Modifica cliente** apre la scheda del cliente; dopo il salvataggio

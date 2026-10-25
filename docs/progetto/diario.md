@@ -689,3 +689,14 @@
 - Tester: `SUPERATO` con prova UI su canale di anteprima, report `test/2026-10-25-r1-esito.md` e screenshot.
 - Validatore: `APPROVATO`; non ha potuto rieseguire i comandi per un limite di permessi dell'ambiente, ha verificato codice, test e coerenza delle prove.
 - Dati di prova rimossi da staging con `E2E_STATO`.
+
+## 2026-10-25 — Correzioni agenda dopo la prova di Andrea
+
+- Localizzazione italiana globale: date picker e testi Material in italiano.
+- **Luogo e note** spostata subito sotto data/ora.
+- Ripetizione: giorno di inizio sempre presente, sostituzione del giorno automatico al cambio data,
+  intervallo personalizzato coerente, etichette con i giorni e anteprima delle prossime date.
+- WhatsApp: il server reale è VOLTY e usa `/invia {numero, testo}`; il Worker ora lo supporta con fallback
+  al vecchio `/send`. Aggiunto **Invia di nuovo** nel dettaglio con conferma.
+- Regole `utenti` rafforzate contro l'auto-promozione a super admin (test E2E 403).
+- CI GitHub Actions per analisi e test; `flutter test` 900 verdi; test Worker 13 verdi.

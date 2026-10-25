@@ -294,8 +294,10 @@ rispetto dei limiti del provider. Nessuna credenziale nel codice.
 
 ### 5. WhatsApp Volty
 
-Contratto esistente: `POST {url}/send`, header `x-api-key`, body `{to, message, mediaUrl}` →
-`{ok, id}` o `{error}`; config in `whatsapp_config/1`. **Da spostare lato server**: oggi
+Contratto attuale: server **VOLTY** `POST {url}/invia`, header `x-api-key`, body
+`{numero, testo}` → `{ok, messageId}` o `{errore, codice}`; il Worker ripiega sul vecchio
+`POST {url}/send` `{to, message}` solo se `/invia` risponde 404. Lo stato è `{connesso, numero, stato}` e
+viene normalizzato in `{connected, number, state}`. Config in KV `WHATSAPP_CONFIG`. **Da spostare lato server**: oggi
 `whatsapp_config` è leggibile da qualsiasi utente loggato (regola `read: if signedIn()`), quindi la
 api_key è esposta → spostare l'invio in un endpoint Worker (`/whatsapp/send`) che legge la chiave da
 Worker secret e stringere la regola. Messaggi dai template con segnaposto; errori HTTP/`error` mappati

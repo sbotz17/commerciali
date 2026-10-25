@@ -315,6 +315,8 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       await _eliminaAppuntamento(appuntamento);
     } else if (azione == azioneModificaClienteVoce) {
       if (cliente != null) await _modificaCliente(cliente, appuntamento);
+    } else if (azione == azioneInviaPromemoriaClienteVoce) {
+      await _inviaPromemoriaCliente(appuntamento, cliente);
     } else if (azione == azioneConfermaInvitoVoce ||
         azione == azioneRifiutaInvitoVoce) {
       await _rispondiInvito(
@@ -361,6 +363,105 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cliente non aggiornato. Riprova.')),
+      );
+    }
+  }
+
+  /// Invia di nuovo il promemoria al cliente, senza aspettare un cambio di data.
+  ///
+  /// Il Worker ricompone il testo dal documento e applica comunque il limite di
+  /// frequenza; `forza` serve solo a superare il blocco "già inviato" per lo
+  /// stesso orario.
+  Future<void> _inviaPromemoriaCliente(
+    Appuntamento appuntamento,
+    Cliente? cliente,
+  ) async {
+    final telefono = (appuntamento.clienteTelefono ?? '').trim().isNotEmpty
+        ? appuntamento.clienteTelefono!.trim()
+        : (cliente?.telefono ?? '').trim();
+    final email = (appuntamento.clienteEmail ?? '').trim().isNotEmpty
+        ? appuntamento.clienteEmail!.trim()
+        : (cliente?.email ?? '').trim();
+    final canali = <String>[
+      if (appuntamento.canaliCliente.contains('whatsapp') &&
+          telefono.isNotEmpty)
+        'whatsapp',
+      if (appuntamento.canaliCliente.contains('email') && email.isNotEmpty)
+        'email',
+    ];
+    if (canali.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Nessun canale con recapito: controlla telefono, email e canali '
+            'dell\'appuntamento.',
+          ),
+        ),
+      );
+      return;
+    }
+    final destinatario = canali.contains('whatsapp') ? telefono : email;
+    final conferma = await showDialog<bool>(
+      context: context,
+      builder: (dialogoContext) => AlertDialog(
+        title: const Text('Inviare il promemoria?'),
+        content: Text(
+          'Il cliente riceverà un messaggio su '
+          '${canali.map((canale) => canale == 'whatsapp' ? 'WhatsApp' : 'Email').join(' e ')}'
+          '${destinatario.isEmpty ? '' : ' ($destinatario)'}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogoContext).pop(false),
+            child: const Text('Annulla'),
+          ),
+          FilledButton(
+            key: const Key('calendario-conferma-invio-promemoria'),
+            onPressed: () => Navigator.of(dialogoContext).pop(true),
+            child: const Text('Invia'),
+          ),
+        ],
+      ),
+    );
+    if (conferma != true || !mounted) return;
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final esito = await servizio.inviaPromemoriaCliente(
+        appuntamentoId: appuntamento.id,
+        canali: canali,
+        modifica: false,
+        forza: true,
+      );
+      if (!mounted) return;
+      final risultati = esito['risultati'];
+      final etichetta = etichettaPromemoriaCliente(
+        risultati is Map ? {'canali': risultati} : null,
+      );
+      final saltato = (esito['saltato'] ?? '').toString();
+      final messaggio = switch (saltato) {
+        'passato' => 'Promemoria non inviato: l\'appuntamento è nel passato.',
+        'disattivato' =>
+          'Promemoria non inviato: l\'avviso al cliente è disattivato.',
+        'gia_inviato' => 'Promemoria già inviato per questo orario.',
+        'in_corso' => 'Invio già in corso. Attendi qualche secondo.',
+        'nessun_canale' => 'Nessun canale selezionato per il cliente.',
+        _ =>
+          etichetta.isEmpty
+              ? 'Promemoria cliente non inviato.'
+              : 'Promemoria cliente: $etichetta',
+      };
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(messaggio)));
+      await _carica();
+    } catch (errore) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Promemoria non inviato: ${errore is StateError ? errore.message : 'riprova.'}',
+          ),
+        ),
       );
     }
   }
@@ -1271,6 +1372,25 @@ class DettaglioElementoDialog extends StatelessWidget {
     final avvisoCliente = etichettaPromemoriaCliente(
       appuntamento?.promemoriaCliente,
     );
+    final telefonoAvviso =
+        (appuntamento?.clienteTelefono ?? '').trim().isNotEmpty
+        ? appuntamento!.clienteTelefono!.trim()
+        : (cliente?.telefono ?? '').trim();
+    final emailAvviso = (appuntamento?.clienteEmail ?? '').trim().isNotEmpty
+        ? appuntamento!.clienteEmail!.trim()
+        : (cliente?.email ?? '').trim();
+    final canaliConRecapito = <String>[
+      if (appuntamento?.canaliCliente.contains('whatsapp') == true &&
+          telefonoAvviso.isNotEmpty)
+        'whatsapp',
+      if (appuntamento?.canaliCliente.contains('email') == true &&
+          emailAvviso.isNotEmpty)
+        'email',
+    ];
+    final puoInviarePromemoria =
+        dettagliVisibili &&
+        appuntamento?.avvisaCliente == true &&
+        canaliConRecapito.isNotEmpty;
     final dataAvvisoCliente = dataPromemoriaCliente(
       appuntamento?.promemoriaCliente,
     );
@@ -1294,6 +1414,21 @@ class DettaglioElementoDialog extends StatelessWidget {
           valore: dataAvvisoCliente.isEmpty
               ? avvisoCliente
               : '$avvisoCliente · $dataAvvisoCliente',
+        ),
+      if (puoInviarePromemoria)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            key: const Key('calendario-invia-promemoria-cliente'),
+            onPressed: () =>
+                Navigator.of(context).pop(azioneInviaPromemoriaClienteVoce),
+            icon: const Icon(Icons.send_outlined, size: 18),
+            label: Text(
+              avvisoCliente.isEmpty
+                  ? 'Invia promemoria al cliente'
+                  : 'Invia di nuovo',
+            ),
+          ),
         ),
       if (dettagliVisibili && appuntamento != null) ...[
         _RigaDettaglio(

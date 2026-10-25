@@ -84,6 +84,8 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Dettaglio appuntamento responsive | `calendario_screen.dart` (`DettaglioElementoDialog`, `_SezioneDettaglio`, `_RigaInvitato`) | Finestra quasi a tutto schermo su telefono, 560 px su tablet; azioni impilate o raggruppate |
 | Promemoria automatico cliente | `appuntamento_form_screen.dart`, `sp_service.dart`, `worker/src/index.js`, `worker/src/promemoria.mjs` | `avvisa_cliente`, `canali_cliente`, `cliente_telefono`, `cliente_email`, `promemoria_cliente`; endpoint `/promemoria-cliente`; testo e idempotenza |
 | Email clienti (Resend) | `features/superadmin/email_server_screen.dart`, Worker `/email/*`, KV `EMAIL_CONFIG` | Mittente, API key e prova; stato nel dettaglio appuntamento |
+| WhatsApp VOLTY | `worker/src/whatsapp.mjs`, `worker/src/index.js` | `/invia {numero, testo}`, fallback `/send`, normalizzazione stato |
+| Test automatici CI | `.github/workflows/test.yml` | `flutter analyze`, `flutter test`, controlli e test Worker |
 | Notifiche invito | `flutter_app/lib/data/services/sp_service.dart` | Notifica In-App a creatore/operatore dopo la risposta; `inviaWhatsapp`/`inviaWhatsappAUtente` best-effort |
 | Rubrica WhatsApp | `firestore.rules`, `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart` | `contatti_notifiche` aziendale: numero e consenso, leggibile dai colleghi |
 | Configurazione WhatsApp | `flutter_app/lib/features/superadmin/whatsapp_server_screen.dart`, `worker/src/index.js` | Super Admin → Server WhatsApp; URL/API key nel KV del Worker, QR e stato; invio autenticato tramite Worker |

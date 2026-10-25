@@ -2361,6 +2361,7 @@ class SpService {
     required String appuntamentoId,
     required List<String> canali,
     required bool modifica,
+    bool forza = false,
   }) async {
     final aziendaId = _aziendaAttiva;
     final id = appuntamentoId.trim();
@@ -2375,6 +2376,7 @@ class SpService {
         'appuntamentoId': id,
         'canali': normalizzaCanaliCliente(canali),
         'modifica': modifica,
+        'forza': forza,
       },
     );
   }

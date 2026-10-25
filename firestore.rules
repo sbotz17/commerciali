@@ -29,8 +29,30 @@ service cloud.firestore {
     // ---------- profili ----------
     match /utenti/{userId} {
       allow read: if signedIn();
-      allow create: if signedIn() && userId == uid();
-      allow update: if signedIn() && (userId == uid() || isSuper());
+      // Il profilo personale non può auto-assegnarsi super_admin.
+      allow create: if signedIn()
+        && userId == uid()
+        && (
+          !('super_admin' in request.resource.data)
+          || request.resource.data.super_admin == false
+        );
+      allow update: if isSuper()
+        || (
+          signedIn()
+          && userId == uid()
+          && (
+            !('super_admin' in request.resource.data)
+            || request.resource.data.super_admin == resource.data.super_admin
+          )
+          && (
+            !('ruolo' in request.resource.data)
+            || request.resource.data.ruolo == resource.data.ruolo
+          )
+          && (
+            !('attivo' in request.resource.data)
+            || request.resource.data.attivo == resource.data.attivo
+          )
+        );
       allow delete: if isSuper();
     }
 

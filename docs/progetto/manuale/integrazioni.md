@@ -130,7 +130,7 @@ esterno disponibile. La configurazione SMTP per singola azienda resta un'evoluzi
 - URL del server Volty;
 - API key;
 - numero mittente;
-- endpoint `/send` raggiungibile;
+- endpoint VOLTY `/invia` raggiungibile (il Worker supporta anche il vecchio `/send`);
 - consenso del destinatario.
 
 ### Configurazione

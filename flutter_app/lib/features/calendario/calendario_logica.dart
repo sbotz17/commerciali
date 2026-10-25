@@ -657,6 +657,9 @@ const String azioneApriTaskVoce = 'apri-task';
 /// Azione di modifica del cliente collegato all'appuntamento.
 const String azioneModificaClienteVoce = 'modifica-cliente';
 
+/// Azione di invio manuale del promemoria al cliente.
+const String azioneInviaPromemoriaClienteVoce = 'invia-promemoria-cliente';
+
 /// Azioni di risposta a un invito di condivisione.
 const String azioneConfermaInvitoVoce = 'conferma-invito';
 const String azioneRifiutaInvitoVoce = 'rifiuta-invito';

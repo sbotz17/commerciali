@@ -223,6 +223,71 @@ void main() {
       expect(find.textContaining('Seleziona un cliente'), findsOneWidget);
     });
 
+    testWidgets('Luogo e note sta subito sotto data e ora', (tester) async {
+      await apriForm(tester);
+
+      final appuntamento = tester.getTopLeft(find.text('APPUNTAMENTO')).dy;
+      final luogo = tester.getTopLeft(find.text('LUOGO E NOTE')).dy;
+      final ripetizione = tester.getTopLeft(find.text('RIPETIZIONE')).dy;
+
+      expect(luogo, greaterThan(appuntamento));
+      expect(luogo, lessThan(ripetizione));
+    });
+
+    testWidgets('cambiando data il giorno automatico viene sostituito', (
+      tester,
+    ) async {
+      await apriForm(tester);
+
+      await tester.tap(find.byKey(const Key('appuntamento-ripeti')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ogni settimana').last);
+      await tester.pumpAndSettle();
+
+      final sabato = find.byKey(const Key('appuntamento-ripeti-giorno-6'));
+      final lunedi = find.byKey(const Key('appuntamento-ripeti-giorno-1'));
+      expect(tester.widget<FilterChip>(sabato).selected, isTrue);
+      expect(tester.widget<FilterChip>(lunedi).selected, isFalse);
+
+      await tester.enterText(
+        find.byKey(const Key('appuntamento-data')),
+        '26/10/2026',
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<FilterChip>(lunedi).selected, isTrue);
+      expect(tester.widget<FilterChip>(sabato).selected, isFalse);
+    });
+
+    testWidgets('la ripetizione settimanale protegge il giorno di inizio', (
+      tester,
+    ) async {
+      await apriForm(tester);
+
+      await tester.tap(find.byKey(const Key('appuntamento-ripeti')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ogni settimana').last);
+      await tester.pumpAndSettle();
+
+      final sabato = find.byKey(const Key('appuntamento-ripeti-giorno-6'));
+      expect(sabato, findsOneWidget);
+      expect(tester.widget<FilterChip>(sabato).selected, isTrue);
+      expect(
+        find.byKey(const Key('appuntamento-anteprima-ripetizione')),
+        findsOneWidget,
+      );
+      expect(find.textContaining('sabato'), findsWidgets);
+
+      await tester.tap(sabato);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<FilterChip>(sabato).selected, isTrue);
+      expect(
+        find.text('Il giorno di inizio deve restare selezionato.'),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('il campo note occupa tutta la larghezza', (tester) async {
       await apriForm(tester);
 

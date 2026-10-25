@@ -183,6 +183,33 @@ void main() {
     });
   });
 
+  group('etichetta ripetizione', () {
+    test('mostra i giorni scelti in italiano', () {
+      expect(
+        etichettaRipetizione(const {
+          'tipo': ripetizioneSettimanale,
+          'giorni_settimana': [1, 3],
+        }),
+        'Ogni settimana — lunedì, mercoledì',
+      );
+      expect(
+        etichettaRipetizione(const {
+          'tipo': ripetizioneBisettimanale,
+          'giorni_settimana': [5],
+        }),
+        'Ogni due settimane — venerdì',
+      );
+      expect(
+        etichettaRipetizione(const {
+          'tipo': ripetizionePersonalizzata,
+          'giorni_settimana': [2],
+          'intervallo_settimane': 3,
+        }),
+        'Ogni 3 settimane — martedì',
+      );
+    });
+  });
+
   group('notifica', () {
     test('etichette', () {
       expect(etichettaNotificaAppuntamento(null), 'Nessuna');

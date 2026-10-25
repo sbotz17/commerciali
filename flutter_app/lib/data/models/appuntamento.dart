@@ -456,9 +456,9 @@ String etichettaRipetizione(Map<String, dynamic>? regola) {
     case ripetizioneGiornaliera:
       return 'Ogni giorno';
     case ripetizioneSettimanale:
-      return 'Ogni settimana';
+      return 'Ogni settimana${_giorniRipetizioneTesto(regola)}';
     case ripetizioneBisettimanale:
-      return 'Ogni due settimane';
+      return 'Ogni due settimane${_giorniRipetizioneTesto(regola)}';
     case ripetizioneMensile:
       return 'Ogni mese';
     case ripetizioneAnnuale:
@@ -466,10 +466,19 @@ String etichettaRipetizione(Map<String, dynamic>? regola) {
     case ripetizionePersonalizzata:
       final intervallo =
           int.tryParse(regola?['intervallo_settimane']?.toString() ?? '') ?? 1;
-      return intervallo <= 1 ? 'Personalizzata' : 'Ogni $intervallo settimane';
+      final base = intervallo <= 1
+          ? 'Ogni settimana'
+          : 'Ogni $intervallo settimane';
+      return '$base${_giorniRipetizioneTesto(regola)}';
     default:
       return 'Mai';
   }
+}
+
+String _giorniRipetizioneTesto(Map<String, dynamic>? regola) {
+  final giorni = giorniRipetizione(regola);
+  if (giorni.isEmpty) return '';
+  return ' — ${giorni.map((giorno) => nomiGiorniRipetizione[giorno - 1].toLowerCase()).join(', ')}';
 }
 
 /// Giorni della settimana selezionati (1 = lunedì … 7 = domenica).

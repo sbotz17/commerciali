@@ -275,6 +275,8 @@ class _AppuntamentoFormScreenState
   Set<String> _canaliCliente = {'whatsapp', 'email'};
   String _ripetizioneTipo = ripetizioneMai;
   Set<int> _giorniRipetizione = {};
+  final Set<int> _giorniSceltiManualmente = {};
+  int? _giornoInizioAuto;
   String _notificaScelta = 'nessuna';
 
   List<Cliente> _clienti = const [];
@@ -302,6 +304,31 @@ class _AppuntamentoFormScreenState
   String get _statoCondivisione =>
       statoCondivisioneDaConferme(_invitatiUids, _conferme);
 
+  /// `true` se la ripetizione usa i giorni della settimana.
+  bool get _ripetizioneConGiorni =>
+      _ripetizioneTipo == ripetizioneSettimanale ||
+      _ripetizioneTipo == ripetizioneBisettimanale ||
+      _ripetizioneTipo == ripetizionePersonalizzata;
+
+  /// Tiene allineato il giorno di inizio con la data scelta.
+  ///
+  /// Il giorno aggiunto automaticamente viene sostituito quando cambia la
+  /// data; i giorni scelti a mano restano. Così l'appuntamento non sparisce
+  /// dal calendario e non si duplica su un vecchio giorno.
+  void _aggiornaGiornoInizio(DateTime giorno) {
+    final vecchio = _giornoInizioAuto;
+    if (_ripetizioneConGiorni &&
+        vecchio != null &&
+        vecchio != giorno.weekday &&
+        !_giorniSceltiManualmente.contains(vecchio)) {
+      _giorniRipetizione.remove(vecchio);
+    }
+    _giornoInizioAuto = giorno.weekday;
+    if (_ripetizioneConGiorni) {
+      _giorniRipetizione.add(giorno.weekday);
+    }
+  }
+
   bool _salvando = false;
   String? _errore;
   String? _messaggioAvvisoCliente;
@@ -324,10 +351,11 @@ class _AppuntamentoFormScreenState
         (appuntamento?.canaliCliente ?? const ['whatsapp', 'email']).toSet();
     _ripetizioneTipo = (appuntamento?.ripetizione['tipo'] ?? ripetizioneMai)
         .toString();
-    _giorniRipetizione = giorniRipetizione(appuntamento?.ripetizione).toSet();
-    if (_giorniRipetizione.isEmpty) {
-      _giorniRipetizione = {_dataScelta.weekday};
-    }
+    final giorniSalvati = giorniRipetizione(appuntamento?.ripetizione).toSet();
+    _giorniRipetizione = {...giorniSalvati};
+    _giorniSceltiManualmente.addAll(giorniSalvati);
+    _giornoInizioAuto = _dataScelta.weekday;
+    _giorniRipetizione.add(_dataScelta.weekday);
     final notificaMin = appuntamento?.notificaMin;
     if (notificaMin == null) {
       _notificaScelta = 'nessuna';
@@ -847,6 +875,7 @@ class _AppuntamentoFormScreenState
     setState(() {
       _dataScelta = giorno;
       _data.text = formattaDataVisita(giorno);
+      _aggiornaGiornoInizio(giorno);
       final fine = parseDataItaliana(_dataFine.text);
       if (fine == null || fine.isBefore(giorno)) {
         _dataFineScelta = giorno;
@@ -872,6 +901,17 @@ class _AppuntamentoFormScreenState
     setState(() {
       _dataFineScelta = giorno;
       _dataFine.text = formattaDataVisita(giorno);
+    });
+  }
+
+  void _dataInizioCambiata(String valore) {
+    final giorno = parseDataItaliana(valore);
+    if (giorno == null) return;
+    final solo = _soloGiorno(giorno);
+    if (solo == _dataScelta) return;
+    setState(() {
+      _dataScelta = solo;
+      _aggiornaGiornoInizio(solo);
     });
   }
 
@@ -1019,6 +1059,91 @@ class _AppuntamentoFormScreenState
     }
   }
 
+  Map<String, dynamic> _regolaRipetizioneForm() {
+    return {
+      'tipo': _ripetizioneTipo,
+      'giorni_settimana': _ripetizioneConGiorni
+          ? (_giorniRipetizione.toList()..sort())
+          : const <int>[],
+      'intervallo_settimane': _ripetizioneTipo == ripetizionePersonalizzata
+          ? int.tryParse(_intervalloRipetizione.text.trim()) ?? 1
+          : 1,
+    };
+  }
+
+  String _anteprimaRipetizione() {
+    final modello = Appuntamento(
+      id: 'anteprima',
+      data: dataIsoVisita(_dataScelta),
+      ora: _tuttoIlGiorno ? null : normalizzaOraVisita(_ora.text),
+      tuttoIlGiorno: _tuttoIlGiorno,
+      ripetizione: _regolaRipetizioneForm(),
+    );
+    final oggi = DateTime.now();
+    final giorni = occorrenzeAppuntamento(
+      modello,
+      dal: oggi.subtract(const Duration(days: 1)),
+      al: oggi.add(const Duration(days: 365)),
+    );
+    if (giorni.isEmpty) return 'nessuna data nel prossimo anno';
+    return giorni
+        .take(3)
+        .map(
+          (giorno) =>
+              '${nomiGiorniRipetizione[giorno.weekday - 1]} '
+              '${formattaDataVisita(giorno)}',
+        )
+        .join(' · ');
+  }
+
+  Widget _sezioneLuogoENote() {
+    return _SezioneAppuntamento(
+      titolo: 'Luogo e note',
+      figli: [
+        TextFormField(
+          key: const Key('appuntamento-luogo'),
+          controller: _luogo,
+          enabled: !_salvando,
+          textInputAction: TextInputAction.next,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+            labelText: 'Luogo',
+            hintText: 'Es. Sede del cliente',
+          ),
+        ),
+        TextFormField(
+          key: const Key('appuntamento-indirizzo'),
+          controller: _indirizzo,
+          enabled: !_salvando,
+          textInputAction: TextInputAction.next,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: 'Indirizzo',
+            hintText: 'Es. Via Roma 1, Milano',
+            suffixIcon: IconButton(
+              key: const Key('appuntamento-maps'),
+              tooltip: 'Apri in Google Maps',
+              onPressed: _salvando ? null : _apriMaps,
+              icon: const Icon(Icons.directions_car_outlined),
+            ),
+          ),
+        ),
+      ],
+      extra: [
+        TextFormField(
+          key: const Key('appuntamento-note'),
+          controller: _note,
+          enabled: !_salvando,
+          minLines: 3,
+          maxLines: 4,
+          textCapitalization: TextCapitalization.sentences,
+          textInputAction: TextInputAction.newline,
+          decoration: const InputDecoration(labelText: 'Note'),
+        ),
+      ],
+    );
+  }
+
   Future<void> _salva() async {
     FocusScope.of(context).unfocus();
     setState(() => _errore = null);
@@ -1084,12 +1209,15 @@ class _AppuntamentoFormScreenState
         ? (giornoFine.difference(giorno).inDays + 1) * 24 * 60
         : fine!.difference(inizio!).inMinutes;
 
+    _aggiornaGiornoInizio(giorno);
     final ripetizione = <String, dynamic>{
       'tipo': _ripetizioneTipo,
-      'giorni_settimana': [
-        for (final giorno in _giorniRipetizione.toList()..sort()) giorno,
-      ],
-      'intervallo_settimane': intervalloRipetizione.clamp(1, 52),
+      'giorni_settimana': _ripetizioneConGiorni
+          ? [for (final giorno in _giorniRipetizione.toList()..sort()) giorno]
+          : const <int>[],
+      'intervallo_settimane': _ripetizioneTipo == ripetizionePersonalizzata
+          ? intervalloRipetizione.clamp(1, 52)
+          : 1,
     };
 
     setState(() => _salvando = true);
@@ -1346,6 +1474,7 @@ class _AppuntamentoFormScreenState
                                   ),
                                   LengthLimitingTextInputFormatter(10),
                                 ],
+                                onChanged: _dataInizioCambiata,
                                 decoration: InputDecoration(
                                   labelText: 'Data inizio *',
                                   hintText: 'gg/mm/aaaa',
@@ -1480,6 +1609,8 @@ class _AppuntamentoFormScreenState
                       ],
                     ),
                     const SizedBox(height: AppSpazi.m),
+                    _sezioneLuogoENote(),
+                    const SizedBox(height: AppSpazi.m),
                     _SezioneAppuntamento(
                       titolo: 'Ripetizione',
                       figli: [
@@ -1524,7 +1655,22 @@ class _AppuntamentoFormScreenState
                               ? null
                               : (valore) {
                                   if (valore == null) return;
-                                  setState(() => _ripetizioneTipo = valore);
+                                  final precedente = _ripetizioneTipo;
+                                  setState(() {
+                                    if (valore == ripetizionePersonalizzata &&
+                                        precedente ==
+                                            ripetizioneBisettimanale &&
+                                        (int.tryParse(
+                                                  _intervalloRipetizione.text
+                                                      .trim(),
+                                                ) ??
+                                                1) <=
+                                            1) {
+                                      _intervalloRipetizione.text = '2';
+                                    }
+                                    _ripetizioneTipo = valore;
+                                    _aggiornaGiornoInizio(_dataScelta);
+                                  });
                                 },
                         ),
                         if (_ripetizioneTipo == ripetizionePersonalizzata)
@@ -1547,10 +1693,7 @@ class _AppuntamentoFormScreenState
                           ),
                       ],
                       extra: [
-                        if (_ripetizioneTipo == ripetizioneGiornaliera ||
-                            _ripetizioneTipo == ripetizioneSettimanale ||
-                            _ripetizioneTipo == ripetizioneBisettimanale ||
-                            _ripetizioneTipo == ripetizionePersonalizzata) ...[
+                        if (_ripetizioneConGiorni) ...[
                           Text(
                             'Giorni della settimana',
                             style: tema.textTheme.bodySmall?.copyWith(
@@ -1573,13 +1716,35 @@ class _AppuntamentoFormScreenState
                                   selected: _giorniRipetizione.contains(giorno),
                                   onSelected: _salvando
                                       ? null
-                                      : (scelto) => setState(() {
-                                          if (scelto) {
-                                            _giorniRipetizione.add(giorno);
-                                          } else {
-                                            _giorniRipetizione.remove(giorno);
+                                      : (scelto) {
+                                          if (!scelto &&
+                                              giorno == _dataScelta.weekday) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Il giorno di inizio deve '
+                                                  'restare selezionato.',
+                                                ),
+                                              ),
+                                            );
+                                            return;
                                           }
-                                        }),
+                                          setState(() {
+                                            if (scelto) {
+                                              _giorniRipetizione.add(giorno);
+                                              _giorniSceltiManualmente.add(
+                                                giorno,
+                                              );
+                                            } else {
+                                              _giorniRipetizione.remove(giorno);
+                                              _giorniSceltiManualmente.remove(
+                                                giorno,
+                                              );
+                                            }
+                                          });
+                                        },
                                 ),
                             ],
                           ),
@@ -1589,11 +1754,23 @@ class _AppuntamentoFormScreenState
                           _ripetizioneTipo == ripetizioneMai
                               ? "L'appuntamento non si ripete."
                               : 'Ripetizione: '
-                                    '${etichettaRipetizione({'tipo': _ripetizioneTipo, 'intervallo_settimane': int.tryParse(_intervalloRipetizione.text) ?? 1})}.',
+                                    '${etichettaRipetizione(_regolaRipetizioneForm())}.',
                           style: tema.textTheme.bodySmall?.copyWith(
                             color: tema.colorScheme.onSurfaceVariant,
                           ),
                         ),
+                        if (_ripetizioneTipo != ripetizioneMai) ...[
+                          const SizedBox(height: AppSpazi.xxs),
+                          Text(
+                            'Prossime date: ${_anteprimaRipetizione()}',
+                            key: const Key(
+                              'appuntamento-anteprima-ripetizione',
+                            ),
+                            style: tema.textTheme.bodySmall?.copyWith(
+                              color: tema.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: AppSpazi.m),
@@ -2133,52 +2310,6 @@ class _AppuntamentoFormScreenState
                               ],
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpazi.m),
-                    _SezioneAppuntamento(
-                      titolo: 'Luogo e note',
-                      figli: [
-                        TextFormField(
-                          key: const Key('appuntamento-luogo'),
-                          controller: _luogo,
-                          enabled: !_salvando,
-                          textInputAction: TextInputAction.next,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(
-                            labelText: 'Luogo',
-                            hintText: 'Es. Sede del cliente',
-                          ),
-                        ),
-                        TextFormField(
-                          key: const Key('appuntamento-indirizzo'),
-                          controller: _indirizzo,
-                          enabled: !_salvando,
-                          textInputAction: TextInputAction.next,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: InputDecoration(
-                            labelText: 'Indirizzo',
-                            hintText: 'Es. Via Roma 1, Milano',
-                            suffixIcon: IconButton(
-                              key: const Key('appuntamento-maps'),
-                              tooltip: 'Apri in Google Maps',
-                              onPressed: _salvando ? null : _apriMaps,
-                              icon: const Icon(Icons.directions_car_outlined),
-                            ),
-                          ),
-                        ),
-                      ],
-                      extra: [
-                        TextFormField(
-                          key: const Key('appuntamento-note'),
-                          controller: _note,
-                          enabled: !_salvando,
-                          minLines: 3,
-                          maxLines: 4,
-                          textCapitalization: TextCapitalization.sentences,
-                          textInputAction: TextInputAction.newline,
-                          decoration: const InputDecoration(labelText: 'Note'),
                         ),
                       ],
                     ),
