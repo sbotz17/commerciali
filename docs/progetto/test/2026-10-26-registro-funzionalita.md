@@ -25,7 +25,7 @@ per confermare i permessi. Nessun dato preesistente modificato: solo record di p
 | AU06 | Visite | elenco per giorno, creazione, modifica, eliminazione, riordino, stati, calendario, filtri, promemoria | IN CORSO | creazione visita OK (26/10). Resto da provare |
 | AU07 | Calendario e appuntamenti | giorno/settimana/mese, creazione, ricorrenza, tutto il giorno, privato, partecipanti, call, Maps, allegati, condivisione, promemoria | IN CORSO | creazione appuntamento OK (26/10). Ricorrenza, inviti, call, Maps, allegati, condivisione e promemoria da provare |
 | AU08 | Task | elenco, filtri, creazione, modifica, eliminazione, scadenza, priorità, utente, completamento | IN CORSO | creazione e comparsa in elenco OK (26/10). **Accessibilità**: il testo delle card non entra nell'albero semantico (R-3). Modifica/eliminazione da provare |
-| AU09 | Notifiche | centro, badge, lette/non lette, “segna tutte”, preferenze, push web, WhatsApp personale, silenzio, anteprima | FALLITA | centro e badge OK. **Preferenze**: `permission-denied` al primo accesso (R-2), schermata “Non hai i permessi” |
+| AU09 | Notifiche | centro, badge, lette/non lette, “segna tutte”, preferenze, push web, WhatsApp personale, silenzio, anteprima | IN CORSO | R-2 corretto e pubblicato: la schermata preferenze si apre senza errore e la GET del proprio documento mancante risponde 404; isolamento verificato (altro utente → 403). Restano: salvataggio dal pulsante, push reale, WhatsApp personale, silenzio |
 | AU10 | Chat | chat dirette, gruppi, messaggi, immagini, letture, badge, notifiche, isolamento | BLOCCATA | schermata OK; con un solo utente in azienda non è possibile creare una chat (serve un secondo utente) |
 | AU11 | Bandi | elenco, ricerca, filtri, dettaglio, link, import superadmin | IN CORSO | elenco reale, ricerca e filtri OK (26/10). Dettaglio, link e import da provare |
 | AU12 | Impostazioni | profilo, azienda, utenti, ruoli, licenze, superadmin, integrazioni, agenda, condivisione calendario, Face ID | IN CORSO | tutte le schermate si aprono. Errore CORS `passkeyElenco` visto alle 23:59, non più riprodotto alle 00:12 (funzioni ridepoyate). Face ID da provare |
@@ -35,15 +35,17 @@ per confermare i permessi. Nessun dato preesistente modificato: solo record di p
 
 ## Bug confermati in questa sessione
 
-### R-2 — Preferenze notifiche: “Non hai i permessi” al primo accesso (P1)
+### R-2 — Preferenze notifiche: “Non hai i permessi” al primo accesso (P1) — CORRETTO
 
 - Riproduzione: utente nuovo senza documento `impostazioni_notifiche/{azienda}_{uid}` → Impostazioni →
   Notifiche → “Preferenze non disponibili · Non hai i permessi per cambiare le notifiche”.
 - Verifica diretta: `GET` Firestore sul documento inesistente con il token dell'utente → **HTTP 403**
   `PERMISSION_DENIED`.
 - Causa: la regola legge `resource.data.utente_uid` anche quando il documento non esiste; Firestore nega.
-- Correzione: `allow read` accetta anche `resource == null`; il servizio tratta `permission-denied` come
-  “nessuna preferenza salvata” e usa i valori predefiniti. Il documento viene creato al primo salvataggio.
+- Correzione: `allow read` accetta `resource == null` **solo se** l'id finisce con `_<uid>` (seconda lettura
+  indipendente APPROVATA). Pubblicata su staging. Verifiche: proprio documento mancante → 404; schermata
+  preferenze senza errore; documento esistente di un altro utente → 403. Residuo: salvataggio dal pulsante
+  non provato in UI (create permessa dalle regole, verificata via REST).
 
 ### R-3 — Task: titolo e dettagli non leggibili dall'albero di accessibilità (P2)
 
