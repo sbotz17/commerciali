@@ -43,3 +43,11 @@ copiato un client di un altro progetto.
 6. tester + validatore.
 
 Fino ad allora **Google login in produzione è BLOCCATO** e nessuna nuova funzione può partire.
+
+## Prova eseguita il 25/10/2026
+
+- provider Google produzione: assente;
+- client OAuth staging: non utilizzabile (redirect URI di produzione rifiutato);
+- login Google reale: **non eseguibile** senza client OAuth di produzione.
+
+**Verdetto: BLOCCATO.**

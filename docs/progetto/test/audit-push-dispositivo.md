@@ -44,3 +44,22 @@ Quindi non si può dichiarare “notifiche push funzionanti ad app chiusa”: ma
 - non è stato inviato un messaggio a un numero reale senza consenso.
 
 Fino a questa prova l’audit push è **BLOCCATO**.
+
+## Prova eseguita il 25/10/2026
+
+Browser Chrome con `permissions: ['notifications']`, pagina di prova servita in locale con lo stesso
+`push-client.js` e `push-sw.js` di produzione:
+
+| Controllo | Esito |
+|---|---|
+| `CloserPush.supportato` | `true` |
+| `Notification.permission` | `granted` |
+| Service worker `/push/` | registrato |
+| `CloserPush.iscrivi()` | **timeout dopo 20 secondi**, nessuna sottoscrizione |
+| Errore browser | `Target page, context or browser has been closed` nella prima prova headless |
+
+Il browser di prova non riesce a completare la sottoscrizione push: il servizio push di Chrome non risponde
+nell’ambiente disponibile. Non è quindi possibile dichiarare la consegna verificata.
+
+**Verdetto: BLOCCATO.** Serve una prova su un dispositivo/browser con servizio push raggiungibile
+(Chrome desktop, Android o iPhone con PWA installata).

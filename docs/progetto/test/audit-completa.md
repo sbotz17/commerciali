@@ -1,7 +1,7 @@
 # Audit completo dell'applicazione — piano di verifica
 
 **Data**: 24/10/2026
-**Stato**: in corso — due audit bloccanti aperti
+**Stato**: in corso — due audit bloccanti aperti; prove del 25/10 eseguite, entrambe BLOCCATE
 **Regola**: nessuna nuova funzione e nessun rilascio finché un'area non ha report tester + validatore.
 **Responsabilità**: la squadra esegue i test; Andrea riceve solo la validazione finale.
 

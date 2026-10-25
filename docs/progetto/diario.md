@@ -574,3 +574,9 @@
 - Google login produzione: BLOCCATO, manca client OAuth dedicato; lo staging non è riutilizzabile (redirect mismatch).
 - Push dispositivo: BLOCCATO, manca la prova di consegna con permesso notifiche reale; codice e service worker verificati.
 - Regola globale: nessun nuovo sviluppo finché entrambi gli audit non sono chiusi con prova UI, tester e validatore.
+
+## 2026-10-25 — Prove audit eseguite
+
+- Push: permesso concesso, service worker attivo, ma `iscrivi()` va in timeout nel browser di prova; nessuna sottoscrizione, audit BLOCCATO.
+- Google: provider produzione assente e client staging non riutilizzabile; login reale non eseguibile, audit BLOCCATO.
+- Nessun nuovo sviluppo ammesso finché i due audit non sono chiusi.
