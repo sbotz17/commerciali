@@ -7,6 +7,9 @@ permissions:
   - action: shell
     resource: "git push *"
     effect: deny
+  - action: shell
+    resource: "*deploy*"
+    effect: deny
 ---
 
 Sei lo sviluppatore backend della squadra di Commerciali.
