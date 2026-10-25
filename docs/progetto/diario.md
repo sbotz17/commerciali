@@ -657,3 +657,9 @@
 - Test di regressione in `test/preventivi_screen_test.dart`, verificato che fallisce senza la correzione.
 - `flutter analyze` 0, `flutter test` 882 verdi.
 - Prova UI sulla build pubblicata non eseguibile senza deploy su staging: rimandata, R-1 resta "corretto, prova UI in sospeso".
+
+## 2026-10-25 — Staging come ambiente di rilascio
+
+- Regola nuova: si prova su build locale o canale di anteprima; su staging si pubblica solo con audit chiuso (tester SUPERATO, validatore APPROVATO, prove UI allegate).
+- Il validatore non approva più leggendo il codice: riesegue i test e pretende prove UI con evidenze.
+- Regola sincronizzata in `squadraalphalab` e in `AGENTS.md`.

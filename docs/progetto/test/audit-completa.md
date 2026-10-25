@@ -8,6 +8,9 @@
 
 ## Gate di pubblicazione
 
+Staging è un ambiente di rilascio, non una sandbox: è ciò che Andrea apre per vedere il prodotto.
+Le prove si fanno su build locale o canale di anteprima; su staging si pubblica solo a gate chiuso.
+
 Nessun deploy hosting su staging o produzione è consentito senza:
 
 1. audit-completa eseguito e report aggiornato;

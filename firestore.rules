@@ -306,5 +306,17 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isSuper();
     }
+
+    // Accesso con Face ID: solo le Cloud Functions (Admin SDK) leggono e
+    // scrivono queste collezioni. Nessun accesso diretto dall'app.
+    match /_passkey_sfide/{id} {
+      allow read, write: if false;
+    }
+    match /_passkey_credenziali/{id} {
+      allow read, write: if false;
+    }
+    match /_passkey_limiti/{id} {
+      allow read, write: if false;
+    }
   }
 }
