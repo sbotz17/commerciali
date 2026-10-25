@@ -97,6 +97,8 @@ void main() {
       expect(preferenze.silenzioFine, '08:00');
       expect(preferenze.numeroWhatsapp, isEmpty);
       expect(preferenze.consensoWhatsapp, isFalse);
+      expect(preferenze.anticipoTaskGiorni, 1);
+      expect(preferenze.anticipoPreventivoGiorni, 3);
     });
 
     test('documento assente usa i default', () {
@@ -118,6 +120,8 @@ void main() {
         'silenzio_a': '07:15',
         'urgenze_passano': false,
         'anteprima_push': false,
+        'anticipo_task_giorni': 5,
+        'anticipo_preventivo_giorni': 7,
       });
       expect(preferenze.push, isFalse);
       expect(preferenze.whatsapp, isTrue);
@@ -128,6 +132,8 @@ void main() {
       expect(preferenze.silenzioFine, '07:15');
       expect(preferenze.urgenzePassano, isFalse);
       expect(preferenze.anteprimaPush, isFalse);
+      expect(preferenze.anticipoTaskGiorni, 5);
+      expect(preferenze.anticipoPreventivoGiorni, 7);
     });
 
     test('orari corrotti ricadono sui default', () {
@@ -156,6 +162,8 @@ void main() {
       expect(mappa['consenso_whatsapp'], isTrue);
       expect(mappa['silenzio_da'], '22:00');
       expect(mappa['silenzio_a'], '08:00');
+      expect(mappa['anticipo_task_giorni'], 1);
+      expect(mappa['anticipo_preventivo_giorni'], 3);
     });
   });
 
@@ -170,6 +178,15 @@ void main() {
       expect(find.text('Canali'), findsOneWidget);
       expect(find.text('WhatsApp'), findsWidgets);
       expect(find.text('Orari di silenzio'), findsOneWidget);
+      expect(find.text('Anticipo degli avvisi'), findsOneWidget);
+      expect(
+        find.byKey(const Key('notifiche-anticipo-task')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const Key('notifiche-anticipo-preventivo')),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('notifiche-push')), findsOneWidget);
       expect(find.byKey(const Key('notifiche-whatsapp')), findsOneWidget);
       expect(find.byKey(const Key('notifiche-chat')), findsOneWidget);

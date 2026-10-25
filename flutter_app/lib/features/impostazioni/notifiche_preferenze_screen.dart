@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/stato_centrato.dart';
+import '../../data/avvisi.dart';
 import '../../data/services/web_push_service.dart';
 import '../../state/azienda_providers.dart';
 
@@ -35,6 +36,8 @@ abstract final class ChiaviPreferenzeNotifiche {
   static const String silenzioA = 'silenzio_a';
   static const String urgenzePassano = 'urgenze_passano';
   static const String anteprimaPush = 'anteprima_push';
+  static const String anticipoTask = chiaveAnticipoTask;
+  static const String anticipoPreventivo = chiaveAnticipoPreventivo;
 }
 
 /// L'orario segue il formato `HH:MM` (24 ore)?
@@ -108,6 +111,8 @@ class PreferenzeNotifiche {
     this.silenzioFine = orarioSilenzioFinePredefinito,
     this.urgenzePassano = true,
     this.anteprimaPush = true,
+    this.anticipoTaskGiorni = anticipoTaskPredefinito,
+    this.anticipoPreventivoGiorni = anticipoPreventivoPredefinito,
   });
 
   /// Preferenze predefinite, usate quando il documento non esiste.
@@ -148,6 +153,16 @@ class PreferenzeNotifiche {
         valori[ChiaviPreferenzeNotifiche.anteprimaPush],
         true,
       ),
+      anticipoTaskGiorni: anticipoDaMappa(
+        valori,
+        chiaveAnticipoTask,
+        anticipoTaskPredefinito,
+      ),
+      anticipoPreventivoGiorni: anticipoDaMappa(
+        valori,
+        chiaveAnticipoPreventivo,
+        anticipoPreventivoPredefinito,
+      ),
     );
   }
 
@@ -161,6 +176,12 @@ class PreferenzeNotifiche {
   final bool urgenzePassano;
   final bool anteprimaPush;
 
+  /// Giorni di anticipo per l'avviso dei task (0 = solo alla scadenza).
+  final int anticipoTaskGiorni;
+
+  /// Giorni di anticipo per l'avviso dei preventivi (0 = solo alla scadenza).
+  final int anticipoPreventivoGiorni;
+
   /// Copia con i campi indicati sostituiti.
   PreferenzeNotifiche copiaCon({
     bool? push,
@@ -172,6 +193,8 @@ class PreferenzeNotifiche {
     String? silenzioFine,
     bool? urgenzePassano,
     bool? anteprimaPush,
+    int? anticipoTaskGiorni,
+    int? anticipoPreventivoGiorni,
   }) {
     return PreferenzeNotifiche(
       push: push ?? this.push,
@@ -183,6 +206,11 @@ class PreferenzeNotifiche {
       silenzioFine: silenzioFine ?? this.silenzioFine,
       urgenzePassano: urgenzePassano ?? this.urgenzePassano,
       anteprimaPush: anteprimaPush ?? this.anteprimaPush,
+      anticipoTaskGiorni: (anticipoTaskGiorni ?? this.anticipoTaskGiorni)
+          .clamp(0, 30),
+      anticipoPreventivoGiorni:
+          (anticipoPreventivoGiorni ?? this.anticipoPreventivoGiorni)
+              .clamp(0, 30),
     );
   }
 
@@ -211,6 +239,10 @@ class PreferenzeNotifiche {
       ChiaviPreferenzeNotifiche.silenzioA: normalizzate.silenzioFine,
       ChiaviPreferenzeNotifiche.urgenzePassano: normalizzate.urgenzePassano,
       ChiaviPreferenzeNotifiche.anteprimaPush: normalizzate.anteprimaPush,
+      ChiaviPreferenzeNotifiche.anticipoTask:
+          normalizzate.anticipoTaskGiorni,
+      ChiaviPreferenzeNotifiche.anticipoPreventivo:
+          normalizzate.anticipoPreventivoGiorni,
     };
   }
 }
@@ -676,6 +708,40 @@ class _CorpoNotifichePreferenzeState extends State<CorpoNotifichePreferenze> {
               ),
               const SizedBox(height: AppSpazi.gapCard),
               _SezioneCard(
+                chiave: const Key('notifiche-sezione-anticipi'),
+                titolo: 'Anticipo degli avvisi',
+                icona: Icons.schedule,
+                figli: [
+                  Text(
+                    'Scegli quanti giorni prima ricevere l\'avviso per i task '
+                    'con scadenza e per i preventivi in scadenza. Alla data '
+                    'fatidica arriva comunque un secondo avviso.',
+                    style: tema.textTheme.bodySmall?.copyWith(
+                      color: tema.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpazi.s),
+                  _CampoAnticipo(
+                    campoKey: const Key('notifiche-anticipo-task'),
+                    etichetta: 'Task con scadenza',
+                    valore: _preferenze.anticipoTaskGiorni,
+                    onCambia: (giorni) => _modifica(
+                      _preferenze.copiaCon(anticipoTaskGiorni: giorni),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpazi.s),
+                  _CampoAnticipo(
+                    campoKey: const Key('notifiche-anticipo-preventivo'),
+                    etichetta: 'Preventivi in scadenza',
+                    valore: _preferenze.anticipoPreventivoGiorni,
+                    onCambia: (giorni) => _modifica(
+                      _preferenze.copiaCon(anticipoPreventivoGiorni: giorni),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpazi.gapCard),
+              _SezioneCard(
                 chiave: const Key('notifiche-sezione-whatsapp'),
                 titolo: 'WhatsApp',
                 icona: Icons.chat_bubble_outline,
@@ -904,6 +970,50 @@ class _SezioneCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Tendina dei giorni di anticipo (0 = solo il giorno della scadenza).
+class _CampoAnticipo extends StatelessWidget {
+  const _CampoAnticipo({
+    required this.campoKey,
+    required this.etichetta,
+    required this.valore,
+    required this.onCambia,
+  });
+
+  static const List<int> _giorni = [0, 1, 2, 3, 5, 7, 14, 30];
+
+  final Key campoKey;
+  final String etichetta;
+  final int valore;
+  final ValueChanged<int> onCambia;
+
+  @override
+  Widget build(BuildContext context) {
+    final opzioni = {..._giorni, valore}.toList()..sort();
+    return DropdownButtonFormField<int>(
+      key: campoKey,
+      initialValue: valore,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: etichetta),
+      items: [
+        for (final giorni in opzioni)
+          DropdownMenuItem(
+            value: giorni,
+            child: Text(
+              giorni == 0
+                  ? 'Solo il giorno della scadenza'
+                  : giorni == 1
+                  ? '1 giorno prima'
+                  : '$giorni giorni prima',
+            ),
+          ),
+      ],
+      onChanged: (scelta) {
+        if (scelta != null) onCambia(scelta);
+      },
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
+import '../avvisi.dart';
 import '../models/allegato.dart';
 import '../models/appuntamento.dart';
 import '../models/azienda.dart';
@@ -407,6 +408,13 @@ class SpService {
   final FirebaseFirestore _firestore;
 
   String? _aziendaAttiva;
+
+  /// Ultimo giro di creazione avvisi in-app, per non ripeterlo a ogni
+  /// ricostruzione della campanella.
+  DateTime? _ultimoGiroInApp;
+
+  /// Ultimo giro di registrazione avvisi WhatsApp.
+  DateTime? _ultimoGiroWhatsapp;
 
   String _now() => DateTime.now().toIso8601String();
 
@@ -1833,6 +1841,7 @@ class SpService {
       'stato': 'inviato',
       'numero': nuovoNumero,
       'revisione': nuovaRev,
+      'valido_fino': vecchio.validoFino,
       'created_at': _now(),
     };
     final ref = await _firestore.collection('preventivi').add(payload);
@@ -1864,6 +1873,9 @@ class SpService {
       'iva': _numero(dati['iva']) ?? 0,
       'totale_iva': _numero(dati['totaleIva']) ?? 0,
       'stato': _stringa(dati['stato'], fallback: 'bozza'),
+      'valido_fino': _dataIsoPreventivo(
+        dati['validoFino'] ?? dati['valido_fino'],
+      ),
     };
     if (numero != null) payload['numero'] = numero;
     if (revisione != null) payload['revisione'] = revisione;
@@ -2241,6 +2253,16 @@ class SpService {
         'utente_uid': uid,
         'numero_whatsapp': numero,
         'consenso_whatsapp': true,
+        'anticipo_task_giorni': anticipoDaMappa(
+          dati,
+          chiaveAnticipoTask,
+          anticipoTaskPredefinito,
+        ),
+        'anticipo_preventivo_giorni': anticipoDaMappa(
+          dati,
+          chiaveAnticipoPreventivo,
+          anticipoPreventivoPredefinito,
+        ),
         'updated_at': _now(),
       }, SetOptions(merge: true));
     } else {
@@ -2617,6 +2639,310 @@ class SpService {
     }
   }
 
+  // ---------- avvisi operatore (appuntamenti, task, preventivi) ----------
+
+  /// Pianifica gli avvisi dell'utente corrente leggendo task, preventivi e
+  /// appuntamenti dell'azienda attiva.
+  ///
+  /// Gli anticipi arrivano dalle preferenze personali; un errore di lettura su
+  /// una singola area non blocca le altre (gli avvisi sono un promemoria, non
+  /// un dato critico).
+  Future<List<AvvisoProgrammato>> pianificaAvvisiPersonali({
+    DateTime? adesso,
+  }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || uid.trim().isEmpty) return const [];
+    final preferenze = await getPreferenzeNotifiche();
+    final anticipoTask = anticipoDaMappa(
+      preferenze,
+      chiaveAnticipoTask,
+      anticipoTaskPredefinito,
+    );
+    final anticipoPreventivo = anticipoDaMappa(
+      preferenze,
+      chiaveAnticipoPreventivo,
+      anticipoPreventivoPredefinito,
+    );
+
+    final avvisi = <AvvisoProgrammato>[];
+    try {
+      final task = await getTask(soloAperti: true, operatoreId: uid);
+      for (final elemento in task) {
+        avvisi.addAll(
+          avvisiTask(
+            elemento,
+            utenteUid: uid,
+            anticipoGiorni: anticipoTask,
+          ),
+        );
+      }
+    } catch (_) {
+      // Un'area non disponibile non blocca le altre.
+    }
+    try {
+      final preventivi = await getPreventivi(soloUtenteId: uid);
+      for (final elemento in preventivi) {
+        avvisi.addAll(
+          avvisiPreventivo(
+            elemento,
+            utenteUid: uid,
+            anticipoGiorni: anticipoPreventivo,
+          ),
+        );
+      }
+    } catch (_) {
+      // Vedi sopra.
+    }
+    try {
+      final appuntamenti = await getAppuntamenti();
+      for (final elemento in appuntamenti) {
+        if (!_destinatarioAppuntamento(elemento, uid)) continue;
+        avvisi.addAll(
+          avvisiAppuntamento(
+            elemento,
+            utenteUids: [uid],
+            adesso: adesso,
+          ),
+        );
+      }
+    } catch (_) {
+      // Vedi sopra.
+    }
+    return avvisi;
+  }
+
+  /// Crea nel centro notifiche gli avvisi già scaduti (max 20 per giro).
+  ///
+  /// La chiave deterministica evita duplicati: lo stesso avviso viene creato
+  /// una sola volta anche se l'app viene aperta più volte.
+  Future<int> generaAvvisiInApp({DateTime? adesso}) async {
+    final ora = adesso ?? DateTime.now();
+    if (_ultimoGiroInApp != null &&
+        ora.difference(_ultimoGiroInApp!).inMinutes < 5) {
+      return 0;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final aziendaId = _aziendaAttiva;
+    if (uid == null || uid.trim().isEmpty || aziendaId == null) return 0;
+    _ultimoGiroInApp = ora;
+
+    final avvisi = avvisiDaMostrare(
+      await pianificaAvvisiPersonali(adesso: ora),
+      adesso: ora,
+    );
+    var creati = 0;
+    for (final avviso in avvisi.take(20)) {
+      try {
+        final riferimento = _firestore
+            .collection('notifiche')
+            .doc(avviso.idDocumento);
+        final esistente = await riferimento.get();
+        if (esistente.exists) continue;
+        final quando = avviso.quando.toIso8601String();
+        await riferimento.set({
+          'azienda_id': aziendaId,
+          'utente_uid': uid,
+          'mittente_uid': uid,
+          'tipo': avviso.tipo,
+          'titolo': avviso.titolo,
+          'testo': avviso.testo,
+          'target_tipo': avviso.tipo,
+          'target_id': avviso.targetId,
+          'canale': 'inapp',
+          'stato': 'inviata',
+          'programmata_at': quando,
+          'inviata_at': quando,
+          'tentativi': 0,
+          'idempotenza_key': avviso.chiave,
+          'created_at': _now(),
+        });
+        creati++;
+      } catch (_) {
+        // Permessi o rete: si riprova al prossimo giro.
+      }
+    }
+    return creati;
+  }
+
+  /// Registra sul Worker gli avvisi futuri dell'utente corrente.
+  ///
+  /// Serve per i task e i preventivi creati prima di questa funzione o quando
+  /// il salvataggio non è riuscito. Il Worker ricontrolla consenso e numero.
+  Future<int> sincronizzaAvvisiWhatsapp({DateTime? adesso}) async {
+    final ora = adesso ?? DateTime.now();
+    if (_ultimoGiroWhatsapp != null &&
+        ora.difference(_ultimoGiroWhatsapp!).inMinutes < 30) {
+      return 0;
+    }
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final aziendaId = _aziendaAttiva;
+    if (uid == null || uid.trim().isEmpty || aziendaId == null) return 0;
+    _ultimoGiroWhatsapp = ora;
+
+    final preferenze = await getPreferenzeNotifiche();
+    if (!_whatsappAttivo(preferenze)) return 0;
+    final avvisi = avvisiDaRegistrare(
+      await pianificaAvvisiPersonali(adesso: ora),
+      adesso: ora,
+    );
+    return _registraAvvisiWorker(aziendaId, avvisi);
+  }
+
+  /// Registra gli avvisi WhatsApp futuri di un task appena salvato.
+  ///
+  /// Best-effort: non interrompe mai il salvataggio. Il destinatario è
+  /// l'operatore assegnato; senza operatore non c'è nessun avviso.
+  Future<void> registraAvvisiTask(String taskId) async {
+    final aziendaId = _aziendaAttiva;
+    final id = taskId.trim();
+    if (aziendaId == null || id.isEmpty) return;
+    try {
+      final documento = await _firestore.collection('task').doc(id).get();
+      final dati = documento.data();
+      if (!documento.exists || dati == null) return;
+      final task = TaskItem.fromMap(dati, id: documento.id);
+      final uid = (task.operatoreId ?? '').trim();
+      if (uid.isEmpty) return;
+      final contatto = await getContattoNotifiche(uid);
+      if (!_whatsappAttivo(contatto)) return;
+      final anticipo = anticipoDaMappa(
+        contatto,
+        chiaveAnticipoTask,
+        anticipoTaskPredefinito,
+      );
+      final avvisi = avvisiDaRegistrare(
+        avvisiTask(task, utenteUid: uid, anticipoGiorni: anticipo),
+      );
+      await _registraAvvisiWorker(aziendaId, avvisi);
+    } catch (_) {
+      // Best-effort: il promemoria non deve far fallire il salvataggio.
+    }
+  }
+
+  /// Registra gli avvisi WhatsApp futuri di un preventivo appena salvato.
+  ///
+  /// Il destinatario è chi ha creato il preventivo (`utente_id`). Best-effort.
+  Future<void> registraAvvisiPreventivo(String preventivoId) async {
+    final aziendaId = _aziendaAttiva;
+    final id = preventivoId.trim();
+    if (aziendaId == null || id.isEmpty) return;
+    try {
+      final documento = await _firestore
+          .collection('preventivi')
+          .doc(id)
+          .get();
+      final dati = documento.data();
+      if (!documento.exists || dati == null) return;
+      final preventivo = Preventivo.fromMap(dati, id: documento.id);
+      final uid = (preventivo.utenteId ?? '').trim();
+      if (uid.isEmpty) return;
+      final contatto = await getContattoNotifiche(uid);
+      if (!_whatsappAttivo(contatto)) return;
+      final anticipo = anticipoDaMappa(
+        contatto,
+        chiaveAnticipoPreventivo,
+        anticipoPreventivoPredefinito,
+      );
+      final avvisi = avvisiDaRegistrare(
+        avvisiPreventivo(
+          preventivo,
+          utenteUid: uid,
+          anticipoGiorni: anticipo,
+        ),
+      );
+      await _registraAvvisiWorker(aziendaId, avvisi);
+    } catch (_) {
+      // Best-effort: vedi sopra.
+    }
+  }
+
+  /// Ricalcola gli avvisi di un task: prima cancella i vecchi, poi registra
+  /// quelli nuovi, in quest'ordine (evita che l'annullamento cancelli i nuovi).
+  Future<void> rinnovaAvvisiTask(String taskId) async {
+    await annullaAvvisi(tipo: 'task', targetId: taskId);
+    await registraAvvisiTask(taskId);
+  }
+
+  /// Ricalcola gli avvisi di un preventivo, con lo stesso ordine del task.
+  Future<void> rinnovaAvvisiPreventivo(String preventivoId) async {
+    await annullaAvvisi(tipo: 'preventivo', targetId: preventivoId);
+    await registraAvvisiPreventivo(preventivoId);
+  }
+
+  /// Cancella dal Worker gli avvisi futuri di un elemento completato,
+  /// eliminato o annullato.
+  Future<void> annullaAvvisi({
+    required String tipo,
+    required String targetId,
+  }) async {
+    final aziendaId = _aziendaAttiva;
+    if (aziendaId == null || tipo.trim().isEmpty || targetId.trim().isEmpty) {
+      return;
+    }
+    try {
+      await _chiamaWorker(
+        '/avvisi/annulla',
+        metodo: 'POST',
+        corpo: {
+          'aziendaId': aziendaId,
+          'tipo': tipo.trim(),
+          'targetId': targetId.trim(),
+        },
+      );
+    } catch (_) {
+      // Best-effort: il Worker scarta comunque gli avvisi vecchi.
+    }
+  }
+
+  Future<int> _registraAvvisiWorker(
+    String aziendaId,
+    List<AvvisoProgrammato> avvisi,
+  ) async {
+    if (avvisi.isEmpty) return 0;
+    var creati = 0;
+    for (final blocco in aBlocchi(avvisi, 50)) {
+      try {
+        final esito = await _chiamaWorker(
+          '/avvisi',
+          metodo: 'POST',
+          corpo: {
+            'aziendaId': aziendaId,
+            'avvisi': [
+              for (final avviso in blocco)
+                {
+                  'chiave': avviso.chiave,
+                  'dueAt': avviso.quandoIso,
+                  'utenteUid': avviso.utenteUid,
+                  'titolo': avviso.titolo,
+                  'testo': avviso.testo,
+                  'tipo': avviso.tipo,
+                  'targetId': avviso.targetId,
+                },
+            ],
+          },
+        );
+        final numero = esito['creati'];
+        if (numero is num) creati += numero.toInt();
+      } catch (_) {
+        // Best-effort: si riprova al prossimo avvio.
+      }
+    }
+    return creati;
+  }
+
+  bool _whatsappAttivo(Map<String, dynamic>? dati) {
+    if (dati == null) return false;
+    final consenso = dati['consenso_whatsapp'];
+    final numero = (dati['numero_whatsapp'] ?? '').toString().trim();
+    return consenso == true && numero.isNotEmpty;
+  }
+
+  bool _destinatarioAppuntamento(Appuntamento appuntamento, String uid) {
+    if ((appuntamento.createdBy ?? '') == uid) return true;
+    if ((appuntamento.operatoreId ?? '') == uid) return true;
+    return appuntamento.invitatiUids.contains(uid);
+  }
+
   // ---------- chat ----------
 
   /// Elenco delle stanze di chat dell'azienda attiva a cui partecipa l'utente
@@ -2933,6 +3259,30 @@ class SpService {
   String? _stringaNull(dynamic valore) {
     final s = (valore?.toString() ?? '').trim();
     return s.isEmpty ? null : s;
+  }
+
+  /// Data `YYYY-MM-DD` da un valore ISO o `gg/mm/aaaa`; `null` se non valida.
+  String? _dataIsoPreventivo(dynamic valore) {
+    final testo = (valore?.toString() ?? '').trim();
+    if (testo.isEmpty) return null;
+    final iso = DateTime.tryParse(testo);
+    final data = iso ?? _dataItalianaPreventivo(testo);
+    if (data == null) return null;
+    return '${data.year.toString().padLeft(4, '0')}-'
+        '${data.month.toString().padLeft(2, '0')}-'
+        '${data.day.toString().padLeft(2, '0')}';
+  }
+
+  DateTime? _dataItalianaPreventivo(String testo) {
+    final trovata = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch(testo);
+    if (trovata == null) return null;
+    final giorno = int.tryParse(trovata.group(1)!);
+    final mese = int.tryParse(trovata.group(2)!);
+    final anno = int.tryParse(trovata.group(3)!);
+    if (giorno == null || mese == null || anno == null) return null;
+    final data = DateTime(anno, mese, giorno);
+    if (data.day != giorno || data.month != mese) return null;
+    return data;
   }
 
   /// Valore numerico, `null` se assente o non interpretabile come numero.

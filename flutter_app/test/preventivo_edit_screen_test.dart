@@ -181,6 +181,7 @@ void main() {
         'cliente_nome': 'ACME Srl',
         'stato': 'inviato',
         'note': 'Nota',
+        'valido_fino': '2026-11-25',
         'sconto': 10,
         'righe': [
           {'nome': 'Voce'},
@@ -197,6 +198,7 @@ void main() {
         'clienteNome': 'ACME Srl',
         'stato': 'inviato',
         'note': 'Nota',
+        'validoFino': '2026-11-25',
         'sconto': 10,
         'righe': [
           {'nome': 'Voce'},

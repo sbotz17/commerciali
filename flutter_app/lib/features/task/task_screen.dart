@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -246,8 +248,10 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
           ...task.toMap(),
           'stato': 'aperto',
         });
+        unawaited(servizio.registraAvvisiTask(task.id));
       } else {
         await servizio.completaTask(task.id);
+        unawaited(servizio.annullaAvvisi(tipo: 'task', targetId: task.id));
       }
       await _carica();
     } catch (errore) {
@@ -283,6 +287,9 @@ class _TaskScreenState extends ConsumerState<TaskScreen> {
 
     try {
       await _servizio().eliminaTask(task.id);
+      unawaited(
+        _servizio().annullaAvvisi(tipo: 'task', targetId: task.id),
+      );
       await _carica();
     } catch (errore) {
       if (!mounted) return;
