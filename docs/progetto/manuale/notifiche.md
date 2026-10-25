@@ -32,6 +32,23 @@ Le notifiche push **non sostituiscono** il centro notifiche: ogni avviso resta s
 
 Non arrivano notifiche per elementi annullati o completati, salvo comunicazioni esplicite.
 
+## Avvisi operatore (dal 26/10/2026)
+
+| Elemento | Quando arriva | A chi |
+|---|---|---|
+| Appuntamento con notifica | all'anticipo scelto nel form (5/10/15/30 min, 1 giorno o personalizzato) | creatore, operatore e invitati |
+| Task con scadenza | con l'anticipo scelto (default 1 giorno, ore 09:00) e alla scadenza | operatore assegnato |
+| Preventivo con "Valido fino al" | con l'anticipo scelto (default 3 giorni, ore 09:00) e il giorno dopo la scadenza | chi ha creato il preventivo |
+
+- L'anticipo di task e preventivi si cambia in **Impostazioni → Notifiche → Anticipo degli avvisi**
+  (0 = solo alla scadenza).
+- L'avviso in-app compare quando si apre Closer: senza Firebase Blaze non c'è un invio programmato ad app
+  chiusa. Resta nel centro notifiche finché non viene letto.
+- Il WhatsApp parte dal Worker solo se l'operatore ha numero e consenso attivi; altrimenti l'avviso resta
+  in-app. Un errore di invio non blocca il salvataggio.
+- Completare o eliminare un task, accettare/rifiutare un preventivo o annullare un appuntamento cancella
+  gli avvisi futuri.
+
 ## Preferenze per utente
 
 Ogni operatore configura:

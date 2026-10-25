@@ -713,3 +713,15 @@
   cliente (con **+** nuovo cliente) e operatore.
 - La card **Data e ora** segue; **Luogo e note** resta subito sotto.
 - Test widget aggiornato sull'ordine; screenshot `2026-10-25-form-luogo-note-ordine.png` rifatto.
+
+## 2026-10-26 — Avvisi operatore (T-14)
+
+- Aggiunto `valido_fino` al preventivo (default 30 giorni nell'editor) e mostrato nell'elenco come scaduto.
+- Nuove funzioni pure `data/avvisi.dart`: due avvisi per task (anticipo + scadenza), due per preventivo
+  (anticipo + giorno dopo la scadenza), promemoria per ogni occorrenza degli appuntamenti.
+- In-app: la campanella crea i documenti `notifiche` scaduti all'apertura (7 giorni di finestra, max 20,
+  throttle 5 minuti) con id deterministico; niente Blaze.
+- WhatsApp: Worker `POST /avvisi` e `/avvisi/annulla`; il cron esistente invia sia `promemoria:` sia
+  `avviso:`. Numero e consenso restano nella rubrica aziendale, mai nel client.
+- Preferenze: anticipo task (1) e preventivo (3), 0–30 giorni; valori copiati nella rubrica per i colleghi.
+- Test: `flutter analyze` 0; 913 test Flutter verdi; 18 test Worker verdi. E2E UI ancora da fare (T14-06).

@@ -127,3 +127,20 @@ ricostruisce con prove ripetibili, non con nuove funzioni.
 - Le regole `utenti` impediscono l'auto-assegnazione di `super_admin`, `ruolo` e `attivo`; test E2E su
   staging conferma 403.
 - Aggiunto workflow GitHub Actions `Test automatici` per `flutter analyze`, `flutter test` e test Worker.
+
+## 2026-10-26 — Avvisi operatore: eccezione al congelamento e scelte
+
+**Decisione di Andrea** (chat del 26/10/2026): procedere subito con gli avvisi all'operatore, registrando
+l'eccezione al congelamento delle nuove funzioni del 24/10. Tester e validatore restano obbligatori e il
+rilascio resta bloccato finché `audit-completa.md` non è chiuso.
+
+**Scelte confermate**
+- Preventivo scaduto = campo facoltativo **`valido_fino`** (ultimo giorno valido), non un calcolo fisso.
+- Anticipo predefinito: **1 giorno** per i task, **3 giorni** per i preventivi, personalizzabile per
+  operatore (0–30). Alla scadenza arriva comunque un secondo avviso.
+- Destinatari: **solo l'operatore assegnato** (task), **chi ha creato il preventivo**, creatore + operatore
+  + invitati per gli appuntamenti.
+- In-app senza Blaze: il client crea i documenti `notifiche` all'apertura dell'app (finestra 7 giorni),
+  con id deterministico; WhatsApp usa la coda KV del Worker e il cron esistente.
+- Gli orari di silenzio non sono applicati alla coda WhatsApp in questa fetta: dichiarato come residuo,
+  non come funzione superata.

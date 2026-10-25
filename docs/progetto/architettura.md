@@ -506,6 +506,36 @@ muti; dati sensibili in push/WhatsApp (solo testo generico); costo account Apple
 orario/ora legale; server Volty non raggiungibile; più dispositivi = più token da gestire.
 NON mettere segreti (VAPID privata, api_key Volty, chiave APNs) in Firestore o nel codice.
 
+## 2026-10-26 — Avvisi operatore: implementazione senza Blaze
+
+Fetta realizzata della sezione Notifiche (task T-14): appuntamenti, task in scadenza e preventivi scaduti
+per l'operatore, in-app e su WhatsApp. Nessuna nuova collezione e nessun segreto nuovo.
+
+### 1. Dati
+- `preventivi.valido_fino`: data `YYYY-MM-DD`, facoltativa, solo aggiunta. I documenti esistenti restano
+  validi senza scadenza.
+- `impostazioni_notifiche` e `contatti_notifiche`: `anticipo_task_giorni` (default 1) e
+  `anticipo_preventivo_giorni` (default 3), limitati 0–30.
+- `notifiche`: documenti con id deterministico `avviso_<tipo>:<id>:<uid>:<ora UTC>`, `canale=inapp`,
+  `target_tipo`/`target_id`, `idempotenza_key` = stessa chiave.
+
+### 2. Calcolo (client, funzioni pure)
+`flutter_app/lib/data/avvisi.dart`: `avvisiTask`, `avvisiPreventivo`, `avvisiAppuntamento`,
+`avvisiDaMostrare` (7 giorni indietro) e `avvisiDaRegistrare` (90 giorni avanti). Stesse regole per
+creatore/operatore/invitati degli appuntamenti; nessun titolo per gli appuntamenti privati.
+
+### 3. Consegna
+- **In-app**: `SpService.generaAvvisiInApp()` crea i documenti scaduti all'apertura della campanella
+  (max 20 per giro, throttle 5 minuti). Senza Blaze non esiste un cron che scriva su Firestore.
+- **WhatsApp**: `POST /avvisi` sul Worker mette in KV (`avviso:<progetto>:<azienda>:...`) solo per
+  destinatari membri con numero e consenso; il cron esistente (`* * * * *`) invia e cancella.
+  `POST /avvisi/annulla` svuota il prefisso dell'elemento. Chiavi separate per staging/produzione.
+- Errori e rete: sempre best-effort, il salvataggio dell'elemento non fallisce.
+
+### 4. Residui dichiarati
+Orari di silenzio non applicati alla coda WhatsApp; push programmato non disponibile senza Blaze; la
+creazione in-app avviene all'apertura dell'app, non a app chiusa.
+
 ## 2026-10-23 — Chat interna
 
 Chat dirette 1-a-1 e gruppi, solo utenti attivi della stessa azienda, nessun esterno. Testo + immagini

@@ -16,7 +16,7 @@
 | `prodotti` | auto | `azienda_id`, `nome`, `categoria`, `prezzo`, `immagine` |
 | `categorie` | auto | `azienda_id`, `nome`, `icona`, `ordine` |
 | `clienti` | auto | `azienda_id`, anagrafica, `piva`, `codice_fiscale` |
-| `preventivi` | auto | `azienda_id`, `numero`, `revisione`, `righe`, totali, `stato` |
+| `preventivi` | auto | `azienda_id`, `numero`, `revisione`, `righe`, totali, `stato`, `valido_fino` |
 | `giro_visite` | auto | `azienda_id`, `data`, `ora`, `ordine`, `stato`, `cliente_id` |
 | `contatori` | `preventivi_{aziendaId}` | `azienda_id`, `valore` |
 | `bandi_*` | varie | globali, lettura pubblica |

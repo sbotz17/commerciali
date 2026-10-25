@@ -185,3 +185,15 @@ automatici, prova E2E reale nella UI, report tester e validazione. Piano: `docs/
 | AU13 | Integrazioni | WhatsApp, SMTP, push, Google/Microsoft, R2 | tester | DA FARE |
 | AU14 | Trasversale | permessi, multi-azienda, errori, mobile/desktop | tester | DA FARE |
 | AU15 | Produzione | progetto, Auth, DB, regole, hosting, admin | tester | DA FARE |
+
+## Avvisi operatore: appuntamenti, task, preventivi (T-14)
+
+| ID | Area | Task | Criteri di accettazione | Agente | Stato |
+|---|---|---|---|---|---|
+| T14-01 | Dati | `valido_fino` sul preventivo | campo facoltativo, default 30 giorni, documenti vecchi leggibili; test | dba/sviluppatore-backend | FATTO |
+| T14-02 | Calcolo | Funzioni pure avvisi task/preventivi/appuntamenti | anticipi, finestre, testo, chiave deterministica; test | sviluppatore-backend | FATTO |
+| T14-03 | Worker | Endpoint `/avvisi` e `/avvisi/annulla` + cron | consenso/numero, membership, validazione, nessun duplicato; test | sviluppatore-backend | FATTO |
+| T14-04 | In-app | Creazione notifiche all'apertura e badge | centro notifiche, chiave idempotente, nessun errore se rete assente; test | sviluppatore-frontend | FATTO |
+| T14-05 | Impostazioni | Anticipo task e preventivi | due tendine 0–30, salvataggio su preferenze e rubrica; test | sviluppatore-frontend | FATTO |
+| T14-06 | Qualità | E2E UI degli avvisi | appuntamento/task/preventivo reali, WhatsApp ricevuto, nessun duplicato | tester | DA FARE |
+| T14-07 | Qualità | Validazione T-14 | report tester, DoD, residui dichiarati | validatore | DA FARE |
