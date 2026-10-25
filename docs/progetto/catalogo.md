@@ -81,6 +81,7 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Promemoria programmati | `worker/src/index.js`, `flutter_app/lib/data/services/sp_service.dart` | KV `PROMEMORIA` + Cron ogni minuto; invio WhatsApp, registrazione/annullamento |
 | Privacy appuntamenti | `firestore.rules`, `sp_service.dart`, `appuntamento.dart` | Sotto-collezione `appuntamenti/{id}/privato/dettagli`; documento principale redatto |
 | Cliente nell’appuntamento | `flutter_app/lib/features/calendario/calendario_screen.dart`, `sp_service.dart` | `getCliente`, dettagli cliente nel dialogo, `ClienteFormScreen`, `aggiornaNomeClienteAppuntamento`, `indirizzoCliente` |
+| Dettaglio appuntamento responsive | `calendario_screen.dart` (`DettaglioElementoDialog`, `_SezioneDettaglio`, `_RigaInvitato`) | Finestra quasi a tutto schermo su telefono, 560 px su tablet; azioni impilate o raggruppate |
 | Notifiche invito | `flutter_app/lib/data/services/sp_service.dart` | Notifica In-App a creatore/operatore dopo la risposta; `inviaWhatsapp`/`inviaWhatsappAUtente` best-effort |
 | Rubrica WhatsApp | `firestore.rules`, `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart` | `contatti_notifiche` aziendale: numero e consenso, leggibile dai colleghi |
 | Configurazione WhatsApp | `flutter_app/lib/features/superadmin/whatsapp_server_screen.dart`, `worker/src/index.js` | Super Admin → Server WhatsApp; URL/API key nel KV del Worker, QR e stato; invio autenticato tramite Worker |

@@ -282,7 +282,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
     if (!mounted) return;
     final azione = await showDialog<String>(
       context: context,
-      builder: (_) => _DialogoElemento(
+      builder: (_) => DettaglioElementoDialog(
         elemento: elemento,
         nomiOperatori: _nomiOperatori,
         uidCorrente: _uidCorrente,
@@ -1165,11 +1165,16 @@ class _CardElemento extends StatelessWidget {
 
 /// Dettaglio di una voce dell'agenda, con le azioni disponibili.
 ///
+/// Su telefono il contenuto scorre e le azioni sono impilate a tutta
+/// larghezza; da tablet in su restano su una riga allineata a destra.
+///
 /// Le azioni che cambiano i dati tornano al chiamante con uno dei valori
-/// `azioneModificaVoce`, `azioneEliminaVoce`, `azioneApriTaskVoce`; i link
-/// esterni (Maps e call) vengono aperti qui.
-class _DialogoElemento extends StatelessWidget {
-  const _DialogoElemento({
+/// `azioneModificaVoce`, `azioneEliminaVoce`, `azioneApriTaskVoce`,
+/// `azioneModificaClienteVoce`; i link esterni (Maps e call) vengono aperti
+/// qui.
+class DettaglioElementoDialog extends StatelessWidget {
+  const DettaglioElementoDialog({
+    super.key,
     required this.elemento,
     required this.nomiOperatori,
     this.uidCorrente,
@@ -1233,237 +1238,393 @@ class _DialogoElemento extends StatelessWidget {
         ? (appuntamento?.note ?? task?.note ?? '').trim()
         : '';
 
+    final stretto = MediaQuery.sizeOf(context).width < AppBreakpoints.telefono;
     final invitati = appuntamento?.invitatiUids ?? const <String>[];
     final condivisione =
         appuntamento?.statoCondivisione ?? statoCondivisioneNonCondiviso;
     final invitato = uidCorrente != null && invitati.contains(uidCorrente);
-    final risposteInvitati = [
-      for (final uid in invitati)
-        '${(nomiOperatori[uid] ?? '').trim().isEmpty ? uid : nomiOperatori[uid]}: '
-            '${etichettaRispostaInvito(rispostaInvito(appuntamento?.conferme ?? const {}, uid))}',
-    ].join('\n');
+    String nomeInvitato(String uid) {
+      final nome = (nomiOperatori[uid] ?? '').trim();
+      return nome.isEmpty ? uid : nome;
+    }
 
-    return AlertDialog(
-      key: const Key('calendario-dettaglio'),
-      title: Text(dettagliVisibili ? elemento.titolo : 'Impegno privato'),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _RigaDettaglio(
-              etichetta: 'Data e ora',
-              valore: etichettaDataOraElemento(elemento),
-            ),
-            _RigaDettaglio(
-              etichetta: 'Stato',
-              valore: etichettaStatoElemento(elemento),
-            ),
-            if (appuntamento?.privato == true)
-              _RigaDettaglio(
-                etichetta: 'Privacy',
-                valore: dettagliVisibili ? 'Appuntamento privato' : 'Dettagli visibili solo al creatore e all\'utente assegnato',
-              ),
-            if (dettagliVisibili)
-              _RigaDettaglio(
-                etichetta: 'Cliente e utente',
-                valore: dettaglioElemento(elemento, nomiOperatori),
-              ),
-            if (dettagliVisibili && cliente != null) ...[
-              const Divider(height: AppSpazi.l),
-              Text('Cliente', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: AppSpazi.xs),
-              if (cliente!.tipoCliente.trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Tipo',
-                  valore: cliente!.tipoCliente.trim(),
-                ),
-              if ((cliente!.nome ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Nome',
-                  valore: cliente!.nome!.trim(),
-                ),
-              if ((cliente!.referente ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Referente',
-                  valore: cliente!.referente!.trim(),
-                ),
-              if ((cliente!.telefono ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Telefono',
-                  valore: cliente!.telefono!.trim(),
-                ),
-              if ((cliente!.email ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Email',
-                  valore: cliente!.email!.trim(),
-                ),
-              if ((cliente!.piva ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'P.IVA',
-                  valore: cliente!.piva!.trim(),
-                ),
-              if ((cliente!.codiceFiscale ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Codice fiscale',
-                  valore: cliente!.codiceFiscale!.trim(),
-                ),
-              if (indirizzoCliente(cliente!).isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Indirizzo',
-                  valore: indirizzoCliente(cliente!),
-                ),
-              if ((cliente!.settore ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Settore',
-                  valore: cliente!.settore!.trim(),
-                ),
-              if ((cliente!.ateco ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'ATECO',
-                  valore: cliente!.ateco!.trim(),
-                ),
-              if ((cliente!.regione ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Regione',
-                  valore: cliente!.regione!.trim(),
-                ),
-              if ((cliente!.note ?? '').trim().isNotEmpty)
-                _RigaDettaglio(
-                  etichetta: 'Note cliente',
-                  valore: cliente!.note!.trim(),
-                ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: OutlinedButton.icon(
-                  key: const Key('calendario-modifica-cliente'),
-                  onPressed: () =>
-                      Navigator.of(context).pop(azioneModificaClienteVoce),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Modifica cliente'),
-                ),
-              ),
-            ],
-            if (dettagliVisibili && invitati.isNotEmpty) ...[
-              _RigaDettaglio(
-                etichetta: 'Condivisione',
-                valore: etichettaStatoCondivisione(condivisione),
-              ),
-              _RigaDettaglio(etichetta: 'Invitati', valore: risposteInvitati),
-            ],
-            if (dettagliVisibili && appuntamento != null) ...[
-              _RigaDettaglio(
-                etichetta: 'Ripetizione',
-                valore: etichettaRipetizione(appuntamento.ripetizione),
-              ),
-              _RigaDettaglio(
-                etichetta: 'Notifica',
-                valore: etichettaNotificaAppuntamento(appuntamento.notificaMin),
-              ),
-            ],
-            if (luogo.isNotEmpty)
-              _RigaDettaglio(etichetta: 'Luogo', valore: luogo),
-            if (indirizzo.isNotEmpty)
-              _RigaDettaglio(etichetta: 'Indirizzo', valore: indirizzo),
-            if (descrizione.isNotEmpty)
-              _RigaDettaglio(etichetta: 'Descrizione', valore: descrizione),
-            if (note.isNotEmpty)
-              _RigaDettaglio(etichetta: 'Note', valore: note),
-            if (dettagliVisibili && allegati.isNotEmpty) ...[
-              const SizedBox(height: AppSpazi.xs),
-              Text(
-                'Allegati',
-                style: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: AppSpazi.xxs),
-              Wrap(
-                spacing: AppSpazi.xs,
-                runSpacing: AppSpazi.xxs,
-                children: [
-                  for (final allegato in allegati)
-                    ActionChip(
-                      key: Key('calendario-allegato-${allegato.id}'),
-                      avatar: Icon(
-                        allegato.immagine
-                            ? Icons.image_outlined
-                            : allegato.video
-                            ? Icons.videocam_outlined
-                            : Icons.attach_file,
-                        size: 16,
-                      ),
-                      label: Text(allegato.nome),
-                      onPressed: onApriAllegato == null
-                          ? null
-                          : () => onApriAllegato!(allegato),
-                    ),
-                ],
-              ),
-            ],
-          ],
+    final panoramica = <Widget>[
+      if (appuntamento?.privato == true)
+        _RigaDettaglio(
+          etichetta: 'Privacy',
+          valore: dettagliVisibili
+              ? 'Appuntamento privato'
+              : 'Dettagli visibili solo al creatore e all\'utente assegnato',
         ),
-      ),
-      actions: [
-        if (dettagliVisibili && maps != null)
-          TextButton.icon(
+      if (dettagliVisibili)
+        _RigaDettaglio(
+          etichetta: 'Cliente e utente',
+          valore: dettaglioElemento(elemento, nomiOperatori),
+        ),
+      if (dettagliVisibili && appuntamento != null) ...[
+        _RigaDettaglio(
+          etichetta: 'Ripetizione',
+          valore: etichettaRipetizione(appuntamento.ripetizione),
+        ),
+        _RigaDettaglio(
+          etichetta: 'Notifica',
+          valore: etichettaNotificaAppuntamento(appuntamento.notificaMin),
+        ),
+      ],
+    ];
+
+    final dettagli = <Widget>[
+      if (luogo.isNotEmpty) _RigaDettaglio(etichetta: 'Luogo', valore: luogo),
+      if (indirizzo.isNotEmpty)
+        _RigaDettaglio(etichetta: 'Indirizzo', valore: indirizzo),
+      if (maps != null)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
             key: const Key('calendario-maps'),
             onPressed: () => _apriLink(context, maps, 'Google Maps'),
-            icon: const Icon(Icons.directions_outlined),
+            icon: const Icon(Icons.directions_outlined, size: 18),
             label: const Text('Apri in Google Maps'),
           ),
-        if (dettagliVisibili && callUrl.isNotEmpty)
-          TextButton.icon(
+        ),
+      if (callUrl.isNotEmpty)
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
             key: const Key('calendario-call'),
             onPressed: () =>
                 _apriLink(context, Uri.tryParse(callUrl), 'la call'),
-            icon: const Icon(Icons.videocam_outlined),
+            icon: const Icon(Icons.videocam_outlined, size: 18),
             label: const Text('Apri call'),
           ),
-        if (invitato) ...[
-          FilledButton.icon(
-            key: const Key('calendario-conferma-invito'),
-            onPressed: () =>
-                Navigator.of(context).pop(azioneConfermaInvitoVoce),
-            icon: const Icon(Icons.check),
-            label: const Text('Confermo'),
+        ),
+      if (descrizione.isNotEmpty)
+        _RigaDettaglio(etichetta: 'Descrizione', valore: descrizione),
+      if (note.isNotEmpty) _RigaDettaglio(etichetta: 'Note', valore: note),
+    ];
+
+    final contenutiCliente = <Widget>[
+      if (dettagliVisibili && cliente != null) ...[
+        if (cliente!.tipoCliente.trim().isNotEmpty)
+          _RigaDettaglio(
+            etichetta: 'Tipo',
+            valore: cliente!.tipoCliente.trim(),
           ),
-          TextButton.icon(
-            key: const Key('calendario-rifiuta-invito'),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            onPressed: () => Navigator.of(context).pop(azioneRifiutaInvitoVoce),
-            icon: const Icon(Icons.close),
-            label: const Text('Non disponibile'),
+        if ((cliente!.nome ?? '').trim().isNotEmpty)
+          _RigaDettaglio(etichetta: 'Nome', valore: cliente!.nome!.trim()),
+        if ((cliente!.referente ?? '').trim().isNotEmpty)
+          _RigaDettaglio(
+            etichetta: 'Referente',
+            valore: cliente!.referente!.trim(),
           ),
-        ],
-        if (dettagliVisibili && elemento.isAppuntamento) ...[
-          OutlinedButton(
-            key: const Key('calendario-modifica'),
-            onPressed: () => Navigator.of(context).pop(azioneModificaVoce),
-            child: const Text('Modifica'),
+        if ((cliente!.telefono ?? '').trim().isNotEmpty)
+          _RigaDettaglio(
+            etichetta: 'Telefono',
+            valore: cliente!.telefono!.trim(),
           ),
-          TextButton(
-            key: const Key('calendario-elimina'),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
-            onPressed: () => Navigator.of(context).pop(azioneEliminaVoce),
-            child: const Text('Elimina'),
+        if ((cliente!.email ?? '').trim().isNotEmpty)
+          _RigaDettaglio(etichetta: 'Email', valore: cliente!.email!.trim()),
+        if ((cliente!.piva ?? '').trim().isNotEmpty)
+          _RigaDettaglio(etichetta: 'P.IVA', valore: cliente!.piva!.trim()),
+        if ((cliente!.codiceFiscale ?? '').trim().isNotEmpty)
+          _RigaDettaglio(
+            etichetta: 'Codice fiscale',
+            valore: cliente!.codiceFiscale!.trim(),
           ),
-        ] else if (dettagliVisibili)
-          FilledButton.tonalIcon(
-            key: const Key('calendario-apri-task'),
-            onPressed: () => Navigator.of(context).pop(azioneApriTaskVoce),
-            icon: const Icon(Icons.open_in_new),
-            label: const Text('Apri Task'),
+        if (indirizzoCliente(cliente!).isNotEmpty)
+          _RigaDettaglio(
+            etichetta: 'Indirizzo',
+            valore: indirizzoCliente(cliente!),
           ),
-        TextButton(
-          key: const Key('calendario-chiudi'),
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Chiudi'),
+        if ((cliente!.settore ?? '').trim().isNotEmpty)
+          _RigaDettaglio(
+            etichetta: 'Settore',
+            valore: cliente!.settore!.trim(),
+          ),
+        if ((cliente!.ateco ?? '').trim().isNotEmpty)
+          _RigaDettaglio(etichetta: 'ATECO', valore: cliente!.ateco!.trim()),
+        if ((cliente!.regione ?? '').trim().isNotEmpty)
+          _RigaDettaglio(
+            etichetta: 'Regione',
+            valore: cliente!.regione!.trim(),
+          ),
+        if ((cliente!.note ?? '').trim().isNotEmpty)
+          _RigaDettaglio(
+            etichetta: 'Note cliente',
+            valore: cliente!.note!.trim(),
+          ),
+        const SizedBox(height: AppSpazi.xs),
+        OutlinedButton.icon(
+          key: const Key('calendario-modifica-cliente'),
+          onPressed: () => Navigator.of(context).pop(azioneModificaClienteVoce),
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text('Modifica cliente'),
         ),
       ],
+    ];
+
+    // Azioni raggruppate: prima la risposta all'invito, poi la gestione
+    // dell'appuntamento. Su telefono i gruppi restano vicini; su schermo
+    // largo le azioni principali stanno a destra.
+    final azioniRisposta = <Widget>[];
+    final azioniProprietario = <Widget>[];
+    final azioniPrincipali = <Widget>[];
+    final azioniSecondarie = <Widget>[];
+    final coloreErrore = Theme.of(context).colorScheme.error;
+
+    if (invitato) {
+      final conferma = FilledButton.icon(
+        key: const Key('calendario-conferma-invito'),
+        onPressed: () => Navigator.of(context).pop(azioneConfermaInvitoVoce),
+        icon: const Icon(Icons.check),
+        label: const Text('Confermo'),
+      );
+      azioniRisposta.add(conferma);
+      azioniPrincipali.add(conferma);
+
+      final rifiuta = OutlinedButton.icon(
+        key: const Key('calendario-rifiuta-invito'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: coloreErrore,
+          side: BorderSide(color: coloreErrore),
+        ),
+        onPressed: () => Navigator.of(context).pop(azioneRifiutaInvitoVoce),
+        icon: const Icon(Icons.close),
+        label: const Text('Non disponibile'),
+      );
+      azioniRisposta.add(rifiuta);
+      azioniSecondarie.add(rifiuta);
+    }
+
+    if (dettagliVisibili && elemento.isAppuntamento) {
+      final modifica = FilledButton.tonalIcon(
+        key: const Key('calendario-modifica'),
+        onPressed: () => Navigator.of(context).pop(azioneModificaVoce),
+        icon: const Icon(Icons.edit_outlined),
+        label: const Text('Modifica'),
+      );
+      azioniProprietario.add(modifica);
+      azioniPrincipali.add(modifica);
+
+      final elimina = TextButton.icon(
+        key: const Key('calendario-elimina'),
+        style: TextButton.styleFrom(foregroundColor: coloreErrore),
+        onPressed: () => Navigator.of(context).pop(azioneEliminaVoce),
+        icon: const Icon(Icons.delete_outline),
+        label: const Text('Elimina'),
+      );
+      azioniProprietario.add(elimina);
+      azioniSecondarie.add(elimina);
+    } else if (dettagliVisibili) {
+      final apriTask = FilledButton.tonalIcon(
+        key: const Key('calendario-apri-task'),
+        onPressed: () => Navigator.of(context).pop(azioneApriTaskVoce),
+        icon: const Icon(Icons.open_in_new),
+        label: const Text('Apri Task'),
+      );
+      azioniProprietario.add(apriTask);
+      azioniPrincipali.add(apriTask);
+    }
+
+    final tutteLeAzioni = stretto
+        ? [...azioniRisposta, ...azioniProprietario]
+        : [...azioniSecondarie, ...azioniPrincipali];
+    final barraAzioni = tutteLeAzioni.isEmpty
+        ? null
+        : Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpazi.m,
+              AppSpazi.s,
+              AppSpazi.m,
+              AppSpazi.m,
+            ),
+            child: stretto
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < tutteLeAzioni.length; i++) ...[
+                        if (i > 0) const SizedBox(height: AppSpazi.xs),
+                        tutteLeAzioni[i],
+                      ],
+                    ],
+                  )
+                : Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: AppSpazi.s,
+                    runSpacing: AppSpazi.xs,
+                    children: [
+                      if (azioniSecondarie.isNotEmpty)
+                        Wrap(
+                          alignment: WrapAlignment.end,
+                          spacing: AppSpazi.xs,
+                          runSpacing: AppSpazi.xs,
+                          children: azioniSecondarie,
+                        ),
+                      if (azioniPrincipali.isNotEmpty)
+                        Wrap(
+                          alignment: WrapAlignment.end,
+                          spacing: AppSpazi.xs,
+                          runSpacing: AppSpazi.xs,
+                          children: azioniPrincipali,
+                        ),
+                    ],
+                  ),
+          );
+
+    final larghezzaDialogo = (MediaQuery.sizeOf(context).width - 24).clamp(
+      280.0,
+      560.0,
+    );
+
+    return Dialog(
+      key: const Key('calendario-dettaglio'),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: larghezzaDialogo,
+          maxHeight: MediaQuery.sizeOf(context).height - 32,
+        ),
+        child: SizedBox(
+          key: const Key('calendario-dettaglio-contenuto'),
+          width: larghezzaDialogo,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpazi.m,
+                  AppSpazi.s,
+                  AppSpazi.xs,
+                  AppSpazi.s,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            dettagliVisibili
+                                ? elemento.titolo
+                                : 'Impegno privato',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: AppSpazi.xxs),
+                          Text(
+                            '${etichettaDataOraElemento(elemento)} · '
+                            '${etichettaStatoElemento(elemento)}',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      key: const Key('calendario-chiudi'),
+                      tooltip: 'Chiudi',
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppSpazi.m),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (panoramica.isNotEmpty)
+                        _SezioneDettaglio(
+                          titolo: 'Panoramica',
+                          children: panoramica,
+                        ),
+                      if (contenutiCliente.isNotEmpty) ...[
+                        const SizedBox(height: AppSpazi.m),
+                        _SezioneDettaglio(
+                          titolo: 'Cliente',
+                          children: contenutiCliente,
+                        ),
+                      ],
+                      if (dettagliVisibili && invitati.isNotEmpty) ...[
+                        const SizedBox(height: AppSpazi.m),
+                        _SezioneDettaglio(
+                          titolo: 'Condivisione',
+                          children: [
+                            _RigaDettaglio(
+                              etichetta: 'Stato',
+                              valore: etichettaStatoCondivisione(condivisione),
+                            ),
+                            for (final uid in invitati)
+                              _RigaInvitato(
+                                nome: nomeInvitato(uid),
+                                stato: rispostaInvito(
+                                  appuntamento?.conferme ?? const {},
+                                  uid,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                      if (dettagli.isNotEmpty) ...[
+                        const SizedBox(height: AppSpazi.m),
+                        _SezioneDettaglio(
+                          titolo: 'Dettagli',
+                          children: dettagli,
+                        ),
+                      ],
+                      if (dettagliVisibili && allegati.isNotEmpty) ...[
+                        const SizedBox(height: AppSpazi.m),
+                        _SezioneDettaglio(
+                          titolo: 'Allegati',
+                          children: [
+                            Wrap(
+                              spacing: AppSpazi.xs,
+                              runSpacing: AppSpazi.xs,
+                              children: [
+                                for (final allegato in allegati)
+                                  ActionChip(
+                                    key: Key(
+                                      'calendario-allegato-${allegato.id}',
+                                    ),
+                                    avatar: Icon(
+                                      allegato.immagine
+                                          ? Icons.image_outlined
+                                          : allegato.video
+                                          ? Icons.videocam_outlined
+                                          : Icons.attach_file,
+                                      size: 16,
+                                    ),
+                                    label: Text(allegato.nome),
+                                    onPressed: onApriAllegato == null
+                                        ? null
+                                        : () => onApriAllegato!(allegato),
+                                  ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (barraAzioni != null) ...[
+                const Divider(height: 1),
+                barraAzioni,
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1481,6 +1642,74 @@ String indirizzoCliente(Cliente cliente) {
           .where((parte) => (parte ?? '').trim().isNotEmpty)
           .map((parte) => parte!.trim());
   return parti.join(', ');
+}
+
+/// Sezione del dettaglio con titolo e contenuto, su sfondo leggero.
+class _SezioneDettaglio extends StatelessWidget {
+  const _SezioneDettaglio({required this.titolo, required this.children});
+
+  final String titolo;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpazi.s),
+      decoration: BoxDecoration(
+        color: tema.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRaggi.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(titolo, style: tema.textTheme.titleSmall),
+          const SizedBox(height: AppSpazi.xs),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+/// Riga di un invitato con lo stato della sua risposta.
+class _RigaInvitato extends StatelessWidget {
+  const _RigaInvitato({required this.nome, required this.stato});
+
+  final String nome;
+  final String? stato;
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    final confermato = stato == 'confermato';
+    final rifiutato = stato == 'rifiutato';
+    final colore = confermato
+        ? tema.colorScheme.primary
+        : rifiutato
+        ? tema.colorScheme.error
+        : tema.colorScheme.onSurfaceVariant;
+    final icona = confermato
+        ? Icons.check_circle_outline
+        : rifiutato
+        ? Icons.cancel_outlined
+        : Icons.schedule;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpazi.xs),
+      child: Row(
+        children: [
+          Icon(icona, size: 18, color: colore),
+          const SizedBox(width: AppSpazi.xs),
+          Expanded(child: Text(nome, style: tema.textTheme.bodyMedium)),
+          const SizedBox(width: AppSpazi.xs),
+          Text(
+            etichettaRispostaInvito(stato),
+            style: tema.textTheme.labelMedium?.copyWith(color: colore),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// Riga etichetta/valore del dialogo di dettaglio.

@@ -76,3 +76,18 @@ impediscono il funzionamento della versione precedente.
 - Aprendo un appuntamento si vedono i dettagli del cliente collegato.
 - Il pulsante **Modifica cliente** apre la scheda cliente e aggiorna l’appuntamento.
 - I test sono della squadra (863 test, analyze 0); non serve eseguirli.
+
+## 2026-10-25 — Dettaglio appuntamento su telefono
+
+**Cosa fa**: il dettaglio di un appuntamento è stato ridisegnato per il telefono. Non è più una finestra
+stretta con i pulsanti ammassati: occupa quasi tutto lo schermo, il contenuto scorre diviso in sezioni
+(Panoramica, Cliente, Condivisione, Dettagli, Allegati) e le azioni restano ferme in fondo, una per riga e
+allineate. Su tablet la finestra è più larga e le azioni restano raggruppate a destra.
+
+**Come provarlo**: aprire Calendario, scegliere **Giorno**, toccare un appuntamento con cliente e invitati;
+scorrere il contenuto, controllare i dati del cliente e i pulsanti **Confermo**, **Non disponibile**,
+**Modifica**, **Elimina**; chiudere con la X. Ripetere su tablet o allargando la finestra.
+
+**Rischi**: nessuna modifica a dati, regole o collezioni; cambia solo il dialogo di dettaglio.
+
+**Come tornare indietro**: ripristinare `calendario_screen.dart` dal commit precedente.

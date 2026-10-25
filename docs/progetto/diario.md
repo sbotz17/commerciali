@@ -614,3 +614,13 @@
 - AU05 Preventivi FALLITA: creazione, numerazione PRV-0001 e totali con sconto OK, ma riaprire un preventivo apre un editor vuoto. Bug R-1 confermato, causa `preventivi_screen.dart:160`.
 - Creato il banco di prova UI riutilizzabile `scripts/audit-ui/` (Playwright su staging).
 - Report: `docs/progetto/test/2026-10-25-audit-ondata-2.md`.
+
+## 2026-10-25 — Dettaglio appuntamento ridisegnato per il telefono
+
+- Il dialogo di dettaglio ora usa una finestra quasi a tutto schermo con intestazione fissa, contenuto
+  scorrevole a sezioni (Panoramica, Cliente, Condivisione, Dettagli, Allegati) e barra azioni fissa.
+- Su telefono le azioni sono impilate a tutta larghezza, nell'ordine risposta all'invito e poi gestione;
+  su tablet la finestra è larga 560 px e i due gruppi restano separati e allineati a destra.
+- **Apri in Google Maps**, **Apri call** e **Modifica cliente** sono diventati pulsanti nel contenuto:
+  la barra in fondo resta libera per le azioni principali.
+- Verifica in browser reale a 390×844 e 900×900; `flutter analyze` 0; `flutter test` 867 verdi.

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:commerciali_app/core/theme/app_theme.dart';
 import 'package:commerciali_app/data/models/appuntamento.dart';
+import 'package:commerciali_app/data/models/cliente.dart';
 import 'package:commerciali_app/data/models/task_item.dart';
 import 'package:commerciali_app/features/calendario/calendario_screen.dart';
 
@@ -451,6 +452,154 @@ void main() {
         ),
         (inizio: 6 * 60, fine: 24 * 60),
       );
+    });
+  });
+
+  group('dettaglio appuntamento', () {
+    Future<void> mostraDettaglio(
+      WidgetTester tester, {
+      Size dimensione = const Size(390, 844),
+      String? uidCorrente = 'u1',
+    }) async {
+      tester.view.physicalSize = dimensione;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final elemento = elementiDaAppuntamenti([
+        appuntamento(
+          invitatiUids: const ['u1', 'u2'],
+          conferme: const {
+            'u1': {'stato': 'confermato'},
+          },
+          statoCondivisione: statoCondivisioneInAttesa,
+        ),
+      ]).single;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: FilledButton(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    builder: (_) => DettaglioElementoDialog(
+                      elemento: elemento,
+                      nomiOperatori: const {'u1': 'Andrea', 'u2': 'Simone'},
+                      uidCorrente: uidCorrente,
+                      cliente: const Cliente(
+                        id: 'c1',
+                        nome: 'ACME',
+                        referente: 'Rossi',
+                        telefono: '021234',
+                        email: 'info@acme.it',
+                        piva: '12345678901',
+                        indirizzo: 'Via Roma',
+                        civico: '1',
+                        cap: '20100',
+                        citta: 'Milano',
+                        provincia: 'MI',
+                      ),
+                    ),
+                  ),
+                  child: const Text('Apri'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Apri'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('su telefono azioni impilate, allineate e senza overflow', (
+      tester,
+    ) async {
+      await mostraDettaglio(tester);
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('calendario-dettaglio')), findsOneWidget);
+      expect(
+        tester
+            .getSize(find.byKey(const Key('calendario-dettaglio-contenuto')))
+            .width,
+        366,
+      );
+      expect(find.text('Panoramica'), findsOneWidget);
+      expect(find.text('Cliente'), findsOneWidget);
+      expect(find.text('Condivisione'), findsOneWidget);
+      expect(find.text('ACME'), findsNothing);
+      expect(find.text('Nome: ACME'), findsOneWidget);
+      expect(find.text('Andrea'), findsOneWidget);
+      expect(find.text('Simone'), findsOneWidget);
+
+      final confermo = find.byKey(const Key('calendario-conferma-invito'));
+      final rifiuta = find.byKey(const Key('calendario-rifiuta-invito'));
+      final misuraConfermo = tester.getSize(confermo);
+      final misuraRifiuta = tester.getSize(rifiuta);
+      final posizioneConfermo = tester.getTopLeft(confermo);
+      final posizioneRifiuta = tester.getTopLeft(rifiuta);
+
+      // A tutta larghezza e con lo stesso bordo sinistro.
+      expect(misuraConfermo.width, greaterThan(300));
+      expect(misuraConfermo.width, misuraRifiuta.width);
+      expect(posizioneConfermo.dx, posizioneRifiuta.dx);
+      expect(posizioneRifiuta.dy, greaterThan(posizioneConfermo.dy));
+      expect(tester.getBottomRight(rifiuta).dx, lessThanOrEqualTo(390));
+
+      await tester.tap(find.byKey(const Key('calendario-chiudi')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('calendario-dettaglio')), findsNothing);
+    });
+
+    testWidgets('da tablet i due gruppi di azioni restano separati', (
+      tester,
+    ) async {
+      await mostraDettaglio(tester, dimensione: const Size(900, 900));
+
+      expect(tester.takeException(), isNull);
+      final nonDisponibile = find.byKey(const Key('calendario-rifiuta-invito'));
+      final elimina = find.byKey(const Key('calendario-elimina'));
+      final confermo = find.byKey(const Key('calendario-conferma-invito'));
+      final modifica = find.byKey(const Key('calendario-modifica'));
+
+      // Prima riga: azioni secondarie. Seconda riga: azioni principali.
+      expect(
+        tester.getTopLeft(nonDisponibile).dy,
+        tester.getTopLeft(elimina).dy,
+      );
+      expect(tester.getTopLeft(confermo).dy, tester.getTopLeft(modifica).dy);
+      expect(
+        tester.getTopLeft(confermo).dy,
+        greaterThan(tester.getTopLeft(nonDisponibile).dy),
+      );
+      expect(tester.getTopRight(elimina).dx, closeTo(714, 1));
+      expect(tester.getTopRight(modifica).dx, closeTo(714, 1));
+    });
+
+    testWidgets('da tablet il dettaglio è largo e le azioni sono a destra', (
+      tester,
+    ) async {
+      // Utente non invitato: restano Modifica ed Elimina.
+      await mostraDettaglio(
+        tester,
+        dimensione: const Size(900, 900),
+        uidCorrente: 'u3',
+      );
+
+      expect(tester.takeException(), isNull);
+      final contenuto = find.byKey(const Key('calendario-dettaglio-contenuto'));
+      expect(tester.getSize(contenuto).width, 560);
+
+      final modifica = find.byKey(const Key('calendario-modifica'));
+      final elimina = find.byKey(const Key('calendario-elimina'));
+      expect(tester.getTopLeft(modifica).dy, tester.getTopLeft(elimina).dy);
+      expect(tester.getSize(modifica).width, lessThan(300));
+      // L'ultima azione tocca il bordo destro del contenuto.
+      expect(tester.getTopRight(modifica).dx, closeTo(900 - 170 - 16, 1));
     });
   });
 
