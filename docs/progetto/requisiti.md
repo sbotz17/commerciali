@@ -805,3 +805,16 @@ Closer e, solo se l'azienda lo sceglie, un'app OAuth propria.
 Nessuna domanda bloccante: le assunzioni sopra valgono fino a diversa indicazione di Andrea. Restano due punti
 che Andrea può cambiare senza toccare i dati: (1) se il link Meet/Teams debba essere visibile anche a chi ha
 `dettagli`; (2) se la condivisione debba valere anche per le visite in `giro_visite` o solo per `appuntamenti`.
+
+## Accesso con Face ID (passkey) — 2026-10-25
+
+**Obiettivo**: entrare in Closer con Face ID (o Touch ID/PIN) senza digitare email e password, su scelta di ogni utente. Email e password restano sempre disponibili. Solo web/PWA per ora.
+
+Requisiti:
+1. Dopo l'accesso con password, l'utente può attivare Face ID da **Impostazioni → Accesso con Face ID**.
+2. Il login mostra **“Entra con Face ID”** solo se il dispositivo/browser lo supporta.
+3. Se l'utente annulla, il login resta utilizzabile e compare un messaggio in italiano.
+4. L'utente vede i dispositivi abilitati e può rimuoverli.
+5. La passkey è legata all'indirizzo ufficiale (RP ID): indirizzi diversi sono siti diversi. Staging `commerciali-app.web.app`, produzione `commerciali-prod.web.app`; ognuno ha le sue passkey.
+6. Nessun dato biometrico nell'app o su Firebase: la chiave privata resta sul dispositivo, il server conserva solo la chiave pubblica. Mai token nei log.
+7. Password sempre come riserva e per il recupero account.

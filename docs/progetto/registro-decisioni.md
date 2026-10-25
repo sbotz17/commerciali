@@ -99,3 +99,12 @@ UI pubblicata, report tester e validazione. Un'area senza prova UI è `BLOCCATA`
 ricostruisce con prove ripetibili, non con nuove funzioni.
 
 **Effetto**: nessun rilascio e nessuna nuova funzione fino alla chiusura delle aree AU01–AU15.
+
+## 2026-10-25 — Accesso con Face ID su Closer (WebAuthn + Firebase custom token)
+
+- **Richiesta di Andrea**: Face ID su Closer, Avanza e Volty; utenti che scelgono, password sempre disponibile.
+- **Perché non basta una libreria**: Firebase Authentication non supporta le passkey. Serve un relying party WebAuthn: opzioni/sfida, verifica della firma e **custom token** Firebase per aprire la sessione. Implementato con `@simplewebauthn/server` in Cloud Functions (`functions/webauthn.js`) e il plugin `passkeys` 2.23.1 nel client (SDK web copiato in `flutter_app/web/passkeys_bundle.js`, release 2.4.0, non caricato da Internet).
+- **Sicurezza**: sfide monouso in `_passkey_sfide` (5 minuti), credenziali in `_passkey_credenziali` (solo Admin SDK), limite tentativi per IP, controllo utente attivo/disabilitato, contatore anti-replay. Nessun dato biometrico, nessuna password, nessun token nei log.
+- **Indirizzi**: RP ID = `commerciali-app.web.app` (staging) e `commerciali-prod.web.app` (produzione). Un solo indirizzo ufficiale per ambiente; non si possono condividere passkey tra i due domini.
+- **BLOCCO REALE (decisione di Andrea, soldi/account)**: il progetto Firebase di **staging** `commerciali-app` è sul piano **Spark**: Cloud Functions non si possono pubblicare senza **Blaze** (pay-as-you-go). La produzione `commerciali-prod` è già Blaze, ma non va usata per provare una funzione nuova. Il codice è pronto; appena Andrea passa lo staging a Blaze si pubblicano funzioni e app. Alternativa scartata: Worker Cloudflare con chiave di servizio Firebase (credenziale di produzione in più e JWT firmati a mano) — più rischiosa.
+- **Stato**: codice nel ramo `feature/face-id-login` (base `feature/agenda-notifiche-chat`), 893 test verdi, analyze 0, build web OK. Prova su iPhone dopo la pubblicazione sullo staging.

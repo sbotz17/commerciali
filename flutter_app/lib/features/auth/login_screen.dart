@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/ui/google_icon.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/passkey_service.dart';
 import '../../state/auth_providers.dart';
 
 /// Validazione dell'email per il form di accesso.
@@ -96,7 +97,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _passwordVisibile = false;
   bool _inCorso = false;
   bool _inCorsoGoogle = false;
+  bool _faceIdSupportato = false;
+  bool _inCorsoFaceId = false;
   String? _errore;
+  String? _erroreFaceId;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllaFaceId();
+  }
+
+  Future<void> _controllaFaceId() async {
+    final disponibile = await ref.read(passkeyServiceProvider).disponibile();
+    if (mounted && disponibile) setState(() => _faceIdSupportato = true);
+  }
+
+  Future<void> _accediConFaceId() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _errore = null;
+      _erroreFaceId = null;
+      _inCorsoFaceId = true;
+    });
+    try {
+      await ref.read(passkeyServiceProvider).accedi();
+      if (!mounted) return;
+      context.go('/');
+    } catch (errore) {
+      if (!mounted) return;
+      setState(() => _erroreFaceId = messaggioErrorePasskey(errore));
+    } finally {
+      if (mounted) setState(() => _inCorsoFaceId = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -107,7 +141,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _invia() async {
     FocusScope.of(context).unfocus();
-    setState(() => _errore = null);
+    setState(() {
+      _errore = null;
+      _erroreFaceId = null;
+    });
     if (!(_modulo.currentState?.validate() ?? false)) return;
 
     setState(() => _inCorso = true);
@@ -249,14 +286,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 if (!_inCorso) _invia();
                               },
                             ),
-                            if (_errore != null) ...[
+                            if (_errore != null || _erroreFaceId != null) ...[
                               const SizedBox(height: AppSpazi.m),
-                              _MessaggioErrore(testo: _errore!),
+                              _MessaggioErrore(testo: _errore ?? _erroreFaceId!),
                             ],
                             const SizedBox(height: AppSpazi.l),
                             FilledButton(
                               key: const Key('pulsante-accedi'),
-                              onPressed: _inCorso ? null : _invia,
+                              onPressed: (_inCorso || _inCorsoFaceId) ? null : _invia,
                               child: _inCorso
                                   ? const Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -275,9 +312,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     )
                                   : const Text('Accedi'),
                             ),
+                            if (_faceIdSupportato) ...[
+                              const SizedBox(height: AppSpazi.s),
+                              OutlinedButton.icon(
+                                key: const Key('pulsante-face-id'),
+                                onPressed: (_inCorso || _inCorsoFaceId)
+                                    ? null
+                                    : _accediConFaceId,
+                                icon: _inCorsoFaceId
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.face_outlined),
+                                label: Text(
+                                  _inCorsoFaceId
+                                      ? 'Attendo Face ID…'
+                                      : 'Entra con Face ID',
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: AppSpazi.xs),
                             TextButton(
-                              onPressed: _inCorso
+                              onPressed: (_inCorso || _inCorsoFaceId)
                                   ? null
                                   : () => context.go('/reset-password'),
                               child: const Text('Password dimenticata?'),
@@ -298,7 +358,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             const SizedBox(height: AppSpazi.m),
                             OutlinedButton(
                               key: const Key('pulsante-google'),
-                              onPressed: (_inCorso || _inCorsoGoogle)
+                              onPressed: (_inCorso || _inCorsoGoogle || _inCorsoFaceId)
                                   ? null
                                   : _accediConGoogle,
                               child: _inCorsoGoogle

@@ -9,6 +9,7 @@ import '../../data/models/azienda.dart';
 import '../../data/models/user_profile.dart';
 import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
+import 'accesso_face_id_card.dart';
 
 // ---------------------------------------------------------------------------
 // Funzioni pure: testi e messaggi verificabili senza Firebase né UI
@@ -147,6 +148,7 @@ class ImpostazioniScreen extends ConsumerWidget {
       onLogout: () => _esci(context, ref),
       onVoce: (rotta) => context.go(rotta),
       onApriIntro: () => context.push('/intro'),
+      extraSicurezza: const AccessoFaceIdCard(),
     );
   }
 
@@ -178,6 +180,7 @@ class CorpoImpostazioni extends StatelessWidget {
     required this.onVoce,
     this.admin = true,
     this.onApriIntro,
+    this.extraSicurezza,
   });
 
   final UserProfile? profilo;
@@ -194,6 +197,10 @@ class CorpoImpostazioni extends StatelessWidget {
 
   /// Apre la pagina "Come installare l'app" (`/intro`).
   final VoidCallback? onApriIntro;
+
+  /// Card aggiuntiva (Accesso con Face ID), iniettata dalla schermata che ha
+  /// i provider. Nei test del corpo puro resta `null`.
+  final Widget? extraSicurezza;
 
   @override
   Widget build(BuildContext context) {
@@ -216,6 +223,10 @@ class CorpoImpostazioni extends StatelessWidget {
               ),
               children: [
                 _CardProfilo(profilo: profilo),
+                if (extraSicurezza != null) ...[
+                  const SizedBox(height: AppSpazi.gapCard),
+                  extraSicurezza!,
+                ],
                 const SizedBox(height: AppSpazi.gapCard),
                 _CardAzienda(
                   aziende: aziende,
