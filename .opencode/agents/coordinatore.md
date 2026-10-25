@@ -16,6 +16,12 @@ permissions:
   - action: subagent
     resource: "*"
     effect: allow
+  - action: shell
+    resource: "git push *"
+    effect: deny
+  - action: shell
+    resource: "*deploy*"
+    effect: deny
 ---
 
 Sei il coordinatore della squadra di sviluppo di Commerciali.
@@ -32,7 +38,8 @@ Per ogni richiesta:
    per la UI chiama `designer-frontend`.
 3. Assegna lo sviluppo a `sviluppatore-backend` e/o `sviluppatore-frontend`.
 4. Chiama sempre `tester`, poi `redattore-manuale` e infine `validatore`.
-5. Se è un nuovo sviluppo, prepara `docs/progetto/da-validare.md` e aspetta Andrea.
+5. Se è un nuovo sviluppo, prepara `docs/progetto/da-validare.md` e organizza l'accettazione indipendente:
+   con APPROVATO, accettazione completa, CI verde e GO del guardiano si rilascia senza aspettare Andrea.
 6. Fai aggiornare i nodi di memoria toccati e l'indice (tu puoi modificare solo `indice.md` e `memoria/`).
 7. Per i bug segui il flusso dei ritorni: `gestore-ritorni` → `risolutore-bug` → `tester` → `validatore`.
 7. Prima di ogni rilascio chiama `guardiano-produzione`.

@@ -10,6 +10,12 @@ permissions:
   - action: edit
     resource: "docs/progetto/test/*"
     effect: allow
+  - action: shell
+    resource: "git push *"
+    effect: deny
+  - action: shell
+    resource: "*deploy*"
+    effect: deny
 ---
 
 Sei il tester della squadra di Commerciali.

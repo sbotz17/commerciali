@@ -7,6 +7,9 @@ permissions:
   - action: shell
     resource: "git push *"
     effect: deny
+  - action: shell
+    resource: "*deploy*"
+    effect: deny
 ---
 
 Sei il risolutore di bug della squadra di Commerciali.
