@@ -91,3 +91,14 @@ Nessuna nuova funzione può partire finché questi due audit non sono chiusi con
 
 Nessun task è `FATTO` perché “i test unitari passano”. Un'area è chiusa solo quando la funzione è stata
 provata **come la usa Andrea**, nella UI pubblicata, con dati reali di test.
+
+## Esecuzione a basso consumo
+
+- L'audit è un indice: ogni ondata legge solo la sezione e i file dell'area.
+- Un tester e un validatore per ondata, sessione riusata; niente agenti nuovi per ogni area.
+- Test automatici una volta per blocco; poi test mirati.
+- Output riassunto; log completi solo sui fallimenti.
+- Screenshot solo per fallimenti o prova finale.
+- Massimo 2 tentativi per area; poi `BLOCCATA` e si passa avanti.
+- Modelli: Flash per test/UI/report; V4 Pro solo per bug complessi, dati, architettura e produzione.
+- Controllo costi con `opencode stats --cost`.

@@ -120,6 +120,18 @@ tutto il repository a ogni richiesta.
   l'endpoint con `curl`.
 - Se la UI non è provabile, il task è **BLOCCATO**, non “SUPERATO con residuo”.
 
+### Audit obbligatorio a basso consumo
+
+- Usare `audit-completa.md` come indice: aprire solo la sezione dell'area in prova.
+- Un tester e un validatore per ondata, con sessione riusata; non un agente nuovo per ogni area.
+- Test automatici una volta per blocco di codice, poi solo test mirati sulle correzioni.
+- Comandi raggruppati e output riassunto; log completi solo se un test fallisce.
+- Screenshot solo per fallimenti o prova finale, non per ogni passaggio.
+- Niente rilettura di `AGENTS.md`, manuale o intero repository: citare file e nodi.
+- Massimo 2 tentativi per area; poi l'area è `BLOCCATA` e si passa alla successiva.
+- Flash per test, UI e report; V4 Pro solo per bug complessi, dati, architettura e produzione.
+- Controllare i consumi con `opencode stats --cost`.
+
 ### Audit obbligatorio prima di ogni rilascio
 
 - `docs/progetto/test/audit-completa.md` è il gate obbligatorio **prima di ogni pubblicazione**, sia su

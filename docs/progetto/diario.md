@@ -586,3 +586,9 @@
 - `docs/progetto/test/audit-completa.md` è obbligatorio prima di ogni deploy su staging e produzione.
 - Nessun deploy “con residuo”: aree non provate bloccano la pubblicazione.
 - Regola sincronizzata in `squadraalphalab` e `AGENTS.md`.
+
+## 2026-10-25 — Audit a basso consumo
+
+- L’audit resta obbligatorio ma viene eseguito a ondate, con sessioni riusate e senza rileggere tutto il progetto.
+- Test una volta per blocco, poi mirati; screenshot solo sui fallimenti; massimo 2 tentativi per area.
+- Regola sincronizzata in `squadraalphalab` e `AGENTS.md`.
