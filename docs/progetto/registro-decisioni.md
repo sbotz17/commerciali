@@ -29,3 +29,10 @@ Stato: attivo.
 
 `bottiandrea83@gmail.com` è super admin. L'accesso è email/password (la passkey non funziona nel browser
 automatizzato). Google resta attivo per gli altri utenti. Stato: attivo.
+
+## 2026-10-25 — Strumenti della squadra: Claude Code affiancato a OpenCode
+- **Decisione**: aggiunti `.claude/agents/` (13 ruoli, senza `coordinatore`: la sessione principale coordina) e `.claude/commands/` (13 comandi), ricavati da `.opencode/` gia' presente. Closer si sviluppa cosi' allo stesso modo da Claude Code e da OpenCode.
+- **Allineamento**: aggiornati in entrambi gli strumenti i comandi `/sviluppo`, `/stato`, `/hotfix` e `/rilascio`, che citavano ancora la validazione di Andrea (superata dalla decisione del 24/10/2026: accettazione indipendente e rilascio automatico). Aggiunto `/audit`; i comandi corrispondenti di `.opencode` sono stati aggiornati allo stesso testo.
+- **Verifica**: `opencode debug config` e `opencode debug agents`; frontmatter YAML di agenti e comandi controllato con un parser su tutti i file dei due strumenti; seconda lettura indipendente del diff.
+- **In sospeso**: task in Avanza non creato perche' il workflow `registra-ore.yml` su `main` non ha l'azione `importa-task`; nessun codice `T-N` inventato.
+- **Ramo**: `feature/strumenti-squadra-claude`, PR verso `staging`.
