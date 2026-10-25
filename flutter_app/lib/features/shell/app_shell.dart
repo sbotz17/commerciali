@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
@@ -13,11 +14,7 @@ import '../notifiche/campanella_notifiche.dart';
 /// Su telefono "Altro" apre il `Drawer` con le pagine secondarie e Impostazioni.
 /// Nessuna logica di autenticazione o permessi: arriverà nei task successivi.
 class AppShell extends StatelessWidget {
-  const AppShell({
-    super.key,
-    required this.percorso,
-    required this.child,
-  });
+  const AppShell({super.key, required this.percorso, required this.child});
 
   /// Percorso corrente restituito da `go_router` (es. `/clienti`).
   final String percorso;
@@ -33,6 +30,12 @@ class AppShell extends StatelessWidget {
       rotta: '/',
     ),
     _VoceNavigazione(
+      etichetta: 'Calendario',
+      icona: Icons.calendar_month_outlined,
+      iconaSelezionata: Icons.calendar_month,
+      rotta: '/calendario',
+    ),
+    _VoceNavigazione(
       etichetta: 'Clienti',
       icona: Icons.people_outline,
       iconaSelezionata: Icons.people,
@@ -43,12 +46,6 @@ class AppShell extends StatelessWidget {
       icona: Icons.description_outlined,
       iconaSelezionata: Icons.description,
       rotta: '/preventivi',
-    ),
-    _VoceNavigazione(
-      etichetta: 'Bandi',
-      icona: Icons.campaign_outlined,
-      iconaSelezionata: Icons.campaign,
-      rotta: '/bandi',
     ),
     _VoceNavigazione(
       etichetta: 'Altro',
@@ -68,12 +65,6 @@ class AppShell extends StatelessWidget {
       rotta: '/catalogo',
     ),
     _VoceNavigazione(
-      etichetta: 'Calendario',
-      icona: Icons.calendar_month_outlined,
-      iconaSelezionata: Icons.calendar_month,
-      rotta: '/calendario',
-    ),
-    _VoceNavigazione(
       etichetta: 'Visite',
       icona: Icons.event_outlined,
       iconaSelezionata: Icons.event,
@@ -84,6 +75,12 @@ class AppShell extends StatelessWidget {
       icona: Icons.task_alt,
       iconaSelezionata: Icons.task_alt,
       rotta: '/task',
+    ),
+    _VoceNavigazione(
+      etichetta: 'Bandi',
+      icona: Icons.campaign_outlined,
+      iconaSelezionata: Icons.campaign,
+      rotta: '/bandi',
     ),
     _VoceNavigazione(
       etichetta: 'Chat',
@@ -198,10 +195,11 @@ class AppShell extends StatelessWidget {
     final esatto = _titoli[percorso];
     if (esatto != null) return esatto;
 
-    final corrispondenze = _titoli.entries
-        .where((voce) => voce.key != '/' && percorso.startsWith(voce.key))
-        .toList()
-      ..sort((a, b) => b.key.length.compareTo(a.key.length));
+    final corrispondenze =
+        _titoli.entries
+            .where((voce) => voce.key != '/' && percorso.startsWith(voce.key))
+            .toList()
+          ..sort((a, b) => b.key.length.compareTo(a.key.length));
     return corrispondenze.isEmpty ? 'Closer' : corrispondenze.first.value;
   }
 
@@ -219,12 +217,80 @@ class AppShell extends StatelessWidget {
   /// Su telefono le rotte non principali finiscono tutte in "Altro".
   int get _indiceTelefono {
     final indice = _indiceIn(_vociTelefono);
-    return indice ?? _vociTelefono.length - 1;
+    if (indice != null) return indice;
+    // Visite e Task sono raggiungibili tenendo premuto Calendario: la barra
+    // evidenzia la voce Calendario anche quando si è in una delle due.
+    if (percorso == '/visite' || percorso == '/task') {
+      return _vociTelefono.indexWhere((voce) => voce.rotta == '/calendario');
+    }
+    return _vociTelefono.length - 1;
   }
 
   int? get _indiceLaterale => _indiceIn(_vociLaterali);
 
   bool get _impostazioniSelezionate => percorso.startsWith('/impostazioni');
+
+  Widget _iconaNavigazione(
+    BuildContext context,
+    _VoceNavigazione voce, {
+    required bool selezionata,
+  }) {
+    final icona = Icon(selezionata ? voce.iconaSelezionata : voce.icona);
+    if (voce.rotta != '/calendario') return icona;
+    return GestureDetector(
+      key: Key('nav-calendario-${selezionata ? 'selezionato' : 'normale'}'),
+      behavior: HitTestBehavior.opaque,
+      onLongPress: () => _mostraMenuCalendario(context),
+      child: Padding(padding: const EdgeInsets.all(4), child: icona),
+    );
+  }
+
+  void _mostraMenuCalendario(BuildContext context) {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        final tema = Theme.of(sheetContext);
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpazi.m,
+                  0,
+                  AppSpazi.m,
+                  AppSpazi.xs,
+                ),
+                child: Text('Calendario', style: tema.textTheme.titleSmall),
+              ),
+              ListTile(
+                key: const Key('nav-menu-visite'),
+                leading: const Icon(Icons.event_outlined),
+                title: const Text('Visite'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  context.go('/visite');
+                },
+              ),
+              ListTile(
+                key: const Key('nav-menu-task'),
+                leading: const Icon(Icons.task_alt),
+                title: const Text('Task'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  context.go('/task');
+                },
+              ),
+              const SizedBox(height: AppSpazi.xs),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -242,10 +308,7 @@ class AppShell extends StatelessWidget {
             actions: const [CampanellaNotifiche()],
           ),
           drawer: telefono
-              ? _DrawerAltro(
-                  percorso: percorso,
-                  voci: _vociDrawerTelefono,
-                )
+              ? _DrawerAltro(percorso: percorso, voci: _vociDrawerTelefono)
               : null,
           body: telefono
               ? child
@@ -276,8 +339,17 @@ class AppShell extends StatelessWidget {
                   destinations: [
                     for (final voce in _vociTelefono)
                       NavigationDestination(
-                        icon: Icon(voce.icona),
-                        selectedIcon: Icon(voce.iconaSelezionata),
+                        key: ValueKey('nav-${voce.rotta}'),
+                        icon: _iconaNavigazione(
+                          context,
+                          voce,
+                          selezionata: false,
+                        ),
+                        selectedIcon: _iconaNavigazione(
+                          context,
+                          voce,
+                          selezionata: true,
+                        ),
                         label: voce.etichetta,
                       ),
                   ],
@@ -343,10 +415,7 @@ class _Rail extends StatelessWidget {
 }
 
 class _DrawerAltro extends StatelessWidget {
-  const _DrawerAltro({
-    required this.percorso,
-    required this.voci,
-  });
+  const _DrawerAltro({required this.percorso, required this.voci});
 
   final String percorso;
   final List<_VoceNavigazione> voci;
