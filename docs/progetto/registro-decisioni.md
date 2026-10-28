@@ -127,3 +127,21 @@ ricostruisce con prove ripetibili, non con nuove funzioni.
 - Le regole `utenti` impediscono l'auto-assegnazione di `super_admin`, `ruolo` e `attivo`; test E2E su
   staging conferma 403.
 - Aggiunto workflow GitHub Actions `Test automatici` per `flutter analyze`, `flutter test` e test Worker.
+
+## 2026-10-26 — Audit completo: una sola corsia di rilascio e registro per funzione
+
+**Decisione**: durante l'audit, staging è considerato una versione sola e stabile. Le prove si fanno sulla
+build pubblicata e su un canale di anteprima; ogni pubblicazione su staging deve partire da un commit
+tracciato e non da una cartella con modifiche non committate. La build provata si annota nel report con
+versione, data/ora e commit (la versione è visibile in Impostazioni).
+
+**Motivo**: il 25-26/10 staging è stato ripubblicato almeno quattro volte (23:34, 23:46, 23:59, 00:03)
+mentre l'audit era in corso. I bug sembravano sparire e ricomparire, i test automatici si rompevano per
+etichette cambiate e non era possibile dire ad Andrea "questa versione funziona".
+
+**Conseguenze**: niente nuove funzioni durante l'audit; niente deploy da cartelle sporche; un solo ramo di
+rilascio; il registro `2026-10-26-registro-funzionalita.md` è la fonte unica dello stato per funzione.
+
+**In sospeso**: il task in Avanza non è stato creato perché il workflow `registra-ore.yml` su `main` non
+accetta l'input `tasks_json` (HTTP 422); nessun codice `T-N` inventato. Va aggiunta l'azione `importa-task`
+al workflow (zona protetta: serve una seconda lettura indipendente).
