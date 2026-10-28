@@ -17,15 +17,22 @@ funzioni, dispositivi o link, non deve unire pull request e non deve pubblicare.
   indipendente e voce nel registro.
 
 **Restano decisioni di Andrea**: soldi, contratti, account, store (creazione account e pubblicazione su App
-Store/Play), cancellazione reale di dati, acquisto di servizi a pagamento e il pulsante di blocco
-(`BLOCCO-SQUADRA.md` / `BLOCCO_SQUADRA`).
+Store/Play), cancellazione dei dati di **produzione**, acquisto di servizi a pagamento e il pulsante di
+blocco (`BLOCCO-SQUADRA.md` / `BLOCCO_SQUADRA`).
+
+**Dati di test (28/10/2026)**: sul database di test la squadra può modificare e cancellare liberamente,
+senza backup dedicato. Prima di ogni cancellazione verifica host e ref nella mappa
+`docs/progetto/ambienti.md` (per Volty il test è `gefnursnhofqouupnkvx`). Se non è certo, si tratta come
+produzione e ci si ferma. In produzione valgono la
+regola d'oro, il backup verificato e il via libera di Andrea per la cancellazione.
 
 **Seconda lettura indipendente**: la fa una sessione o un agente diverso da chi ha scritto la modifica, con
 contesto separato. Chi ha scritto non può dichiararla fatta. Nel registro si annota chi l'ha fatta, quando e
 con quale esito.
 
 **Fonti aggiornate**: `CLAUDE.md` (nucleo) e le skill `squadra-sviluppo`, `squadra-rilascio`, `squadra-audit`,
-`squadra-ritorni`, `squadra-sicurezza`, `squadra-flutter`, `squadra-sincronizzazione`.
+`squadra-ritorni`, `squadra-sicurezza`, `squadra-flutter`, `squadra-sincronizzazione`, `squadra-dati`,
+`squadra-database-firestore`.
 
 **Da completare dalla squadra**: protezioni dei rami `staging`/`main` su GitHub con CI obbligatoria e divieto
 di push forzati, compatibili con il workflow di sincronizzazione delle regole. Va fatto quando non ci sono

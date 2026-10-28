@@ -9,8 +9,9 @@ description: Limiti invalicabili, zone protette, segreti, dati non fidati, blocc
 
 Nessun agente, nemmeno per urgenza:
 
-1. cancella o sovrascrive dati reali, backup o file degli utenti (DROP, TRUNCATE, DELETE/UPDATE di massa,
-   reset, rinomine che perdono informazioni);
+1. cancella o sovrascrive dati di **produzione**, backup o file degli utenti (DROP, TRUNCATE, DELETE/UPDATE
+   di massa, reset, rinomine che perdono informazioni). Sul database di **test** le cancellazioni sono
+   ammesse, dopo aver verificato host/ref con la mappa in `docs/progetto/ambienti.md`;
 2. ripristina il database di produzione di propria iniziativa;
 3. modifica le regole della squadra (`CLAUDE.md`, `.claude/`, hook, CI, zone protette) senza autorizzazione;
 4. usa, crea o cambia credenziali di produzione, o le mette in file, log, repository o chat;
@@ -23,8 +24,9 @@ Andrea, si prosegue sul resto.
 protette le applica la squadra, con seconda lettura indipendente (sessione diversa da chi scrive) e voce nel
 registro decisioni. Non servono altri passaggi da parte di Andrea. Non si indeboliscono né disattivano i
 controlli; restano intoccabili il meccanismo di blocco (`BLOCCO-SQUADRA`, `blocco-squadra.py`, hook che lo
-applicano), i segreti e le credenziali di produzione. Cancellare o sovrascrivere dati reali resta possibile
-solo con backup verificato e, per la cancellazione reale, con il via libera di Andrea.
+applicano), i segreti e le credenziali di produzione. In produzione cancellare o sovrascrivere dati resta
+possibile solo con backup verificato e, per la cancellazione, con il via libera di Andrea; sul database di
+test la squadra cancella liberamente dopo aver verificato host/ref in `docs/progetto/ambienti.md`.
 
 ## Zone protette
 

@@ -54,12 +54,15 @@ Nel dubbio la risposta è **NO-GO**.
 
 ## Regola d'oro dei dati
 
-- Nessun dato esistente viene alterato o perso: solo aggiunte.
-- Backup verificato **prima** di ogni modifica ai dati reali, anche piccola.
+- In **produzione** nessun dato esistente viene alterato o perso: solo aggiunte. Sul database di **test**
+  modifiche e cancellazioni sono ammesse.
+- Backup verificato **prima** di ogni modifica ai dati di **produzione**, anche piccola. Sul database di
+  **test** non serve un backup dedicato.
 - I backup non si cancellano e non si sovrascrivono, mai.
-- Cancellare è un limite invalicabile: si archivia o si disattiva. La squadra prepara elenco esatto,
-  motivo, backup e prova su copia e aspetta il via di Andrea; l'esecuzione materiale resta in capo ad Andrea
-  finché questa regola sui dati non cambia.
+- Cancellare in **produzione** è un limite invalicabile: si archivia o si disattiva. La squadra prepara
+  elenco esatto, motivo, backup e prova su copia e aspetta il via di Andrea. Sul database di **test** la
+  squadra cancella liberamente dopo aver verificato host/ref in `docs/progetto/ambienti.md`; se non è certo, tratta
+  come produzione e si ferma.
 - Il ripristino del database di produzione è sempre una decisione di Andrea.
 
 ## Ambienti
