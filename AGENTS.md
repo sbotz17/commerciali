@@ -194,8 +194,9 @@ Se lo strumento non la trova, apri il file `~/.claude/skills/<nome>/SKILL.md` (o
 - `js/supabase.js` è legacy: non caricarlo e non aggiungerci funzioni.
 - Prima di lavorare leggi `docs/progetto/` (architettura, database, catalogo, registro decisioni).
 - Test: non esiste ancora una suite automatica; il tester verifica nel browser e con script mirati.
-- Branch: `feature/...`, `fix/...`, `hotfix/...`. Mai push diretto su `staging` o `main`; le PR verso `staging`
-  le apre il coordinatore e le unisce solo Andrea.
+- Branch: `feature/...`, `fix/...`, `hotfix/...`. Mai push diretto su `staging` o `main`; le PR verso
+  `staging` le apre **e le unisce** il coordinatore dopo tester `SUPERATO` e validatore `APPROVATO`. Andrea
+  non deve unire né provare nulla (decisione 28/10/2026).
 
 ## Ambienti
 
