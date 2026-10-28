@@ -278,4 +278,29 @@ void main() {
       expect(numeroRevisione('PRV-0001', 12), 'PRV-0001-R12');
     });
   });
+
+  group('validità del preventivo', () {
+    test('legge e normalizza valido_fino', () {
+      final preventivo = Preventivo.fromMap({
+        'numero': 'PRV-0001',
+        'stato': 'inviato',
+        'valido_fino': '2026-10-30',
+      }, id: 'p1');
+      expect(preventivo.validoFino, '2026-10-30');
+      expect(preventivo.toMap()['valido_fino'], '2026-10-30');
+    });
+
+    test('un valore non valido resta null', () {
+      final preventivo = Preventivo.fromMap({
+        'valido_fino': 'domani',
+      }, id: 'p1');
+      expect(preventivo.validoFino, isNull);
+    });
+
+    test('i documenti vecchi senza validità restano leggibili', () {
+      final preventivo = Preventivo.fromMap({'numero': 'PRV-0002'}, id: 'p2');
+      expect(preventivo.validoFino, isNull);
+      expect(preventivo.stato, 'bozza');
+    });
+  });
 }

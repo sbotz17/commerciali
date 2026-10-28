@@ -13,11 +13,40 @@ import '../../state/azienda_providers.dart';
 import 'notifiche_screen.dart';
 
 /// Pulsante con la campanella e il badge delle notifiche non lette.
-class CampanellaNotifiche extends ConsumerWidget {
+///
+/// Alla prima comparsa crea gli avvisi in-app già scaduti (task, preventivi e
+/// appuntamenti con promemoria) e allinea quelli futuri sul Worker. Entrambe
+/// le operazioni sono best-effort: la campanella resta usabile anche senza
+/// rete o permessi.
+class CampanellaNotifiche extends ConsumerStatefulWidget {
   const CampanellaNotifiche({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CampanellaNotifiche> createState() =>
+      _CampanellaNotificheState();
+}
+
+class _CampanellaNotificheState extends ConsumerState<CampanellaNotifiche> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _avviaAvvisi());
+  }
+
+  Future<void> _avviaAvvisi() async {
+    if (!mounted) return;
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      await servizio.generaAvvisiInApp();
+      await servizio.sincronizzaAvvisiWhatsapp();
+    } catch (_) {
+      // Nessun provider/Firebase o rete assente: si riprova al prossimo avvio.
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     Stream<List<Notifica>>? flusso;
     try {
       flusso = ref.watch(spServiceProvider).notificheStream();

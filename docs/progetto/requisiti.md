@@ -817,3 +817,38 @@ Closer e, solo se l'azienda lo sceglie, un'app OAuth propria.
 Nessuna domanda bloccante: le assunzioni sopra valgono fino a diversa indicazione di Andrea. Restano due punti
 che Andrea può cambiare senza toccare i dati: (1) se il link Meet/Teams debba essere visibile anche a chi ha
 `dettagli`; (2) se la condivisione debba valere anche per le visite in `giro_visite` o solo per `appuntamenti`.
+
+## 2026-10-26 — Avvisi all'operatore: appuntamenti, task e preventivi
+
+**Obiettivo**: avvisare ogni operatore, in-app e sul proprio WhatsApp, quando si avvicina un appuntamento
+con notifica configurata, un task con scadenza o la scadenza di un preventivo.
+
+**User story**
+Come operatore voglio ricevere un avviso chiaro prima e al momento della scadenza dei miei impegni, così non
+perdo appuntamenti, task e preventivi da rinnovare. Come titolare voglio che ogni commerciale riceva gli
+avvisi sul proprio numero, senza doverli girare a mano.
+
+**Criteri di accettazione**
+1. Un appuntamento con `notifica_min` valorizzato genera un avviso a ogni occorrenza (anche ricorrente) per
+   creatore, operatore e invitati; un appuntamento annullato o senza notifica non genera avvisi.
+2. Un task aperto con scadenza genera due avvisi all'operatore assegnato: uno con l'anticipo scelto
+   (default 1 giorno, ore 09:00) e uno alla scadenza (ora indicata o 09:00). Un task completato o senza
+   scadenza non genera avvisi.
+3. Il preventivo ha il campo facoltativo `valido_fino` (data, default proposta 30 giorni dalla creazione).
+   Genera un avviso con l'anticipo scelto (default 3 giorni, ore 09:00) e uno il giorno dopo la scadenza,
+   verso chi lo ha creato. Accettato, rifiutato e annullato non generano avvisi.
+4. Gli avvisi compaiono nel centro notifiche anche senza push: il client li crea all'apertura dell'app per
+   gli avvisi già scaduti negli ultimi 7 giorni, con chiave deterministica (nessun duplicato).
+5. Gli avvisi futuri vengono registrati nel Worker e inviati su WhatsApp dal cron, solo se il destinatario
+   ha numero e consenso attivi; un errore di invio non blocca il salvataggio dell'elemento.
+6. Completare, eliminare o annullare un elemento cancella gli avvisi futuri; modificare data/ora li
+   ricalcola.
+7. Ogni operatore sceglie l'anticipo per task e preventivi in Impostazioni → Notifiche; i valori anomali
+   sono limitati a 0–30 giorni.
+8. `flutter analyze` 0, test Flutter e Worker verdi; nessun segreto nel client, numero letto dal Worker.
+
+**Fuori ambito**
+- Push FCM/APNs programmato: richiede Firebase Blaze e credenziali; resta il push immediato già esistente.
+- Orari di silenzio applicati alla coda WhatsApp (restano una preferenza salvata, non ancora enforced).
+- Avvisi per elementi di altre aziende, SMS, email per task/preventivi, riepilogo giornaliero unico.
+- Modifica in blocco delle date di validità dei preventivi esistenti.

@@ -163,6 +163,7 @@ class Preventivo {
     this.iva = 0,
     this.totaleIva = 0,
     this.stato = 'bozza',
+    this.validoFino,
     this.createdAt,
   });
 
@@ -188,8 +189,20 @@ class Preventivo {
       iva: (map['iva'] as num?) ?? 0,
       totaleIva: (map['totale_iva'] as num?) ?? 0,
       stato: (map['stato'] as String?) ?? 'bozza',
+      validoFino: _dataIsoValida(map['valido_fino']),
       createdAt: map['created_at'] as String?,
     );
+  }
+
+  /// Normalizza `valido_fino` in `YYYY-MM-DD`, ignorando valori non validi.
+  static String? _dataIsoValida(Object? valore) {
+    final testo = (valore ?? '').toString().trim();
+    if (testo.isEmpty) return null;
+    final data = DateTime.tryParse(testo);
+    if (data == null) return null;
+    return '${data.year.toString().padLeft(4, '0')}-'
+        '${data.month.toString().padLeft(2, '0')}-'
+        '${data.day.toString().padLeft(2, '0')}';
   }
 
   /// Id del documento `preventivi`.
@@ -240,6 +253,12 @@ class Preventivo {
   /// `revisionato`).
   final String stato;
 
+  /// Ultimo giorno di validità `YYYY-MM-DD` (campo `valido_fino`).
+  ///
+  /// È facoltativo: i preventivi creati prima di questa funzione restano
+  /// validi senza scadenza finché non vengono riaperti e salvati.
+  final String? validoFino;
+
   /// Data di creazione ISO-8601 (campo `created_at`).
   final String? createdAt;
 
@@ -261,6 +280,7 @@ class Preventivo {
         'iva': iva,
         'totale_iva': totaleIva,
         'stato': stato,
+        'valido_fino': validoFino,
         'created_at': createdAt,
       };
 }

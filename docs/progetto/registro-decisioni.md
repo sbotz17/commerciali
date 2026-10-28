@@ -127,3 +127,43 @@ ricostruisce con prove ripetibili, non con nuove funzioni.
 - Le regole `utenti` impediscono l'auto-assegnazione di `super_admin`, `ruolo` e `attivo`; test E2E su
   staging conferma 403.
 - Aggiunto workflow GitHub Actions `Test automatici` per `flutter analyze`, `flutter test` e test Worker.
+
+## 2026-10-26 — Avvisi operatore: eccezione al congelamento e scelte
+
+**Decisione di Andrea** (chat del 26/10/2026): procedere subito con gli avvisi all'operatore, registrando
+l'eccezione al congelamento delle nuove funzioni del 24/10. Tester e validatore restano obbligatori e il
+rilascio resta bloccato finché `audit-completa.md` non è chiuso.
+
+**Scelte confermate**
+- Preventivo scaduto = campo facoltativo **`valido_fino`** (ultimo giorno valido), non un calcolo fisso.
+- Anticipo predefinito: **1 giorno** per i task, **3 giorni** per i preventivi, personalizzabile per
+  operatore (0–30). Alla scadenza arriva comunque un secondo avviso.
+- Destinatari: **solo l'operatore assegnato** (task), **chi ha creato il preventivo**, creatore + operatore
+  + invitati per gli appuntamenti.
+- In-app senza Blaze: il client crea i documenti `notifiche` all'apertura dell'app (finestra 7 giorni),
+  con id deterministico; WhatsApp usa la coda KV del Worker e il cron esistente.
+- Gli orari di silenzio non sono applicati alla coda WhatsApp in questa fetta: dichiarato come residuo,
+  non come funzione superata.
+
+## 2026-10-26 — Registro Avanza: task creato, webhook assente
+
+Il task **T-14** è stato creato in Avanza con il workflow `registra-ore.yml` (progetto Commerciali) e le ore
+sono state dichiarate per analista, sviluppatore-backend, sviluppatore-frontend e tester. Il repository
+`commerciali` **non ha il webhook GitHub** di Avanza: lo stato del task non si aggiorna da solo con ramo e
+PR. Va installato con l'azione `collegamento` del workflow (operazione di configurazione, senza segreti in
+chat); fino ad allora il coordinatore aggiorna lo stato a mano.
+
+## 2026-10-28 — La squadra esegue tutto; Andrea non fa test né merge
+
+**Decisione di Andrea** (chat del 28/10/2026): la squadra fa tutto, test compresi. Andrea non deve provare
+funzioni, dispositivi o link, non deve unire pull request e non deve pubblicare.
+
+- Fonte: `sbotz17/squadraalphalab` (`CLAUDE.md` e `DECISIONI.md` aggiornati oggi, con seconda lettura
+  indipendente).
+- Le prove UI/WhatsApp le esegue la squadra con build locale, browser automatizzato, utenti e dati di test,
+  canali di anteprima; se serve un dispositivo/account/acquisto personale l'area resta `BLOCCATA` e non si
+  pubblica, senza chiedere la prova ad Andrea.
+- Il coordinatore apre e unisce le PR dopo tester `SUPERATO` e validatore `APPROVATO`; la promozione in
+  produzione la esegue dopo guardiano `GO`, audit chiuso, backup verificato e rollback pronto.
+- Restano riservate ad Andrea: soldi, contratti, account, store, acquisto di servizi, cancellazione reale di
+  dati (la squadra prepara e aspetta il via) e il pulsante di blocco.

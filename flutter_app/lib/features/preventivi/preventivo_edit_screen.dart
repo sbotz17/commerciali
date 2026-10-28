@@ -10,6 +10,8 @@
 // I totali usano le funzioni pure del modello (`totaleRiga`, `calcolaTotali`)
 // per restare identici alla vecchia app.
 
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter;
@@ -31,6 +33,8 @@ import '../../state/azienda_providers.dart';
 import '../catalogo/catalogo_screen.dart'
     show etichettaPaniere, formattaPrezzo, prezzoDaTesto, ProdottoFormScreen;
 import '../clienti/clienti_screen.dart';
+import '../visite/visite_screen.dart'
+    show formattaDataVisita, parseDataItaliana;
 import 'preventivi_screen.dart'
     show etichettaStatoPreventivo, numeroVisualizzatoPreventivo;
 
@@ -190,6 +194,7 @@ Map<String, dynamic> payloadPreventivoDaEditor({
   String stato = 'bozza',
   String? note,
   num sconto = 0,
+  String? validoFino,
   List<PreventivoRiga> righe = const [],
 }) {
   final percentuale = sconto.toDouble();
@@ -206,6 +211,7 @@ Map<String, dynamic> payloadPreventivoDaEditor({
     'cliente_nome': (clienteNome ?? '').trim(),
     'stato': statoNormalizzato.isEmpty ? 'bozza' : statoNormalizzato,
     'note': (note ?? '').trim(),
+    'valido_fino': (validoFino ?? '').trim(),
     'sconto': percentuale,
     'righe': [for (final riga in righe) riga.toMap()],
     'subtotale': totali.subtotale,
@@ -225,6 +231,7 @@ Map<String, dynamic> datiServizioPreventivo(Map<String, dynamic> payload) {
     'clienteNome': payload['cliente_nome'],
     'stato': payload['stato'],
     'note': payload['note'],
+    'validoFino': payload['valido_fino'],
     'sconto': payload['sconto'],
     'righe': payload['righe'],
     'subtotale': payload['subtotale'],
@@ -378,6 +385,7 @@ class PreventivoEditScreen extends ConsumerStatefulWidget {
 class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
   final _note = TextEditingController();
   final _scontoGenerale = TextEditingController();
+  final _validoFino = TextEditingController();
 
   final List<_RigaPreventivo> _righe = [];
 
@@ -433,6 +441,10 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       _popolaCampi(iniziale);
     } else {
       _stato = 'bozza';
+      // Un preventivo nuovo è valido per 30 giorni, salvo modifica.
+      _validoFino.text = formattaDataVisita(
+        DateTime.now().add(const Duration(days: 30)),
+      );
       final id = (widget.preventivoId ?? '').trim();
       if (id.isNotEmpty) {
         _caricandoPreventivo = true;
@@ -448,6 +460,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
   void dispose() {
     _note.dispose();
     _scontoGenerale.dispose();
+    _validoFino.dispose();
     for (final riga in _righe) {
       riga.dispose();
     }
@@ -464,6 +477,11 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
     _stato = preventivo.stato.trim().toLowerCase();
     if (_stato.isEmpty) _stato = 'bozza';
     _note.text = preventivo.note ?? '';
+    final validoFino = DateTime.tryParse(preventivo.validoFino ?? '') ??
+        parseDataItaliana(preventivo.validoFino);
+    _validoFino.text = validoFino == null
+        ? ''
+        : formattaDataVisita(validoFino);
     _scontoGenerale.text = testoNumeroPreventivo(preventivo.sconto);
     _righe.clear();
     for (final riga in preventivo.righe) {
@@ -775,6 +793,7 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       ),
       stato: _stato,
       note: _note.text,
+      validoFino: _validoFino.text,
       sconto: numeroPreventivoDaTesto(_scontoGenerale.text),
       righe: righe,
     );
@@ -786,6 +805,14 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
       final risultato = iniziale == null
           ? await servizio.inserisciPreventivo(dati)
           : await servizio.aggiornaPreventivo(iniziale.id, dati);
+      final idRisposta = (risultato['id'] as String?)?.trim() ?? '';
+      final idSalvato = idRisposta.isNotEmpty
+          ? idRisposta
+          : (iniziale?.id.trim() ?? '');
+      if (idSalvato.isNotEmpty) {
+        // Best-effort: un errore del Worker non annulla il salvataggio.
+        unawaited(servizio.rinnovaAvvisiPreventivo(idSalvato));
+      }
       if (!mounted) return;
 
       final numero =
@@ -1124,10 +1151,49 @@ class _PreventivoEditScreenState extends ConsumerState<PreventivoEditScreen> {
                 setState(() => _stato = valore);
               },
             ),
+            const SizedBox(height: AppSpazi.s),
+            TextFormField(
+              key: const Key('preventivo-valido-fino'),
+              controller: _validoFino,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Valido fino al',
+                helperText:
+                    'Serve per l\'avviso di scadenza. Lascia vuoto per nessuna '
+                    'scadenza.',
+                suffixIcon: IconButton(
+                  key: const Key('preventivo-valido-fino-calendario'),
+                  tooltip: 'Scegli la data',
+                  onPressed: _scegliValidoFino,
+                  icon: const Icon(Icons.calendar_today_outlined),
+                ),
+              ),
+              onTap: _scegliValidoFino,
+            ),
           ],
         ),
       ),
     );
+  }
+
+  /// Sceglie la data di validità con il calendario italiano; "Cancella"
+  /// rimuove la scadenza.
+  Future<void> _scegliValidoFino() async {
+    final iniziale = DateTime.tryParse(_validoFino.text) ??
+        parseDataItaliana(_validoFino.text) ??
+        DateTime.now().add(const Duration(days: 30));
+    final scelta = await showDatePicker(
+      context: context,
+      initialDate: iniziale,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      helpText: 'Valido fino al',
+      cancelText: 'Annulla',
+      confirmText: 'Conferma',
+      fieldLabelText: 'Data di scadenza',
+    );
+    if (scelta == null || !mounted) return;
+    setState(() => _validoFino.text = formattaDataVisita(scelta));
   }
 
   Widget _sezioneRighe({required bool tabella}) {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -340,10 +342,16 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
     try {
       final servizio = ref.read(spServiceProvider);
       servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
-      if (task != null) {
-        await servizio.aggiornaTask(task.id, dati);
-      } else {
-        await servizio.inserisciTask(dati);
+      final risultato = task != null
+          ? await servizio.aggiornaTask(task.id, dati)
+          : await servizio.inserisciTask(dati);
+      final idRisposta = (risultato['id'] as String?)?.trim() ?? '';
+      final id = idRisposta.isNotEmpty
+          ? idRisposta
+          : (task?.id.trim() ?? '');
+      if (id.isNotEmpty) {
+        // Gli avvisi sono best-effort: un errore non annulla il salvataggio.
+        unawaited(servizio.rinnovaAvvisiTask(id));
       }
       if (!mounted) return;
       Navigator.of(context).pop(true);

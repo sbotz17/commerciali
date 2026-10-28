@@ -27,6 +27,11 @@ import {
   inviaWhatsapp,
   normalizzaStatoServerWhatsapp,
 } from "./whatsapp.mjs";
+import {
+  avvisoCoda,
+  avvisoPrefisso,
+  validaAvviso,
+} from "./avvisi.mjs";
 
 const VIES_BASE = "https://ec.europa.eu/taxation_customs/vies/rest-api/ms/IT/vat";
 const CONFIG_KEY = "server";
@@ -731,6 +736,116 @@ async function gestisciPromemoriaCliente(request, env, url) {
   return json({ ok: inviato, risultati });
 }
 
+/**
+ * Avvisi programmati all'operatore (task, preventivi, appuntamenti).
+ *
+ * Il client calcola ora, destinatario e testo; il Worker verifica che il
+ * destinatario sia membro dell'azienda e abbia numero + consenso, poi mette
+ * l'avviso nella coda KV. Il Cron lo invia al momento giusto.
+ */
+async function gestisciAvvisi(request, env, url) {
+  const utente = await utenteFirebase(request, env);
+  if (!utente) return json({ error: "Non autenticato" }, 401);
+  if (!env.PROMEMORIA) return json({ error: "KV promemoria assente" }, 500);
+
+  if (url.pathname === "/avvisi/annulla" && request.method === "POST") {
+    const body = await corpoJson(request);
+    const aziendaId = String(body.aziendaId || "").trim();
+    const tipo = String(body.tipo || "").trim();
+    const targetId = String(body.targetId || "").trim();
+    if (!aziendaId || !tipo || !targetId) {
+      return json({ error: "Parametri mancanti" }, 400);
+    }
+    if (!(await isMembro(env, aziendaId, utente))) {
+      return json({ error: "Non appartieni all'azienda" }, 403);
+    }
+    if (!/^[a-z]{1,20}$/.test(tipo)) {
+      return json({ error: "Tipo non valido" }, 400);
+    }
+    const prefisso = avvisoPrefisso(
+      env.FIREBASE_PROJECT,
+      aziendaId,
+      tipo,
+      targetId,
+    );
+    const elenco = await env.PROMEMORIA.list({ prefix: prefisso });
+    await Promise.all(elenco.keys.map((voce) => env.PROMEMORIA.delete(voce.name)));
+    return json({ ok: true, annullati: elenco.keys.length });
+  }
+
+  if (url.pathname === "/avvisi" && request.method === "POST") {
+    const body = await corpoJson(request);
+    const aziendaId = String(body.aziendaId || "").trim();
+    const elenco = Array.isArray(body.avvisi) ? body.avvisi.slice(0, 50) : [];
+    if (!aziendaId || !elenco.length) {
+      return json({ error: "Parametri mancanti" }, 400);
+    }
+    if (!(await isMembro(env, aziendaId, utente))) {
+      return json({ error: "Non appartieni all'azienda" }, 403);
+    }
+
+    let creati = 0;
+    let saltati = 0;
+    for (const voce of elenco) {
+      const valido = validaAvviso(voce);
+      if (!valido) {
+        saltati++;
+        continue;
+      }
+      const { chiave, uid, due, testo, titolo, tipo, targetId } = valido;
+      // Il destinatario può essere un collega: la membership si controlla con
+      // il token del chiamante (le regole Firestore valgono anche qui).
+      const membro = await leggiDocumento(
+        env,
+        `membri/${aziendaId}_${uid}`,
+        utente.token,
+      );
+      if (!membro) {
+        saltati++;
+        continue;
+      }
+      const contatto = await leggiDocumento(
+        env,
+        `contatti_notifiche/${aziendaId}_${uid}`,
+        utente.token,
+      );
+      if (!contatto) {
+        saltati++;
+        continue;
+      }
+      if (stringaCampo(contatto, "azienda_id") !== aziendaId) {
+        saltati++;
+        continue;
+      }
+      if (contatto.fields?.consenso_whatsapp?.booleanValue !== true) {
+        saltati++;
+        continue;
+      }
+      const numero = stringaCampo(contatto, "numero_whatsapp");
+      if (!numero) {
+        saltati++;
+        continue;
+      }
+      await env.PROMEMORIA.put(
+        avvisoCoda(env.FIREBASE_PROJECT, aziendaId, chiave),
+        JSON.stringify({
+          due,
+          numero,
+          testo,
+          titolo,
+          tipo,
+          targetId,
+          utenteUid: uid,
+        }),
+      );
+      creati++;
+    }
+    return json({ ok: true, creati, saltati });
+  }
+
+  return json({ error: "Endpoint non trovato" }, 404);
+}
+
 async function gestisciPromemoria(request, env, url) {
   const utente = await utenteFirebase(request, env);
   if (!utente) return json({ error: "Non autenticato" }, 401);
@@ -812,26 +927,36 @@ async function inviaPromemoriaScaduti(env) {
   if (!env.PROMEMORIA) return;
   const config = await leggiConfig(env);
   if (!config) return;
-  const elenco = await env.PROMEMORIA.list({ prefix: "promemoria:" });
   const adesso = Date.now();
-  for (const voce of elenco.keys) {
-    const raw = await env.PROMEMORIA.get(voce.name);
-    if (!raw) continue;
-    let dato;
-    try {
-      dato = JSON.parse(raw);
-    } catch (_) {
-      await env.PROMEMORIA.delete(voce.name);
-      continue;
-    }
-    if (Number(dato.due) > adesso) continue;
-    try {
-      await inviaWhatsapp(config, dato.numero, dato.testo);
-      await env.PROMEMORIA.delete(voce.name);
-    } catch (_) {
-      // Se il server è irraggiungibile riprova; dopo 24h scarta.
+  // `promemoria:` sono gli avvisi al cliente, `avviso:` quelli all'operatore
+  // per task, preventivi e appuntamenti. La consegna è la stessa.
+  for (const prefisso of ["promemoria:", "avviso:"]) {
+    const elenco = await env.PROMEMORIA.list({ prefix: prefisso });
+    for (const voce of elenco.keys) {
+      const raw = await env.PROMEMORIA.get(voce.name);
+      if (!raw) continue;
+      let dato;
+      try {
+        dato = JSON.parse(raw);
+      } catch (_) {
+        await env.PROMEMORIA.delete(voce.name);
+        continue;
+      }
+      if (Number(dato.due) > adesso) continue;
+      // Un avviso rimasto in coda per più di 24 ore è ormai inutile: si
+      // scarta senza inviarlo in ritardo.
       if (adesso - Number(dato.due) > 24 * 60 * 60 * 1000) {
         await env.PROMEMORIA.delete(voce.name);
+        continue;
+      }
+      try {
+        await inviaWhatsapp(config, dato.numero, dato.testo);
+        await env.PROMEMORIA.delete(voce.name);
+      } catch (_) {
+        // Se il server è irraggiungibile riprova; dopo 24h scarta.
+        if (adesso - Number(dato.due) > 24 * 60 * 60 * 1000) {
+          await env.PROMEMORIA.delete(voce.name);
+        }
       }
     }
   }
@@ -980,6 +1105,14 @@ export default {
     if (url.pathname === "/promemoria" || url.pathname === "/promemoria/annulla") {
       try {
         return await gestisciPromemoria(request, env, url);
+      } catch (e) {
+        return json({ error: String(e.message || e) }, 500);
+      }
+    }
+
+    if (url.pathname === "/avvisi" || url.pathname === "/avvisi/annulla") {
+      try {
+        return await gestisciAvvisi(request, env, url);
       } catch (e) {
         return json({ error: String(e.message || e) }, 500);
       }

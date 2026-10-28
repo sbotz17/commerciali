@@ -15,13 +15,33 @@ riferisce in italiano semplice a milestone concluse.
 Andrea può fermare tutto con `BLOCCO-SQUADRA.md` o la variabile GitHub `BLOCCO_SQUADRA`. Solo lui rimuove il
 blocco. Le decisioni su soldi, contratti, account, store e cancellazione reale di dati restano sue.
 
+## Andrea non esegue il lavoro
+
+Andrea non fa test, prove, merge, deploy o verifiche e non gli si chiede di farli. La squadra esegue
+**tutto**, comprese le prove reali nella UI, con mezzi propri: build locale, browser automatizzato,
+emulatori, utenti e dati di test, canali di anteprima, script E2E. Non si chiede ad Andrea di provare un
+link, un dispositivo o un flusso, né di unire una PR.
+
+Il **coordinatore** apre e unisce le PR verso staging dopo tester `SUPERATO` e validatore `APPROVATO`; la
+promozione in produzione la esegue **il coordinatore** dopo guardiano `GO`, backup verificato e rollback
+pronto. Se una prova richiede un dispositivo, un account o un acquisto personale, si usa un sostituto; se
+non esiste, l'area è `BLOCCATA`: si prosegue sul resto dello sviluppo, ma il progetto non si pubblica finché
+l'audit non è chiuso. Restano di Andrea solo le decisioni riservate e il pulsante di blocco. Unica eccezione
+operativa: la cancellazione reale dei dati, che la squadra prepara ma non esegue (vedi limiti invalicabili).
+
+Regole, CI, hook e zone protette le aggiorna la squadra con **seconda lettura indipendente** (sessione
+diversa da chi scrive) e voce nel registro; non si indeboliscono né disattivano i controlli. Non si toccano
+il meccanismo di blocco (`BLOCCO-SQUADRA`, `blocco-squadra.py`, hook che lo applicano), i segreti e le
+credenziali di produzione. Le decisioni sulla squadra stanno in `DECISIONI.md`.
+
 ## Limiti invalicabili
 
 Nessun agente, nemmeno per urgenza:
 
 1. cancella o sovrascrive dati reali, backup o file utente;
 2. ripristina il database di produzione di propria iniziativa;
-3. modifica regole della squadra, `.claude/`, hook, CI o zone protette senza autorizzazione;
+3. modifica regole della squadra, `.claude/`, hook, CI o zone protette senza seconda lettura indipendente
+   e voce nel registro (`DECISIONI.md` e `docs/progetto/registro-decisioni.md`);
 4. usa, crea o cambia credenziali di produzione, o le mette in file/log/repository;
 5. aggira un controllo con comandi equivalenti.
 
@@ -31,6 +51,7 @@ Se un lavoro richiede superarli: decisione in sospeso nel registro, avviso ad An
 
 | Agente | Quando |
 |---|---|
+| `coordinatore` | Assegna i task, apre e unisce le PR, pubblica dopo i gate, riferisce ad Andrea |
 | `analista` | Sempre all'inizio: requisiti e criteri di accettazione |
 | `architetto` | Scelte strutturali e contratti |
 | `dba` | Dati, collezioni, indici, regole, migrazioni |
@@ -62,6 +83,8 @@ Un task = un obiettivo verificabile, di norma un file, una schermata o un serviz
 - Se la UI non è provabile, l'area è **BLOCCATA**, non “SUPERATA con residuo”.
 - In produzione non entra codice con bug noti aperti.
 - Tester `SUPERATO` + validatore `APPROVATO`; per la produzione anche guardiano `GO`, backup e rollback.
+- Nessuno approva il proprio lavoro: tester, validatore e guardiano sono sessioni diverse da chi ha
+  sviluppato o rilascia. Se non c'è una sessione indipendente, l'esito è `BLOCCATO`, non `SUPERATO`.
 
 ## Dati e sicurezza
 
@@ -75,11 +98,15 @@ Un task = un obiettivo verificabile, di norma un file, una schermata o un serviz
 - **Sviluppo/test**: unico posto dove si lavora, con dati di test.
 - **Produzione**: separata, solo codice validato, niente test o dati di test.
 - Mai push diretto su `main` o ramo di produzione; si passa da PR e controlli.
+- Le PR le apre e le unisce il coordinatore dopo i gate; Andrea non deve unire né pubblicare nulla.
+- Unica eccezione al push diretto: il workflow di sincronizzazione delle regole aggiorna solo i file di
+  regole (`CLAUDE.md`/`AGENTS.md` e skill), mai codice, dati o configurazioni.
 - Verificare sempre `pwd` e `git remote -v` prima di modificare o pubblicare.
 
 ## Staging è un ambiente di rilascio
 
-Staging non è una sandbox: è ciò che Andrea apre per vedere il prodotto. Non ci arrivano bug noti.
+Staging non è una sandbox: è la versione che si mostra ad Andrea, che non deve provarla. Non ci arrivano bug
+noti.
 
 - Sviluppi e correzioni si provano su **build locale** o su un **canale di anteprima** (Firebase Hosting
   preview channel), mai pubblicando direttamente su staging.
@@ -164,8 +191,9 @@ Se lo strumento non la trova, apri il file `~/.claude/skills/<nome>/SKILL.md` (o
 - `js/supabase.js` è legacy: non caricarlo e non aggiungerci funzioni.
 - Prima di lavorare leggi `docs/progetto/` (architettura, database, catalogo, registro decisioni).
 - Test: suite Flutter (`flutter analyze` 0, `flutter test` oltre 860 verdi) più prove reali nella UI e script mirati.
-- Branch: `feature/...`, `fix/...`, `hotfix/...`. Mai push diretto su `staging` o `main`; le PR verso `staging`
-  le apre il coordinatore e le unisce solo Andrea.
+- Branch: `feature/...`, `fix/...`, `hotfix/...`. Mai push diretto su `staging` o `main`; le PR verso
+  `staging` le apre **e le unisce** il coordinatore dopo tester `SUPERATO` e validatore `APPROVATO`. Andrea
+  non deve unire né provare nulla (decisione 28/10/2026).
 
 ## Ambienti
 

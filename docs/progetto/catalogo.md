@@ -111,6 +111,10 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Report produzione | `docs/progetto/test/2026-10-24-produzione.md` | Progetto, DB, Auth, hosting, admin, Web Push e verifiche |
 | Report integrazioni/calendario | `docs/progetto/test/2026-10-24-integrazioni-calendario.md` | O01–O04, E2E regole, 806 test verdi |
 | Report amministrazione/bandi | `docs/progetto/test/2026-10-22-amministrazione-bandi.md` | E2E ruoli, utenti, azienda, import e ATECO |
+| Avvisi operatore (calcolo) | `flutter_app/lib/data/avvisi.dart` | Funzioni pure per task, preventivi e appuntamenti: anticipi, finestre, testo e chiave idempotente |
+| Avvisi operatore (servizio) | `flutter_app/lib/data/services/sp_service.dart` | `pianificaAvvisiPersonali`, `generaAvvisiInApp`, `sincronizzaAvvisiWhatsapp`, `registraAvvisiTask/Preventivo`, `annullaAvvisi` |
+| Endpoint avvisi | `worker/src/index.js`, `worker/src/avvisi.mjs` | `POST /avvisi`, `POST /avvisi/annulla`, coda KV `avviso:` e cron; validazione e chiavi separate per ambiente |
+| Validità preventivo | `flutter_app/lib/data/models/preventivo.dart`, `features/preventivi/preventivo_edit_screen.dart` | Campo facoltativo `valido_fino`, default 30 giorni, usato dagli avvisi |
 
 ## Collezioni Firestore
 
