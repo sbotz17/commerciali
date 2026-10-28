@@ -1,7 +1,7 @@
 # Registro delle funzionalità — Closer staging
 
-**Data**: 26/10/2026
-**Build provata**: `v1.0.0+1 · 2026.10.25-2359 · 551c6c7` (prime prove) e `v1.0.0+1 · 2026.10.26-0014 · be113b2` (preferenze notifiche), live `https://commerciali-app.web.app`
+**Data**: 26/10/2026 — aggiornato 28/10/2026
+**Build provata**: `v1.0.0+1 · 2026.10.26-0028` (ondata 3 del 28/10), live `https://commerciali-app.web.app`
 **Utente di prova**: `e2e-ui-kdl5c715@commerciali.test` (azienda `cg3EiOl20WDXIw0mjl03`)
 **Metodo**: Chrome reale automatizzato (Playwright) sulla UI pubblicata, più lettura diretta di Firestore/REST
 per confermare i permessi. Nessun dato preesistente modificato: solo record di prova aggiunti.
@@ -17,18 +17,18 @@ per confermare i permessi. Nessun dato preesistente modificato: solo record di p
 
 | ID | Area | Funzioni implementate | Stato | Evidenza / residuo |
 |---|---|---|---|---|
-| AU01 | Auth e onboarding | login email, login Google, Face ID/passkey, reset password, sessione, utente disattivato, onboarding, creazione azienda, primo admin, ruoli | IN CORSO | login email e persistenza dopo reload OK (26/10). Google, passkey, reset, onboarding e disattivato da provare |
-| AU02 | Dashboard | conteggi, valore aperto, ultimi preventivi, azioni rapide, dati per azienda | IN CORSO | schermata e azioni rapide visibili; conteggi con dati reali da verificare |
-| AU03 | Clienti | elenco, ricerca, creazione, modifica, eliminazione, duplicati, VIES, isolamento azienda, persistenza | SUPERATA (parziale) | creazione, elenco, ricerca, duplicato, VIES, modifica e persistenza OK (25/10). Eliminazione non provata |
-| AU04 | Catalogo | prodotti, categorie, immagini, codici, panieri, filtri | SUPERATA (parziale) | categorie, prodotti, ricerca, filtro, paniere e persistenza OK (26/10). Immagine ed eliminazione non provate |
-| AU05 | Preventivi | elenco, filtri, creazione, modifica, eliminazione, righe, sconti, IVA, totali, numero `PRV-`, revisioni, PDF, riapertura | IN CORSO | creazione, numero, totali, riapertura e PDF `PRV-0001.pdf` OK (26/10). Modifica, eliminazione, revisioni e invio da provare |
-| AU06 | Visite | elenco per giorno, creazione, modifica, eliminazione, riordino, stati, calendario, filtri, promemoria | IN CORSO | creazione visita OK (26/10). Resto da provare |
+| AU01 | Auth e onboarding | login email, login Google, Face ID/passkey, reset password, sessione, utente disattivato, onboarding, creazione azienda, primo admin, ruoli | IN CORSO | registrazione, onboarding, creazione azienda, login email, intro e sessione OK (28/10). Google, passkey, reset e disattivato da provare |
+| AU02 | Dashboard | conteggi, valore aperto, ultimi preventivi, azioni rapide, dati per azienda | SUPERATA (base) | dashboard con azienda nuova, conteggi e azioni rapide OK (28/10); da verificare con dati pieni |
+| AU03 | Clienti | elenco, ricerca, creazione, modifica, eliminazione, duplicati, VIES, isolamento azienda, persistenza | SUPERATA (parziale) | creazione e persistenza OK anche il 28/10; ricerca, duplicato, VIES e modifica OK il 25/10. Eliminazione non provata |
+| AU04 | Catalogo | prodotti, categorie, immagini, codici, panieri, filtri | SUPERATA (parziale) | categorie, prodotti, ricerca, filtro, paniere e persistenza OK (26/10); creazione prodotto OK anche il 28/10. Immagine ed eliminazione non provate |
+| AU05 | Preventivi | elenco, filtri, creazione, modifica, eliminazione, righe, sconti, IVA, totali, numero `PRV-`, revisioni, PDF, riapertura | IN CORSO | creazione, numero, totali, riapertura e PDF OK il 26/10 e di nuovo il 28/10. Modifica, eliminazione, revisioni e invio da provare |
+| AU06 | Visite | elenco per giorno, creazione, modifica, eliminazione, riordino, stati, calendario, filtri, promemoria | IN CORSO | creazione visita OK (26/10 e 28/10). Modifica, eliminazione, riordino, stati e promemoria da provare |
 | AU07 | Calendario e appuntamenti | giorno/settimana/mese, creazione, ricorrenza, tutto il giorno, privato, partecipanti, call, Maps, allegati, condivisione, promemoria | IN CORSO | creazione appuntamento OK (28/10, lenta ma funzionante). **R-4 corretto e pubblicato**: `/promemoria/annulla` 500 → 200, nessun errore console. Restano: ricorrenza, inviti, call, Maps, allegati, condivisione |
-| AU08 | Task | elenco, filtri, creazione, modifica, eliminazione, scadenza, priorità, utente, completamento | IN CORSO | creazione e comparsa in elenco OK (26/10). **Accessibilità**: il testo delle card non entra nell'albero semantico (R-3). Modifica/eliminazione da provare |
+| AU08 | Task | elenco, filtri, creazione, modifica, eliminazione, scadenza, priorità, utente, completamento | IN CORSO | creazione e conteggio OK (26/10 e 28/10). **Accessibilità**: titolo assente dall'albero semantico (R-3). Modifica/eliminazione da provare |
 | AU09 | Notifiche | centro, badge, lette/non lette, “segna tutte”, preferenze, push web, WhatsApp personale, silenzio, anteprima | IN CORSO | R-2 corretto e pubblicato: la schermata preferenze si apre senza errore (verificato di nuovo il 28/10). **R-4** colpiva i promemoria via Worker: corretto e pubblicato. Restano: salvataggio dal pulsante, push reale, WhatsApp personale, silenzio |
 | AU10 | Chat | chat dirette, gruppi, messaggi, immagini, letture, badge, notifiche, isolamento | BLOCCATA | schermata OK; con un solo utente in azienda non è possibile creare una chat (serve un secondo utente) |
-| AU11 | Bandi | elenco, ricerca, filtri, dettaglio, link, import superadmin | IN CORSO | elenco reale, ricerca e filtri OK (26/10). Dettaglio, link e import da provare |
-| AU12 | Impostazioni | profilo, azienda, utenti, ruoli, licenze, superadmin, integrazioni, agenda, condivisione calendario, Face ID | IN CORSO | tutte le schermate si aprono. Errore CORS `passkeyElenco` visto alle 23:59, non più riprodotto alle 00:12 (funzioni ridepoyate). Face ID da provare |
+| AU11 | Bandi | elenco, ricerca, filtri, dettaglio, link, import superadmin | IN CORSO | elenco reale, ricerca e filtri OK (26/10 e 28/10). Dettaglio, link e import da provare |
+| AU12 | Impostazioni | profilo, azienda, utenti, ruoli, licenze, superadmin, integrazioni, agenda, condivisione calendario, Face ID | IN CORSO | schermata impostazioni OK (28/10). Errore CORS `passkeyElenco` visto il 26/10, non riprodotto dopo il redeploy. Face ID da provare |
 | AU13 | Integrazioni | server WhatsApp, SMTP/email, push VAPID/FCM, Google/Microsoft, R2, errori e retry | DA PROVARE | schermata si apre; nessun invio reale provato |
 | AU14 | Trasversale | permessi, multi-azienda, errori rete, mobile/desktop, reload, cache, segnaposto, deep link | IN CORSO | reload su rotta protetta mantiene la sessione OK. URL duplicato `/clienti#/clienti` da verificare. Mobile/desktop e multi-azienda da provare |
 | AU15 | Produzione | progetto separato, Auth, DB, regole, hosting, dati vuoti, admin | BLOCCATA | progetto `commerciali-prod` non ancora creato; nessuna prova possibile |
