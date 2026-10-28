@@ -767,6 +767,7 @@ async function gestisciPromemoria(request, env, url) {
     await annullaPromemoria(env, appuntamentoId);
 
     let creati = 0;
+    const chiaviCreate = [];
     for (const uid of utenti) {
       const contatto = await leggiDocumento(
         env,
@@ -792,8 +793,17 @@ async function gestisciPromemoria(request, env, url) {
             utenteUid: uid,
           }),
         );
+        chiaviCreate.push(key);
         creati++;
       }
+    }
+    if (chiaviCreate.length) {
+      // Indice per id: la cancellazione non deve fare list() sul KV, che ha
+      // un limite giornaliero basso sul piano gratuito.
+      await env.PROMEMORIA.put(
+        `promemoria-indice:${appuntamentoId}`,
+        JSON.stringify(chiaviCreate),
+      );
     }
     return json({ ok: true, creati });
   }
@@ -803,9 +813,41 @@ async function gestisciPromemoria(request, env, url) {
 
 async function annullaPromemoria(env, appuntamentoId) {
   if (!env.PROMEMORIA) return;
-  const prefisso = `promemoria:${appuntamentoId}:`;
-  const elenco = await env.PROMEMORIA.list({ prefix: prefisso });
-  await Promise.all(elenco.keys.map((voce) => env.PROMEMORIA.delete(voce.name)));
+  const chiaveIndice = `promemoria-indice:${appuntamentoId}`;
+  const indice = await env.PROMEMORIA.get(chiaveIndice);
+  if (indice !== null) {
+    let chiavi = [];
+    try {
+      const letto = JSON.parse(indice);
+      if (Array.isArray(letto)) {
+        chiavi = letto.filter((voce) => typeof voce === "string");
+      }
+    } catch (_) {
+      // Indice illeggibile: si ripulisce e si lascia il marcatore vuoto.
+    }
+    await Promise.all(chiavi.map((chiave) => env.PROMEMORIA.delete(chiave)));
+    if (chiavi.length) await env.PROMEMORIA.put(chiaveIndice, "[]");
+    return;
+  }
+
+  // Dati creati prima dell'indice: un solo list, poi si scrive il marcatore.
+  // Se la quota list è esaurita non si blocca il salvataggio: si registra e
+  // si prosegue (le chiavi vecchie restano, ma i nuovi promemoria funzionano).
+  try {
+    const elenco = await env.PROMEMORIA.list({
+      prefix: `promemoria:${appuntamentoId}:`,
+    });
+    await Promise.all(
+      elenco.keys.map((voce) => env.PROMEMORIA.delete(voce.name)),
+    );
+    await env.PROMEMORIA.put(chiaveIndice, "[]");
+  } catch (errore) {
+    console.error(
+      "annullaPromemoria: pulizia dati vecchi non riuscita",
+      appuntamentoId,
+      errore?.message || errore,
+    );
+  }
 }
 
 async function inviaPromemoriaScaduti(env) {
@@ -953,6 +995,8 @@ async function gestisciAllegati(request, env, url) {
 
   return json({ error: "Endpoint non trovato" }, 404);
 }
+
+export { annullaPromemoria };
 
 export default {
   async fetch(request, env) {
