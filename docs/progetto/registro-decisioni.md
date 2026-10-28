@@ -152,3 +152,18 @@ sono state dichiarate per analista, sviluppatore-backend, sviluppatore-frontend 
 `commerciali` **non ha il webhook GitHub** di Avanza: lo stato del task non si aggiorna da solo con ramo e
 PR. Va installato con l'azione `collegamento` del workflow (operazione di configurazione, senza segreti in
 chat); fino ad allora il coordinatore aggiorna lo stato a mano.
+
+## 2026-10-28 — La squadra esegue tutto; Andrea non fa test né merge
+
+**Decisione di Andrea** (chat del 28/10/2026): la squadra fa tutto, test compresi. Andrea non deve provare
+funzioni, dispositivi o link, non deve unire pull request e non deve pubblicare.
+
+- Fonte: `sbotz17/squadraalphalab` (`CLAUDE.md` e `DECISIONI.md` aggiornati oggi, con seconda lettura
+  indipendente).
+- Le prove UI/WhatsApp le esegue la squadra con build locale, browser automatizzato, utenti e dati di test,
+  canali di anteprima; se serve un dispositivo/account/acquisto personale l'area resta `BLOCCATA` e non si
+  pubblica, senza chiedere la prova ad Andrea.
+- Il coordinatore apre e unisce le PR dopo tester `SUPERATO` e validatore `APPROVATO`; la promozione in
+  produzione la esegue dopo guardiano `GO`, audit chiuso, backup verificato e rollback pronto.
+- Restano riservate ad Andrea: soldi, contratti, account, store, acquisto di servizi, cancellazione reale di
+  dati (la squadra prepara e aspetta il via) e il pulsante di blocco.
