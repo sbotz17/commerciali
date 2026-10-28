@@ -77,3 +77,16 @@ Residui confermati: appuntamenti storici con quota già esaurita possono mantene
 invio doppio); indice corrotto non ripulito; primo accesso agli storici fa una `list` una-tantum.
 Non verificati dal validatore: deploy reale, quota KV reale, `flutter analyze`/`flutter test` (diff solo
 Worker/config/CI; il client Flutter non è toccato).
+
+## Smoke test dopo il deploy (28/10/2026)
+
+Worker pubblicato: versione `eae06f48-c4ea-4d87-bdc1-5fefe4054536`, schedule `*/5 * * * *`.
+
+| Prova | Prima | Dopo |
+|---|---|---|
+| `POST /promemoria/annulla` con token reale e quota `list()` esaurita | 500 `{"error":"KV list() limit exceeded for the day."}` | **200 `{"ok":true}`** |
+| Creazione appuntamento dalla UI del calendario | chiamata a `/promemoria/annulla` in 500, errore console | chiamata **200**, nessun errore console; appuntamento visibile in calendario |
+
+Esito: R-4 **CHIUSO** per la parte verificabile. Resta il residuo dichiarato: eventuali chiavi vecchie di
+appuntamenti creati prima della correzione possono non essere rimosse finché la quota `list()` non torna
+disponibile; i nuovi promemoria funzionano.
