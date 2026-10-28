@@ -24,4 +24,4 @@ binding = "EMAIL_CONFIG"
 id = "f70b070a45ee437ab21beaca321c169b"
 
 [triggers]
-crons = ["* * * * *"]
+crons = ["*/5 * * * *"]
