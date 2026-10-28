@@ -24,7 +24,7 @@ per confermare i permessi. Nessun dato preesistente modificato: solo record di p
 | AU05 | Preventivi | elenco, filtri, creazione, modifica, eliminazione, righe, sconti, IVA, totali, numero `PRV-`, revisioni, PDF, riapertura | IN CORSO | creazione, numero, totali, riapertura e PDF OK il 26/10 e di nuovo il 28/10. Modifica, eliminazione, revisioni e invio da provare |
 | AU06 | Visite | elenco per giorno, creazione, modifica, eliminazione, riordino, stati, calendario, filtri, promemoria | IN CORSO | creazione visita OK (26/10 e 28/10). Modifica, eliminazione, riordino, stati e promemoria da provare |
 | AU07 | Calendario e appuntamenti | giorno/settimana/mese, creazione, ricorrenza, tutto il giorno, privato, partecipanti, call, Maps, allegati, condivisione, promemoria | IN CORSO | creazione appuntamento OK (28/10, lenta ma funzionante). **R-4 corretto e pubblicato**: `/promemoria/annulla` 500 → 200, nessun errore console. Restano: ricorrenza, inviti, call, Maps, allegati, condivisione |
-| AU08 | Task | elenco, filtri, creazione, modifica, eliminazione, scadenza, priorità, utente, completamento | IN CORSO | creazione e conteggio OK (26/10 e 28/10). **Accessibilità**: titolo assente dall'albero semantico (R-3). Modifica/eliminazione da provare |
+| AU08 | Task | elenco, filtri, creazione, modifica, eliminazione, scadenza, priorità, utente, completamento | IN CORSO | creazione e conteggio OK (26/10 e 28/10). Accessibilità verificata il 28/10: titolo e dettagli sono nel nome del `checkbox` della card; R-3 chiuso come falso allarme dello strumento (innerText). Modifica/eliminazione da provare |
 | AU09 | Notifiche | centro, badge, lette/non lette, “segna tutte”, preferenze, push web, WhatsApp personale, silenzio, anteprima | IN CORSO | R-2 corretto e pubblicato: la schermata preferenze si apre senza errore (verificato di nuovo il 28/10). **R-4** colpiva i promemoria via Worker: corretto e pubblicato. Restano: salvataggio dal pulsante, push reale, WhatsApp personale, silenzio |
 | AU10 | Chat | chat dirette, gruppi, messaggi, immagini, letture, badge, notifiche, isolamento | BLOCCATA | schermata OK; con un solo utente in azienda non è possibile creare una chat (serve un secondo utente) |
 | AU11 | Bandi | elenco, ricerca, filtri, dettaglio, link, import superadmin | IN CORSO | elenco reale, ricerca e filtri OK (26/10 e 28/10). Dettaglio, link e import da provare |
@@ -55,7 +55,12 @@ per confermare i permessi. Nessun dato preesistente modificato: solo record di p
 - Verifiche: 18 test Worker verdi, tester `SUPERATO`, validatore `APPROVATO`, deploy `eae06f48`, smoke reale
   `POST /promemoria/annulla` → **200**; UI calendario senza 500. Report `test/2026-10-28-R-4-promemoria.md`.
 
-### R-3 — Task: titolo e dettagli non leggibili dall'albero di accessibilità (P2)
+### R-3 — Task: falso allarme dell'accessibilità (CHIUSO)
+
+- Verifica con l'albero di accessibilità completo: il `checkbox` della card ha nome
+  `Audit Task 28-10 · Audit Utente · Senza scadenza`. Il titolo è leggibile.
+- Il test precedente leggeva solo `innerText` e produceva un falso negativo.
+- Nessuna correzione di codice; i test UI devono usare l'albero di accessibilità.
 
 - Riproduzione: Task → Nuovo task → “Audit Task 2026-10-25” → la card è visibile a schermo, ma il testo
   semantico contiene solo “Senza scadenza · 2 · Azioni”.
