@@ -2,20 +2,65 @@
   "progetto": "Closer",
   "aggiornato": "2026-10-29",
   "aree": [
-    {"id": "AU01", "stato": "DA RIFARE"},
-    {"id": "AU02", "stato": "DA RIFARE"},
-    {"id": "AU03", "stato": "DA RIFARE"},
-    {"id": "AU04", "stato": "DA RIFARE"},
-    {"id": "AU05", "stato": "DA RIFARE"},
-    {"id": "AU06", "stato": "DA RIFARE"},
-    {"id": "AU07", "stato": "DA RIFARE"},
-    {"id": "AU08", "stato": "DA RIFARE"},
-    {"id": "AU09", "stato": "DA RIFARE"},
-    {"id": "AU10", "stato": "BLOCCATA"},
-    {"id": "AU11", "stato": "DA RIFARE"},
-    {"id": "AU12", "stato": "DA RIFARE"},
-    {"id": "AU13", "stato": "DA RIFARE"},
-    {"id": "AU14", "stato": "DA RIFARE"},
-    {"id": "AU15", "stato": "BLOCCATA"}
+    {
+      "id": "AU01",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU02",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU03",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU04",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU05",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU06",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU07",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU08",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU09",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU10",
+      "stato": "BLOCCATA"
+    },
+    {
+      "id": "AU11",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU12",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU13",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU14",
+      "stato": "DA RIFARE"
+    },
+    {
+      "id": "AU15",
+      "stato": "BLOCCATA"
+    }
   ]
 }
