@@ -1,8 +1,7 @@
 # Audit completo dell'applicazione — piano di verifica
 
 **Data**: 24/10/2026 — **riaperto il 29/10/2026**
-**Stato**: nessuna area è `PROVATA`. Le vecchie `SUPERATA` sono revocate: tutte le aree sono `DA RIFARE`,
-tranne AU10 e AU15 `BLOCCATA`. R-2, R-3 e R-4 sono chiusi come ritorni, ma non bastano a chiudere le aree.
+**Stato**: AU03 è `PROVATA` (29/10). Le altre aree restano `DA RIFARE`, tranne AU10 e AU15 `BLOCCATA`. R-2, R-3 e R-4 sono chiusi come ritorni, ma non bastano a chiudere le aree.
 **Standard**: `skills/squadra-audit` — criterio scritto prima, prova UI reale, persistenza, caso negativo,
 risposta reale del servizio, test che fallisce se la funzione si rompe (esecuzione rossa), evidenza con
 build/commit, tester e validatore in sessioni distinte.
@@ -71,7 +70,7 @@ Nessuna area è più `PROVATA`; le prove precedenti restano come storia, non com
 |---|---|---|
 | AU01 | DA RIFARE | Google, Face ID, reset e utente disattivato non provati; prove precedenti non ripetibili |
 | AU02 | DA RIFARE | solo schermata e conteggi base; mancano dati pieni e casi negativi |
-| AU03 | DA RIFARE | eliminazione e isolamento non provati; prove su una sola azienda |
+| AU03 | **PROVATA** | 29/10: CRUD, duplicati, VIES, isolamento RLS, persistenza e pulizia; report `2026-10-29-AU03-clienti.md`; tester SUPERATO, validatore APPROVATO |
 | AU04 | DA RIFARE | immagine ed eliminazione non provate; paniere parziale |
 | AU05 | DA RIFARE | modifica, eliminazione, revisioni e invio non provati |
 | AU06 | DA RIFARE | modifica, eliminazione, riordino, stati e promemoria non provati |
