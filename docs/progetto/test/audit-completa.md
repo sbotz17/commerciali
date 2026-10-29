@@ -1,10 +1,11 @@
 # Audit completo dell'applicazione — piano di verifica
 
-**Data**: 24/10/2026
-**Stato**: in corso — registro per funzione aggiornato al 28/10 in
-`docs/progetto/test/2026-10-26-registro-funzionalita.md`; ondata 3 in
-`docs/progetto/test/2026-10-28-audit-ondata-3.md` (AU01 onboarding/login, AU02, AU03, AU04, AU05, AU06,
-AU07 base, AU08 base, AU09 preferenze, AU11, AU12). R-2 e R-4 CHIUSI; R-3 APERTO; AU10 e AU15 BLOCCATE.
+**Data**: 24/10/2026 — **riaperto il 29/10/2026**
+**Stato**: nessuna area è `PROVATA`. Le vecchie `SUPERATA` sono revocate: tutte le aree sono `DA RIFARE`,
+tranne AU10 e AU15 `BLOCCATA`. R-2, R-3 e R-4 sono chiusi come ritorni, ma non bastano a chiudere le aree.
+**Standard**: `skills/squadra-audit` — criterio scritto prima, prova UI reale, persistenza, caso negativo,
+risposta reale del servizio, test che fallisce se la funzione si rompe (esecuzione rossa), evidenza con
+build/commit, tester e validatore in sessioni distinte.
 **Gate**: obbligatorio prima di **ogni pubblicazione su staging e produzione**.
 **Regola**: nessuna nuova funzione e nessun rilascio finché un'area non ha report tester + validatore.
 **Responsabilità**: la squadra esegue i test; Andrea riceve solo la validazione finale.
@@ -17,7 +18,7 @@ Le prove si fanno su build locale o canale di anteprima; su staging si pubblica 
 Nessun deploy hosting su staging o produzione è consentito senza:
 
 1. audit-completa eseguito e report aggiornato;
-2. esiti reali per le aree pubblicate, con prove UI;
+2. **nessuna area diversa da `PROVATA`**: `BLOCCATA`, `DA RIFARE` e `FALLITA` bloccano;
 3. tester `SUPERATO`;
 4. validatore `APPROVATO`;
 5. per la produzione: guardiano `GO`, backup verificato e rollback pronto.
@@ -60,6 +61,36 @@ Se manca una prova, l'area è **BLOCCATA**, non “SUPERATA con residuo”.
 | AU13 | Integrazioni | server WhatsApp, SMTP, push VAPID/FCM, Google/Microsoft, R2, errori e retry | P1 |
 | AU14 | Trasversale | permessi, multi-azienda, errori rete, mobile/desktop, reload, cache, nessun segnaposto | P0 |
 | AU15 | Produzione | progetto separato, Auth, DB, regole, hosting, dati vuoti, accesso admin | P0 |
+
+## Revisione del 29/10/2026 — audit riaperti
+
+Andrea ha stabilito che **se trova un guasto, il test era sbagliato** e che tutti gli audit vanno rivisti.
+Nessuna area è più `PROVATA`; le prove precedenti restano come storia, non come chiusura.
+
+| Area | Stato | Perché |
+|---|---|---|
+| AU01 | DA RIFARE | Google, Face ID, reset e utente disattivato non provati; prove precedenti non ripetibili |
+| AU02 | DA RIFARE | solo schermata e conteggi base; mancano dati pieni e casi negativi |
+| AU03 | DA RIFARE | eliminazione e isolamento non provati; prove su una sola azienda |
+| AU04 | DA RIFARE | immagine ed eliminazione non provate; paniere parziale |
+| AU05 | DA RIFARE | modifica, eliminazione, revisioni e invio non provati |
+| AU06 | DA RIFARE | modifica, eliminazione, riordino, stati e promemoria non provati |
+| AU07 | DA RIFARE | ricorrenza, inviti, call, Maps, allegati, condivisione non provati |
+| AU08 | DA RIFARE | modifica, eliminazione, completamento e filtri non provati |
+| AU09 | DA RIFARE | salvataggio preferenze, push reale, WhatsApp personale e silenzio non provati |
+| AU10 | BLOCCATA | serve un secondo utente in azienda |
+| AU11 | DA RIFARE | dettaglio, link e import non provati |
+| AU12 | DA RIFARE | utenti, ruoli, licenze, superadmin e integrazioni non provati |
+| AU13 | DA RIFARE | nessun invio reale WhatsApp/email/push |
+| AU14 | DA RIFARE | mobile/desktop, multi-azienda, errori di rete non provati |
+| AU15 | BLOCCATA | progetto di produzione non ancora creato |
+
+**Regola**: un'area passa a `PROVATA` solo quando **tutte** le sue funzioni hanno il report completo e
+tester/validatore indipendenti. Fino ad allora il deploy è vietato.
+
+**Gate tecnico**: prima di ogni deploy eseguire `python3 scripts/controlla-audit.py`. Oggi esce **1**:
+nessuna area è `PROVATA`, quindi il deploy è bloccato. Il test del gate è in
+`scripts/test_controlla_audit.py` (`python3 -m unittest`).
 
 ## Audit bloccanti (prima di nuovi sviluppi)
 

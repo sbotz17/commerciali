@@ -145,3 +145,24 @@ rilascio; il registro `2026-10-26-registro-funzionalita.md` è la fonte unica de
 **In sospeso**: il task in Avanza non è stato creato perché il workflow `registra-ore.yml` su `main` non
 accetta l'input `tasks_json` (HTTP 422); nessun codice `T-N` inventato. Va aggiunta l'azione `importa-task`
 al workflow (zona protetta: serve una seconda lettura indipendente).
+
+## 2026-10-29 — Audit riaperti e standard di prova
+
+**Decisione di Andrea**: se trova una cosa rotta, la squadra ha testato male; gli audit sono tutti da
+rivedere; la squadra deve essere meglio di una persona. Recepito senza eccezioni.
+
+**Effetto**:
+- Nessuna area è più `PROVATA`; le vecchie `SUPERATA` sono revocate. AU01–AU09 e AU11–AU14 sono `DA RIFARE`,
+  AU10 e AU15 `BLOCCATA`.
+- Standard obbligatorio (skill `squadra-audit`): criterio scritto prima, prova UI reale, persistenza, caso
+  negativo, risposta reale del servizio, test che fallisce se la funzione si rompe con esecuzione rossa,
+  evidenza con build/commit, tester e validatore in sessioni distinte.
+- L'area è `PROVATA` solo se **tutte** le sue funzioni lo sono. `FALLITA` resta `FALLITA` finché il ritorno
+  non è chiuso.
+- Il deploy è vietato con aree non `PROVATA`. Il controllo automatico non è ancora attivo: il coordinatore
+  esegue `scripts/controlla-audit.py` a mano e annota l'esito; il deploy resta vietato.
+- Ogni guasto segnalato da Andrea è un guasto del processo: causa, test che l'avrebbe fermato, riaudit,
+  voce nel registro.
+
+**Responsabile**: coordinatore aggiorna i registri entro il 31/10/2026; validatore verifica che nessuna
+area resti `SUPERATA`.
