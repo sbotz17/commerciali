@@ -1,0 +1,36 @@
+{
+  "suffisso": "45422",
+  "casi": [
+    {
+      "nome": "dup-piva",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "dup-piva-formattata",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "dup-nome",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "dup-cf",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "vies-non-valida",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "pulizia finale",
+      "esito": "OK",
+      "dettaglio": "5 clienti rimossi"
+    }
+  ],
+  "esito": "PROVATA"
+}
