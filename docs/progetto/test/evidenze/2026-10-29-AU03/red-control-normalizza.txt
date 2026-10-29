@@ -1,0 +1,12 @@
+Controllo rosso/verde della correzione normalizzaPiva (29/10/2026)
+
+1) Con il codice vecchio (spazi interni non rimossi):
+   flutter test test/cliente_test.dart
+   → FALLITO: "normalizzaPiva fa trim degli spazi"
+   atteso '00159560366', ottenuto '001 595 603 66'.
+
+2) Dopo la correzione (replaceAll(RegExp(r'\D'), '')):
+   flutter test test/cliente_test.dart
+   → 12 test passati.
+
+Il test che fallisce senza la correzione è in flutter_app/test/cliente_test.dart.
