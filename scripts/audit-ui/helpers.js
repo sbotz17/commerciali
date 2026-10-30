@@ -64,7 +64,10 @@ async function elencoPulsanti(page) {
 }
 
 async function login(page, email = EMAIL, pass = PASS) {
-  await abilitaSemantica(page);
+  const campoEmail = page.locator('input[aria-label="Email"]').first();
+  if (!(await campoEmail.count())) {
+    await abilitaSemantica(page);
+  }
   await scrivi(page, 'Email', email);
   await scrivi(page, 'Password', pass);
   await cliccaTesto(page, 'Accedi');
