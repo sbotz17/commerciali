@@ -32,7 +32,24 @@ operativa: la cancellazione dei dati di produzione, che la squadra prepara ma no
 Regole, CI, hook e zone protette le aggiorna la squadra con **seconda lettura indipendente** (sessione
 diversa da chi scrive) e voce nel registro; non si indeboliscono né disattivano i controlli. Non si toccano
 il meccanismo di blocco (`BLOCCO-SQUADRA`, `blocco-squadra.py`, hook che lo applicano), i segreti e le
-credenziali di produzione. Le decisioni sulla squadra stanno in `DECISIONI.md`.
+credenziali di produzione. Le decisioni sulla squadra stanno in `DECISIONI.md`. Il riassunto semplice di
+tutte le regole è `REGOLE-IN-BREVE.md`: si aggiorna a ogni cambio di regola, nello stesso giro.
+
+## La squadra non si ferma mai (decisione di Andrea, 29/10/2026)
+
+**Decisione di Andrea** (chat del 29/10/2026): «la squadra non si deve mai fermare». Nessuna sessione chiude
+il lavoro annunciando un passo senza eseguirlo («lo faccio dopo», «il turno è finito», «proseguo con…» e poi
+silenzio): ciò che si annuncia si esegue nello stesso giro, oppure si mette in coda con motivo, codice del
+task e chi lo sblocca.
+
+- Se un passo dipende da un'attesa esterna (CI, deploy, servizio, documenti), la sessione **prosegue su
+  altro lavoro utile** e riprende il passo appena è possibile: non chiede ad Andrea di riavviarla.
+- Prima di chiudere una risposta la sessione rilegge ciò che ha annunciato: niente deve restare annunciato e
+  non fatto. Se ha finito, elenca ciò che resta e chi lo sblocca — e intanto cerca altro lavoro utile.
+- Restano fermi solo i lavori che dipendono da un blocco di Andrea (`BLOCCO-SQUADRA.md` /
+  `BLOCCO_SQUADRA`), da una decisione riservata, da un segreto o accesso che solo Andrea può fornire, dalla
+  cancellazione di dati di produzione, o dal caso «Quando fermarsi e valutare insieme» (errore scoperto,
+  passaggio saltato, incertezza sul proprio lavoro o su un esito). Tutto il resto prosegue.
 
 ## Limiti invalicabili
 
@@ -105,7 +122,8 @@ Un task = un obiettivo verificabile, di norma un file, una schermata o un serviz
 - Mai push diretto su `main` o ramo di produzione; si passa da PR e controlli.
 - Le PR le apre e le unisce il coordinatore dopo i gate; Andrea non deve unire né pubblicare nulla.
 - Unica eccezione al push diretto: il workflow di sincronizzazione delle regole aggiorna solo i file di
-  regole (`CLAUDE.md`/`AGENTS.md` e skill), mai codice, dati o configurazioni.
+  regole (`CLAUDE.md`/`AGENTS.md`, `DECISIONI.md`, `REGOLE-IN-BREVE.md` e skill), mai codice, dati o
+  configurazioni.
 - Verificare sempre `pwd` e `git remote -v` prima di modificare o pubblicare.
 
 ## Staging è un ambiente di rilascio
@@ -147,6 +165,28 @@ sessioni: la seconda richiesta si **blocca e si mette in coda**, senza ramo, sen
 - Ogni area approvata ha passi, esito, evidenza e residui elencati.
 - "Sembra funzionare" non è una prova. Se non può provare, l'esito è `RESPINTO` o `BLOCCATO`.
 - Controlla che i bug noti siano chiusi e che un test automatico copra la correzione.
+
+## Qualità delle prove
+
+Un test scritto male è peggio di nessun test: dà falsa sicurezza. **Se Andrea trova un guasto, il test era
+sbagliato.**
+
+- Stati dell'area: `PROVATA`, `BLOCCATA`, `DA RIFARE`, `FALLITA`. `PROVATA` è l'unico stato che sblocca il
+  rilascio; `SUPERATO`/`APPROVATO` sono i verdetti di tester e validatore, non lo stato dell'area.
+- Un'area è `PROVATA` solo con: criterio scritto prima; prova UI sul percorso reale; persistenza dopo
+  ricarica; caso negativo (permesso, dato mancante, errore di rete, isolamento tra aziende); risposta reale
+  del servizio; test automatico che fallisce se la funzione si rompe (con esecuzione **rossa** allegata);
+  evidenza con build e commit.
+- `BLOCCATA` se manca una prova; `DA RIFARE` se la prova non è ripetibile o è stata fatta su una versione
+  che è cambiata. Non esiste "SUPERATA con residuo".
+- Tester e validatore sono indipendenti e rieseguono le prove. Nessuno approva il proprio lavoro.
+- I test UI leggono l'albero di accessibilità e le risposte di rete, non solo il testo visibile.
+- Ogni guasto segnalato da Andrea è un guasto del processo: causa, test che l'avrebbe fermato, riaudit
+  dell'area, voce nel registro. Non è un caso isolato. Se è un requisito nuovo o un ambiente diverso, si
+  registra come modifica, non come test rotto.
+- La build in prova è fissata con commit; niente deploy durante l'audit. Il deploy è bloccato se il registro
+  ha aree non `PROVATA`. Il controllo automatico non è ancora attivo in tutti i progetti: finché non lo è,
+  il coordinatore esegue il controllo a mano e lo annota; il deploy resta comunque vietato.
 
 ## Memoria, riuso e token
 
