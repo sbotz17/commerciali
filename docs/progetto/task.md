@@ -107,26 +107,81 @@ Piano micro-task. Un task = un obiettivo verificabile. Stato iniziale: `DA FARE`
 
 | ID | Area | Task | Criteri di accettazione | Agente | Stato |
 |---|---|---|---|---|---|
-| H01 | DBA | Collezioni agenda/notifiche/chat e regole | schema, indici e regole approvate; nessun dato esistente toccato | dba | DA FARE |
-| H02 | Dati | Modelli `Appuntamento`, `Task`, `Promemoria`, `Notifica` | fromMap/toMap, default, test | sviluppatore-backend | DA FARE |
-| H03 | Dati | `SpService`: CRUD appuntamenti e task | query per azienda, filtro operatore, test | sviluppatore-backend | DA FARE |
-| H04 | UI | Schermata Calendario giorno/settimana | viste, filtri, oggi, senza orario, test | sviluppatore-frontend | DA FARE |
-| H05 | UI | Form appuntamento | titolo/data, cliente, operatore, luogo, Maps, call, promemoria | sviluppatore-frontend | DA FARE |
-| H06 | UI | Pagina Task | lista per scadenza, filtri, completa/riapri, test | sviluppatore-frontend | DA FARE |
-| H07 | UI | Form task | scadenza, operatore, priorità, cliente/appuntamento, note | sviluppatore-frontend | DA FARE |
-| H08 | UI | Dettaglio appuntamento/task con allegati | immagini R2, anteprima, eliminazione | sviluppatore-frontend | DA FARE |
-| H09 | Notifiche | Centro notifiche e badge in-app | elenco, lette/non lette, deep link, test | sviluppatore-frontend | DA FARE |
-| H10 | Notifiche | Preferenze notifiche per utente | canali, tipi, silenzio, numero WhatsApp, test | sviluppatore-frontend | DA FARE |
+| H01 | DBA | Collezioni agenda/notifiche/chat e regole | schema, indici e regole approvate; nessun dato esistente toccato | dba | FATTO |
+| H02 | Dati | Modelli `Appuntamento`, `Task`, `Promemoria`, `Notifica` | fromMap/toMap, default, test | sviluppatore-backend | FATTO |
+| H03 | Dati | `SpService`: CRUD appuntamenti e task | query per azienda, filtro operatore, test | sviluppatore-backend | FATTO |
+| H04 | UI | Schermata Calendario giorno/settimana | viste, filtri, oggi, senza orario, test | sviluppatore-frontend | FATTO |
+| H04b | UI | Calendario classico giorno/settimana/mese e stile card | vista predefinita calendario; selettori periodo e stile; griglia ore, mese, “Senza orario”, creazione con ora; test | sviluppatore-frontend | FATTO |
+| H04c | UI | Nuovo cliente dal form appuntamento e condivisione con colleghi/gruppi | pulsante `+` accanto al cliente; inviti con notifica; conferma disponibilità; stato provvisorio visibile; test | sviluppatore-frontend | FATTO |
+| H04d | Notifiche | Risposta invito a creatore/operatore con In-App e WhatsApp | notifica di conferma a chi ha creato o gestisce l'appuntamento; recapito WhatsApp aziendale con consenso; test e E2E; nessun test richiesto ad Andrea | sviluppatore-backend | FATTO |
+| H04e | UI | Form appuntamento: inizio/fine, tutto il giorno, ripetizione, notifica, privato | campi data/ora inizio e fine, flag tutto il giorno, ricorrenze con giorni, notifica configurabile, mascheramento privacy; test | sviluppatore-frontend | FATTO |
+| H04f | Full stack | Allegati, promemoria e privacy reale | file su KV Worker, promemoria WhatsApp via Cron, dettagli privati in sotto-collezione e regole; test/E2E | sviluppatore-backend + frontend | FATTO |
+| H05 | UI | Form appuntamento | titolo/data, cliente, operatore, luogo, Maps, call, promemoria | sviluppatore-frontend | FATTO |
+| H06 | UI | Pagina Task | lista per scadenza, filtri, completa/riapri, test | sviluppatore-frontend | FATTO |
+| H07 | UI | Form task | scadenza, operatore, priorità, cliente/appuntamento, note | sviluppatore-frontend | FATTO |
+| H08 | UI | Dettaglio appuntamento/task con allegati | upload/download/eliminazione nel KV Worker, form appuntamento, max 10 MB (R2 resta il target finale) | sviluppatore-frontend | FATTO |
+| H09 | Notifiche | Centro notifiche e badge in-app | elenco, lette/non lette, deep link, test | sviluppatore-frontend | FATTO |
+| H10 | Notifiche | Preferenze notifiche per utente | canali, tipi, silenzio, numero WhatsApp, test | sviluppatore-frontend | FATTO |
 | H11 | Push | Dispositivi e token FCM web/Android/iOS | registrazione, logout, token scaduto | sviluppatore-backend | DA FARE |
-| H12 | Worker | Scheduler promemoria e notifiche | cron, idempotenza, retry, fuso, test | sviluppatore-backend | DA FARE |
-| H13 | WhatsApp | Invio operatore via server Volty | endpoint, secret, template, errore/retry | sviluppatore-backend | DA FARE |
-| H14 | Email | SMTP per azienda e invio prova | settings, secret server, template, retry | sviluppatore-backend | DA FARE |
+| H12 | Worker | Scheduler promemoria e notifiche | Cron Worker ogni minuto, KV `PROMEMORIA`, invio WhatsApp; push/In-App richiede Blaze | sviluppatore-backend | IN CORSO |
+| H13 | WhatsApp | Invio operatore via server Volty | endpoint, secret, template, errore/retry | sviluppatore-backend | IN CORSO |
+| H13b | WhatsApp | Configurazione Super Admin e proxy Worker | URL/API key nel KV, QR/stato, invio autenticato, rubrica consenso; test app + E2E Worker | sviluppatore-backend | FATTO |
+| H13c | WhatsApp + Email | Promemoria automatico al cliente | avviso alla creazione e al cambio data/ora, WhatsApp+email, idempotenza, log nel dettaglio, config Resend; test | sviluppatore-backend + frontend | FATTO |
+| H14 | Email | SMTP per azienda e invio prova | settings, secret server, template, retry; oggi c'è il mittente unico Resend, lo SMTP per azienda resta da fare | sviluppatore-backend | IN CORSO |
 | H15 | Google | OAuth Google Calendar/Meet | collega/scollega, evento+Meet, sync, conflitti | sviluppatore-backend | DA FARE |
 | H16 | Microsoft | OAuth Microsoft/Teams | collega/scollega, online meeting, sync, conflitti | sviluppatore-backend | DA FARE |
 | H17 | R2 | Upload immagini firmato | limiti, formati, URL firmati, pulizia | sviluppatore-backend | DA FARE |
 | H18 | Prenotazione | Slot e pagina pubblica | token, scadenza, doppia prenotazione, conferma | sviluppatore-backend | DA FARE |
-| H19 | Chat | Modelli e stanze/messaggi | dirette senza duplicati, gruppi, partecipanti | sviluppatore-backend | DA FARE |
-| H20 | Chat | Lista conversazioni e thread | realtime, non letti, letture, immagini, soft delete | sviluppatore-frontend | DA FARE |
-| H21 | Chat | Notifiche chat in-app/push | badge, anteprima generica, silenzio, no duplicati | sviluppatore-backend | DA FARE |
-| H22 | Impostazioni | Sezione Calendario e notifiche | tutte le configurazioni, secret non visibili, test | sviluppatore-frontend | DA FARE |
+| H19 | Chat | Modelli e stanze/messaggi | dirette senza duplicati, gruppi, partecipanti | sviluppatore-backend | FATTO |
+| H20 | Chat | Lista conversazioni e thread | realtime, non letti, letture, immagini, soft delete | sviluppatore-frontend | FATTO |
+| H21 | Chat | Notifiche chat in-app/push | notifiche in-app create per i destinatari; push FCM ancora da fare | sviluppatore-backend | IN CORSO |
+| H22 | Impostazioni | Sezione Calendario e notifiche | fuso, promemoria, template, slot, allegati, Maps; test | sviluppatore-frontend | FATTO |
 | H23 | Qualità | E2E agenda/notifiche/chat | appuntamento, task, promemoria, chat, Maps, push | tester | DA FARE |
+| H24 | Qualità | Test automatici in CI | workflow GitHub Actions: `flutter analyze`, `flutter test`, controlli e test Worker | sviluppatore-backend | FATTO |
+
+## Calendario per operatore, condivisione e OAuth aziendale (F32)
+
+Decisioni confermate da Andrea il 24/10/2026. Un task = un obiettivo verificabile. Primo blocco eseguibile senza credenziali esterne: O01–O05 e O08–O10 con stub; O06/O07/O11 richiedono le credenziali e il Worker.
+
+| ID | Area | Task | Criteri di accettazione | Agente | Stato |
+|---|---|---|---|---|---|
+| O01 | DBA | Schema e regole `integrazioni_azienda`, `condivisioni_calendario`, estensioni `integrazioni`/`impostazioni_agenda` | schema, indici e regole approvati; nessun secret in Firestore; test positivi/negativi; nessuna migrazione | dba | FATTO |
+| O02 | Dati | Modelli `IntegrazioneAzienda` e `CondivisioneCalendario` | `fromMap`/`toMap`, default compatibili, livelli e stati validati; test | sviluppatore-backend | FATTO |
+| O03 | Dati | `SpService`: lettura/salvataggio integrazioni azienda e CRUD condivisioni | admin legge/salva; utente legge proprie condivisioni; revoca; test | sviluppatore-backend | FATTO |
+| O04 | UI | `Impostazioni → Integrazioni`: card Google, Microsoft, SMTP, WhatsApp, R2, Push | stati, modalità app Closer/app propria, campi, secret mascherati, test widget | sviluppatore-frontend | FATTO |
+| O05 | UI | Procedura guidata Google/Microsoft (passi, copia redirect, test connessione) | 6 passi, errori comprensibili, nessun secret mostrato dopo il salvataggio; test | sviluppatore-frontend | DA FARE |
+| O06 | Worker | OAuth Google: start, callback, token KV, refresh, revoca, test connessione | token mai al client; state firmato; scope minimi; test con mock | sviluppatore-backend | DA FARE |
+| O07 | Worker | OAuth Microsoft/Graph: app multi-tenant, token, Teams, test connessione | consenso tenant, token KV, online meeting; test con mock | sviluppatore-backend | DA FARE |
+| O08 | UI | `Impostazioni utente → Connessioni` Google/Microsoft | collega/ricollega/scollega, calendario scelto, stato; test | sviluppatore-frontend | DA FARE |
+| O09 | Dati/Worker | Condivisione calendario e mascheramento eventi esterni | livelli libero/occupato/dettagli/modifica; stesso azienda; revoca; nessun dato mascherato al client; test | sviluppatore-backend | DA FARE |
+| O10 | UI | Condivisione calendario e sezione "Condivisi con me" | dialog, livelli, revoca, badge, eventi "Occupato"; test | sviluppatore-frontend | IN CORSO |
+| O11 | Worker | Creazione evento e call Meet/Teams sul calendario dell'operatore | evento sul calendario corretto, cliente invitato, link salvato, conflitti; test | sviluppatore-backend | IN CORSO |
+| O12 | Qualità | E2E staging calendario condiviso e OAuth | connessione, evento, call, condivisione, revoca, 0 `permission-denied`, nessun secret esposto | tester | DA FARE |
+| O13 | Qualità | Validazione finale F32 | report tester, DoD, approvazione; residui dichiarati | validatore | DA FARE |
+
+**Dipendenze**: O01 → O02/O03 → O04/O05; O06/O07 richiedono credenziali Google/Azure e Worker; O08 dopo O06/O07; O09/O10 dopo O01/O03; O11 dopo O06/O07; O12/O13 alla fine.
+
+**Prima fetta**: O01 + O02 + O03 + O04, con O06/O07 simulati da un `Test connessione` stub che non chiama servizi esterni. Serve a rendere visibili e salvabili le configurazioni senza credenziali.
+
+## Audit completo dell'applicazione (AU)
+
+**Decisione 24/10/2026**: nuove funzioni congelate fino alla chiusura dell'audit. Ogni area richiede test
+automatici, prova E2E reale nella UI, report tester e validazione. Piano: `docs/progetto/test/audit-completa.md`.
+
+| ID | Area | Criterio | Agente | Stato |
+|---|---|---|---|---|
+| AU01 | Auth e onboarding | login/reset/Google/onboarding/ruoli provati nella UI | tester | BLOCCATO (Google OAuth) |
+| AU02 | Dashboard | conteggi e dati corretti per azienda | tester | DA FARE |
+| AU03 | Clienti | CRUD, VIES, duplicati, persistenza | tester | FATTO (SUPERATA, report 25/10) |
+| AU04 | Catalogo | prodotti, categorie, panieri, immagini | tester | FATTO (SUPERATA; immagini e eliminazione da provare) |
+| AU05 | Preventivi | numero, totali, revisioni, PDF | tester | IN CORSO (R-1 corretto e verificato; restano revisioni e PDF) |
+| AU06 | Visite | CRUD, riordino, stati, calendario | tester | DA FARE |
+| AU07 | Calendario | viste, ricorrenza, privato, partecipanti, call, allegati | tester | DA FARE |
+| AU08 | Task | CRUD, scadenze, completamento, filtri | tester | DA FARE |
+| AU09 | Notifiche | centro, preferenze, push, WhatsApp, silenzio | tester | BLOCCATO (prova dispositivo) |
+| AU10 | Chat | dirette, gruppi, letture, immagini, notifiche | tester | DA FARE |
+| AU11 | Bandi | lista, filtri, dettaglio, import | tester | DA FARE |
+| AU12 | Impostazioni | profilo, utenti, ruoli, licenze, superadmin, integrazioni | tester | DA FARE |
+| AU13 | Integrazioni | WhatsApp, SMTP, push, Google/Microsoft, R2 | tester | DA FARE |
+| AU14 | Trasversale | permessi, multi-azienda, errori, mobile/desktop | tester | DA FARE |
+| AU15 | Produzione | progetto, Auth, DB, regole, hosting, admin | tester | DA FARE |

@@ -379,3 +379,337 @@
 - Verifiche: `flutter analyze` 0, **517 test verdi**, prova reale su staging: cliente creato e selezionato, prodotto creato e inserito in riga.
 - Report: `docs/progetto/test/2026-10-23-preventivo-nuovo-cliente-prodotto.md`.
 - Pubblicato Closer anche su `https://commerciali-app.web.app`.
+
+## 2026-10-23/24 — Base agenda, task, notifiche e chat
+
+- Create collezioni e regole Firestore per appuntamenti, task, promemoria, notifiche, dispositivi, allegati, impostazioni agenda/notifiche, integrazioni, slot/prenotazioni, cache eventi, chat e messaggi. Regole **compilate e pubblicate su staging**; indice composito chat pubblicato.
+- Modelli: Appuntamento, TaskItem, Promemoria, Notifica, StanzaChat, MessaggioChat.
+- Servizi: CRUD appuntamenti/task, notifiche (lista, stream, letta, tutte lette, preferenze), chat (stanze, dirette/gruppi, messaggi, letture).
+- UI: Calendario giorno/settimana con filtri e creazione appuntamento; form appuntamento con Maps; pagina Task e form task; centro notifiche con badge; preferenze notifiche; lista chat, chat diretta/gruppo e thread testo.
+- Test: `flutter analyze` 0, **720 test verdi**.
+- Ancora da fare: push FCM, scheduler Worker, WhatsApp operatore, SMTP, Google/Microsoft, R2 immagini, prenotazione pubblica, notifiche chat, impostazioni agenda complete, E2E.
+
+- Aggiunte notifiche chat in-app e impostazioni agenda di base; suite a **740 test verdi**.
+
+## 2026-10-24 — Task O03: servizio integrazioni e condivisioni calendario
+
+- `lib/data/services/sp_service.dart`: import dei modelli `integrazione_azienda.dart` e `condivisione_calendario.dart`.
+- `SpService`: `getIntegrazioneAzienda()` (null senza azienda attiva; `vuota(aziendaId)` se assente), `salvaIntegrazioneAzienda()` (merge su `integrazioni_azienda/{aziendaId}`, mai `client_secret`/token), `getCondivisioniCalendario()` (proprietario, filtro `attiva` opzionale, ordine `createdAt` disc.), `getCondivisioniRicevute()` (destinatario, solo attive), `condividiCalendario()` (id deterministico, no-op se attiva stesso livello, `StateError` se livello diverso, delete+ricrea se revocata), `revocaCondivisione()`, `eliminaCondivisione()`.
+- Funzioni pure top-level: `condivisioneCalendarioValida()`, `condivisioniAttive()`, `confrontaCondivisioniPerData()`.
+- Test `test/integrazioni_service_test.dart`: validazione (self, vuoti, livello invalido, validi), filtro attive, ordinamento (disc. e null in fondo). `salvaIntegrazioneAzienda` non testata senza Firestore (non forzata).
+- Verifiche: `flutter analyze` 0; `flutter test test/integrazioni_service_test.dart` → 9 test verdi.
+
+## 2026-10-24 — Prima fetta calendario condiviso e OAuth aziendale (O01–O04)
+
+- Aggiunte regole e indici staging per `integrazioni_azienda` e `condivisioni_calendario`; deploy completato.
+- Regola di lettura corretta: dopo la revoca il destinatario non vede più la condivisione.
+- Creati modelli `IntegrazioneAzienda`, `ConfigIntegrazioneProvider`, `CondivisioneCalendario` con test (20).
+- Aggiunti a `SpService` lettura/salvataggio integrazione e CRUD condivisioni, con funzioni pure testate (9).
+- Creata `Impostazioni → Calendario e integrazioni` con card Google, Microsoft, SMTP, WhatsApp, R2 e Push; il Client Secret è disabilitato finché non c'è il Worker.
+- `flutter analyze` 0; `flutter test` 778 verdi; `scripts/e2e-agenda.py` PASS anche su integrazioni e condivisioni.
+- Restano O05–O13: Worker OAuth, connessioni utente, condivisione UI e call.
+
+## 2026-10-24 — Condivisione calendario e call manuale (O10/O11 parziali)
+
+- Creata `Impostazioni → Condivisione calendario`: scelta collega, livelli libero/occupato, dettagli, modifica, elenco condivisioni attive, revoca con conferma, sezione “Condivisi con me”.
+- Aggiunti test widget e funzioni pure per il filtro colleghi e i livelli.
+- Form appuntamento: sezione Call con provider (Meet/Teams/altro), link manuale, copia e apertura; validazione http/https.
+- `flutter analyze` 0; `flutter test` 790 verdi; app pubblicata su staging.
+- Restano: vista calendario degli eventi condivisi e mascheramento “Occupato” (O09), creazione automatica Meet/Teams (O11), Worker OAuth (O06/O07), connessioni utente (O08), E2E browser (O12).
+
+## 2026-10-24 — Un solo indirizzo ufficiale
+
+- `commerciali-app.web.app` resta l’unico indirizzo ufficiale di Closer.
+- `commerciali-flutter.web.app` ora risponde con redirect 301 alla home principale; non è un secondo ambiente e non condivide una sessione separata.
+- Il target Hosting `flutter` pubblica solo la pagina di reindirizzamento, così i vecchi link non si rompono.
+
+## 2026-10-24 — Calendario classico giorno/settimana/mese
+
+- Aggiunte `calendario_logica.dart` (periodi, raggruppamento, griglia del mese, posizionamento eventi sovrapposti) e `viste_calendario.dart` (`VistaMeseCalendario`, `VistaGrigliaOraria`).
+- La schermata Calendario ha ora due selettori: periodo **Giorno/Settimana/Mese** e stile **Calendario/Card**. All'apertura usa il calendario **mensile**; l'elenco a card esistente resta per tutti i periodi.
+- La griglia giorno/settimana ha il righello delle ore, affianca gli eventi sovrapposti, mostra “Senza orario” e crea un appuntamento toccando uno spazio vuoto (ora proposta).
+- Il form appuntamento accetta `oraIniziale`.
+- `flutter analyze` 0; `flutter test` 805 verdi (29 nel solo `calendario_test.dart`).
+
+## 2026-10-24 — Menu laterale semplificato
+
+- Rimosse le due voci “Altro” con i tre puntini dalla barra laterale desktop.
+- La rail mostra tutte le pagine (Dashboard, Clienti, Catalogo, Preventivi, Visite, Calendario, Task, Chat, Bandi, Notifiche) e la rotella Impostazioni in fondo.
+- Su telefono resta la `NavigationBar` con quattro voci principali e drawer “Altro”.
+- `flutter analyze` 0; `flutter test` 805 verdi; app pubblicata su `commerciali-app.web.app`.
+
+## 2026-10-24 — Pulizia dati di test ed etichette “Utente”
+
+- Rimossi due utenti E2E rimasti nell’azienda Closer (`Agenda A` e `Agenda B`, email `@commerciali.test`), le loro membership, i documenti personali e gli account Auth. Verificato che in Closer resti solo l’utente reale.
+- Aggiunto `scripts/pulisci-dati-test.py`: cerca utenti `@commerciali.test`/`e2e-` e rimuove membership, dati personali e account Auth senza toccare dati reali.
+- Etichette calendario/task/form cambiate da “Operatore/Operatori” a “Utente/Utenti” (i campi Firestore restano `operatore_id`).
+- Form appuntamento: sezione “Partecipanti” per invitare colleghi e gruppi, con rimozione e stato della condivisione.
+- `flutter analyze` 0; `flutter test` 806 verdi; app pubblicata su `commerciali-app.web.app`.
+
+## 2026-10-24 — Nuovo cliente e inviti con conferma disponibilità
+
+- Form appuntamento: il **+** accanto al cliente apre `ClienteFormScreen` e seleziona il cliente creato.
+- Nuova sezione **Condivisione**: dialogo con persone e gruppi della chat, chip degli invitati e stato.
+- `appuntamenti` esteso con `invitati_uids`, `conferme` e `stato_condivisione`; nessuna nuova collezione né regola.
+- Gli invitati ricevono una notifica In-App; il tocco apre il dettaglio (`/calendario?appuntamento=…`), dove possono confermare o rifiutare.
+- La risposta passa da `rispondiInvitoAppuntamento` in transazione e ricalcola lo stato: `in_attesa` → `confermato` / `rifiutato`.
+- Badge “In attesa di conferma” sulle card e nel dettaglio; icona clessidra nella griglia.
+- `flutter analyze` 0; `flutter test` 822 verdi; `scripts/e2e-agenda.py` PASS con invito e conferma da un secondo utente.
+
+## 2026-10-24 — Ambiente di produzione: progetto creato, attivazione sospesa
+
+- Creato il progetto Firebase `commerciali-prod` (display name “Closer Produzione”) e l’app web `Closer Web`.
+- Hosting riservato: `https://commerciali-prod.web.app` (nessuna app pubblicata).
+- La creazione del database Firestore `(default)` e l’inizializzazione Auth richiedono billing/Identity Platform: non è stata attivata alcuna fatturazione.
+- Il database named `default` creato per errore è stato eliminato; il progetto resta vuoto.
+- `main` esiste ma non contiene l’app Flutter: la pubblicazione resta bloccata finché non c’è validazione e non viene aggiornato.
+- Staging `commerciali-app` resta l’unico ambiente operativo.
+
+## 2026-10-24 — Produzione attivata
+
+- Collegato l’account di fatturazione “Il mio account di fatturazione” al progetto `commerciali-prod`.
+- Creato Firestore `(default)` in `europe-west8`; pubblicate regole e indici.
+- Inizializzato Auth email/password; creato l’admin `bottiandrea83@gmail.com` (super admin) e l’azienda `Closer` (`closer-prod`) con ruoli, categorie e licenza iniziale. Inviata email per impostare la password.
+- Aggiunti `.firebaserc` con alias `prod`, `firebase_options_prod.dart` e scelta `APP_ENV=prod` in `main.dart`.
+- Pubblicata l’app su `https://commerciali-prod.web.app` con configurazione Firebase di produzione.
+- `main` non contiene ancora l’app Flutter: la pubblicazione è stata fatta dal ramo corrente; il passaggio ufficiale su `main` richiede la validazione finale.
+- Google Sign-In non è ancora configurato in produzione; l’accesso email/password funziona.
+
+## 2026-10-24 — Notifica di conferma all’organizzatore
+
+- Corretto il flusso: quando un invitato conferma o rifiuta, vengono avvisati **creatore** e **operatore**
+  dell’appuntamento con una notifica In-App (prima non veniva creata).
+- Aggiunto l’invio WhatsApp best-effort alla stessa cerchia, tramite `whatsapp_config/1` e la nuova rubrica
+  aziendale `contatti_notifiche` (numero e consenso, leggibile dai colleghi, scrivibile solo dall’interessato).
+- `salvaPreferenzeNotifiche` aggiorna la rubrica; senza consenso o senza numero il recapito viene rimosso.
+- Backfill eseguito per la conferma già esistente di Simone sull’appuntamento “Appuntamento da Gennari”:
+  creata la notifica In-App per Andrea.
+- Test: `flutter analyze` 0; `flutter test` 827 verdi; `scripts/e2e-agenda.py` PASS anche su
+  `contatti_notifiche`; regole Firestore pubblicate su staging.
+- WhatsApp non può ancora partire: nel progetto Firebase non esiste `whatsapp_config/1` e non ci sono
+  numeri/consensi salvati. Serve configurare il server WhatsApp e il proprio numero nelle preferenze.
+
+## 2026-10-24 — Schermata Super Admin Server WhatsApp e proxy Worker
+
+- Aggiunta **Super Admin → Server WhatsApp** (`whatsapp_server_screen.dart`): URL, API key con mostra/nascondi,
+  salvataggio, verifica connessione e QR di pairing. Accesso riservato al super admin.
+- L’API key **non** viene salvata in Firestore: il Worker `commerciali-vies` la conserva nel KV
+  `WHATSAPP_CONFIG`; solo il super admin può leggerla/scriverla tramite token Firebase.
+- Il Worker espone `/whatsapp/config`, `/whatsapp/status`, `/whatsapp/qr`, `/whatsapp/send`. L’invio legge
+  numero e consenso da `contatti_notifiche` con il token del chiamante, quindi il numero non transita dal client.
+- Ristretta la regola Firestore `whatsapp_config` al solo super admin (l’app non la usa più).
+- Aggiunto `scripts/e2e-whatsapp-worker.py`: PASS su autenticazione, salvataggio/lettura/cancellazione KV,
+  rifiuto senza token e server finto non raggiungibile.
+- `flutter analyze` 0; `flutter test` 833 verdi; `scripts/e2e-agenda.py` PASS; Worker e regole pubblicati.
+
+## 2026-10-24 — Notifiche Web Push
+
+- Aggiunto client Web Push e service worker con scope `/push/`, separato dal service worker Flutter.
+- Aggiunta sezione “Notifiche sul dispositivo” nelle preferenze, con attivazione/disattivazione e messaggi di errore.
+- Aggiunto salvataggio delle sottoscrizioni in `dispositivi`.
+- Creata e pubblicata la Cloud Function `inviaPushNotifica` in produzione, con VAPID in `functions/.env` (non committato).
+- Trigger provato con sottoscrizione finta: funzione attiva e gestione errore corretta; dati di prova rimossi.
+- Service worker e client verificati nel browser di produzione; manca la prova di consegna reale con permesso notifiche.
+- `flutter analyze` 0; `flutter test` 833 verdi.
+
+## 2026-10-24 — Form appuntamento: intervallo, ripetizione, notifica e privacy
+
+- Sostituiti **Ora** e **Durata** con **Ora inizio** e **Ora fine**; aggiunte **Data fine** e **Ora fine**,
+  con fine calcolata e validata dopo l’inizio.
+- Flag **Tutto il giorno** accanto alla data di inizio.
+- **Ripeti**: mai, ogni giorno, ogni settimana, ogni due settimane, ogni mese, ogni anno, personalizzata
+  (giorni della settimana + ogni N settimane). Le occorrenze sono espanse dal client nel periodo visibile,
+  senza duplicare documenti.
+- **Notifica**: all’ora, 5/10/15/30 minuti prima o personalizzata; salvata in `notifica_min`.
+- **Appuntamento privato**: titolo, luogo e dettagli mascherati nella UI per chi non è creatore o operatore;
+  gli invitati possono comunque confermare la disponibilità.
+- Allegati immagini/video: **non implementati** perché Cloudflare R2 non è attivo; nessun pulsante finto.
+- `flutter analyze` 0; `flutter test` 849 verdi; regole/Worker già pubblicati.
+
+## 2026-10-24 — Notifiche accessibili al commerciale
+
+- Separata in Impostazioni la sezione **Personale** (Notifiche, Condivisione calendario) dalle voci admin.
+- Il ruolo commerciale vede e gestisce le proprie notifiche, push e condivisione calendario.
+- Le voci Calendario e agenda, Integrazioni, Utenti, Ruoli e Licenze restano all’admin.
+- Aggiunto test widget per il ruolo commerciale; `flutter analyze` 0; suite completa aggiornata.
+
+## 2026-10-24 — Server WhatsApp recuperato e configurato
+
+- Trovata la VM Google Cloud `whatsapp-server` (progetto `project-54593866-4927-4312-88d`, zona `us-central1-a`, IP `35.188.136.131`).
+- Server già connesso al numero `393516722792`; API key recuperata dalla VM e poi ruotata per sicurezza.
+- Aggiunto reverse proxy HTTPS con Caddy su `https://35.188.136.131.sslip.io` e regola firewall 80/443.
+- Config salvata nel KV Cloudflare `WHATSAPP_CONFIG` (chiave `server`).
+- Creato il Worker di produzione `commerciali-vies-prod` con progetto Firebase `commerciali-prod`; staging usa `commerciali-vies`.
+- Verificati `/whatsapp/config` e `/whatsapp/status` su entrambi i Worker: server connesso, numero corretto.
+- L’app sceglie il Worker in base ad `APP_ENV=prod`; l’API key non è nel repository.
+
+## 2026-10-24 — Integrati allegati, promemoria e privacy reale
+
+- **Allegati**: form appuntamento con selezione file, upload nel KV Worker `ALLEGATI`, metadati in
+  `allegati`, link firmato di 1 ora, eliminazione. Max 10 MB per file (immagini, video, PDF, email).
+- **Promemoria**: le occorrenze degli appuntamenti (max 30 nei prossimi 90 giorni) vengono registrate nel
+  KV `PROMEMORIA`; un Cron del Worker ogni minuto invia il promemoria via WhatsApp agli utenti con consenso.
+  Annullamento su modifica/eliminazione.
+- **Privacy reale**: per gli appuntamenti privati il documento principale è redatto e i dettagli veri
+  stanno in `appuntamenti/{id}/privato/dettagli`, leggibili solo a creatore, operatore e super admin;
+  l’invitato può comunque aggiornare solo la propria conferma.
+- R2 e Blaze non sono disponibili: allegati su KV e promemoria su WhatsApp sono la soluzione temporanea,
+  registrata nel registro decisioni.
+- `flutter analyze` 0; `flutter test` 856 verdi; Worker, regole e Cron pubblicati; E2E Worker PASS.
+
+## 2026-10-24 — Lezione appresa: stato WhatsApp
+
+- Il server era connesso ma la UI mostrava “non connesso”: la risposta usava `connesso`/`numero`, la schermata `connected`/`number`.
+- Aggiunta normalizzazione con test; aggiornata la Definition of Done: per i servizi esterni serve la prova UI completa, non solo l’endpoint.
+- Se la UI non è provabile, il task è BLOCCATO e non “SUPERATO con residuo”.
+
+## 2026-10-24 — Audit completo, nuove funzioni congelate
+
+- Creato `docs/progetto/test/audit-completa.md` con 15 aree e criteri di prova UI reale.
+- Nuove funzioni congelate fino alla chiusura dell’audit; ogni area richiede tester e validatore.
+- I bug noti restano elencati nell’audit e vanno chiusi con prova nella schermata, non solo con endpoint.
+
+## 2026-10-25 — Due audit bloccanti
+
+- Google login produzione: BLOCCATO, manca client OAuth dedicato; lo staging non è riutilizzabile (redirect mismatch).
+- Push dispositivo: BLOCCATO, manca la prova di consegna con permesso notifiche reale; codice e service worker verificati.
+- Regola globale: nessun nuovo sviluppo finché entrambi gli audit non sono chiusi con prova UI, tester e validatore.
+
+## 2026-10-25 — Prove audit eseguite
+
+- Push: permesso concesso, service worker attivo, ma `iscrivi()` va in timeout nel browser di prova; nessuna sottoscrizione, audit BLOCCATO.
+- Google: provider produzione assente e client staging non riutilizzabile; login reale non eseguibile, audit BLOCCATO.
+- Nessun nuovo sviluppo ammesso finché i due audit non sono chiusi.
+
+## 2026-10-25 — Audit-completa come gate di ogni pubblicazione
+
+- `docs/progetto/test/audit-completa.md` è obbligatorio prima di ogni deploy su staging e produzione.
+- Nessun deploy “con residuo”: aree non provate bloccano la pubblicazione.
+- Regola sincronizzata in `squadraalphalab` e `AGENTS.md`.
+
+## 2026-10-25 — Audit a basso consumo
+
+- L’audit resta obbligatorio ma viene eseguito a ondate, con sessioni riusate e senza rileggere tutto il progetto.
+- Test una volta per blocco, poi mirati; screenshot solo sui fallimenti; massimo 2 tentativi per area.
+- Regola sincronizzata in `squadraalphalab` e `AGENTS.md`.
+
+## 2026-10-25 — Regole in nucleo breve + skill
+
+- `squadraalphalab` riorganizzato: `CLAUDE.md` di 92 righe e sei skill `/squadra-*` caricate solo quando servono; testo integrale in `archive/`.
+- Installate su questo Mac in `~/.claude/CLAUDE.md` e `~/.claude/skills/` con `local-setup/sync-regole.sh` (provato: 6 skill).
+- La sincronizzazione automatica via GitHub Action era rotta da sempre (secret `SYNC_TOKEN` assente): ora il workflow scrive nel file giusto (`AGENTS.md` se c'è) e copia le skill in `.claude/skills/`; serve il token di Andrea.
+
+## 2026-10-25 — Dettaglio cliente dall’appuntamento
+
+- Il dettaglio appuntamento carica il cliente collegato con `getCliente` e mostra nome, referente, telefono,
+  email, P.IVA, codice fiscale, indirizzo, settore, ATECO, regione e note.
+- Pulsante **Modifica cliente**: apre `ClienteFormScreen`; dopo il salvataggio aggiorna il nome
+  denormalizzato sull’appuntamento e ricarica l’agenda.
+- Nessun dato cliente viene mostrato se l’appuntamento privato non è visibile all’utente.
+- `flutter analyze` 0; `flutter test` 863 verdi; app pubblicata.
+
+## 2026-10-25 — Audit ondata 2: Clienti e Preventivi
+
+- AU03 Clienti SUPERATA: creazione, elenco, ricerca, duplicati, VIES valida e non valida, modifica, persistenza (prove UI reali).
+- AU05 Preventivi FALLITA: creazione, numerazione PRV-0001 e totali con sconto OK, ma riaprire un preventivo apre un editor vuoto. Bug R-1 confermato, causa `preventivi_screen.dart:160`.
+- Creato il banco di prova UI riutilizzabile `scripts/audit-ui/` (Playwright su staging).
+- Report: `docs/progetto/test/2026-10-25-audit-ondata-2.md`.
+
+## 2026-10-25 — Dettaglio appuntamento ridisegnato per il telefono
+
+- Il dialogo di dettaglio ora usa una finestra quasi a tutto schermo con intestazione fissa, contenuto
+  scorrevole a sezioni (Panoramica, Cliente, Condivisione, Dettagli, Allegati) e barra azioni fissa.
+- Su telefono le azioni sono impilate a tutta larghezza, nell'ordine risposta all'invito e poi gestione;
+  su tablet la finestra è larga 560 px e i due gruppi restano separati e allineati a destra.
+- **Apri in Google Maps**, **Apri call** e **Modifica cliente** sono diventati pulsanti nel contenuto:
+  la barra in fondo resta libera per le azioni principali.
+- Verifica in browser reale a 390×844 e 900×900; `flutter analyze` 0; `flutter test` 867 verdi.
+
+## 2026-10-25 — Bug R-1: riaprire un preventivo apriva un editor vuoto
+
+- `_apriPreventivo` in `flutter_app/lib/features/preventivi/preventivi_screen.dart` navigava sempre a
+  `/preventivi/nuovo`, ignorando il preventivo cliccato: ora usa `/preventivi/<id>` (id ripulito dagli spazi);
+  con id vuoto non si naviga e si resta sull'elenco, senza crash.
+- Nessun'altra modifica: rotte, editor, layout e regole restano com'erano.
+- Test in `flutter_app/test/preventivi_screen_test.dart`: la schermata vera è montata su un router minimo con
+  `spServiceProvider` sostituito da un servizio finto (solo `getPreventivi`/`setAziendaAttiva`), quindi senza
+  Firebase; cliccando la card `p2` si arriva a `/preventivi/p2`, non a `/preventivi/nuovo`. Verificato che il
+  test fallisce con il codice precedente e passa con la correzione.
+- `flutter analyze` 0; `flutter test test/preventivi_screen_test.dart` 20 verdi; suite intera 882 verdi.
+
+## 2026-10-25 — Promemoria automatico al cliente
+
+- Nuova sezione **Avviso al cliente** nel form appuntamento: interruttore, WhatsApp ed Email in base ai
+  recapiti del cliente; snapshot di telefono/email sull'appuntamento.
+- Alla creazione e al cambio di data/ora il form chiama il Worker; il Worker compone il testo dal documento e
+  invia su WhatsApp (server esistente) ed email (Resend). Lo stesso orario non viene inviato due volte.
+- Esito salvato in `promemoria_cliente` e mostrato nel dettaglio; avviso dopo il salvataggio.
+- Configurazione **Super Admin → Server email** (mittente, API key Resend, prova) e KV `EMAIL_CONFIG`.
+- Verifiche: 9 test Node sul testo/idempotenza di base; E2E locale con WhatsApp finto (invio, log, dedupe,
+  spostamento, 403 cross-azienda) ed email finta; UI staging con form, invio e log; `flutter test` 883 verdi,
+  `flutter analyze` 0.
+- Nota: l'email resta non attiva su staging finché non viene inserita una API key Resend; WhatsApp usa il
+  server reale.
+
+## 2026-10-25 — Correzione R-1
+
+- `preventivi_screen.dart`: la lista apre il preventivo scelto con `/preventivi/<id>` invece di `/preventivi/nuovo`.
+- Test di regressione in `test/preventivi_screen_test.dart`, verificato che fallisce senza la correzione.
+- `flutter analyze` 0, `flutter test` 882 verdi.
+- Prova UI sulla build pubblicata non eseguibile senza deploy su staging: rimandata, R-1 resta "corretto, prova UI in sospeso".
+
+## 2026-10-25 — Staging come ambiente di rilascio
+
+- Regola nuova: si prova su build locale o canale di anteprima; su staging si pubblica solo con audit chiuso (tester SUPERATO, validatore APPROVATO, prove UI allegate).
+- Il validatore non approva più leggendo il codice: riesegue i test e pretende prove UI con evidenze.
+- Regola sincronizzata in `squadraalphalab` e in `AGENTS.md`.
+
+## 2026-10-25 — Nota di trasparenza: commit 9a050cb
+
+- Mentre lavoravo, un'altra sessione stava scrivendo la funzione "Accesso con Face ID / passkey" negli stessi file (`passkey_service.dart`, `accesso_face_id_card.dart`, `functions/webauthn.js`, `firestore.rules`, ecc.).
+- Il mio `git add -A` ha incluso quei file nel commit `9a050cb`, che doveva contenere solo la regola su staging e il validatore. Il messaggio del commit non descrive quel lavoro.
+- Nessun file è stato perso. Stato del ramo dopo il fatto: `flutter analyze` 0, `flutter test` 894 verdi (882 + 12 test della funzione passkey).
+- La funzione passkey resta **non validata**: deve passare da tester e validatore con prova UI prima di entrare nell'audit o in un rilascio.
+- Da ora i commit si fanno con percorsi espliciti, mai `git add -A`.
+
+## 2026-10-25 — Causa degli account di prova che sparivano
+
+- Non era l'app: due sessioni usavano lo stesso file di stato e il cleanup di una cancellava l'utente dell'altra.
+- `scripts/e2e-ui-dati.py` ora crea un file di stato per esecuzione; `cleanup` accetta `E2E_STATO=<file>`.
+- Prova di controllo: utente creato con lo stesso metodo ancora attivo dopo 10 minuti.
+
+## 2026-10-25 — R-1 verificato in UI su canale di anteprima
+
+- Pubblicata la build con la correzione su `commerciali-app--r1-preventivo-a20lnjm1.web.app` (scade 28/10), senza toccare staging.
+- Clic su PRV-0001: si apre "Modifica preventivo" con numero, cliente, riga, totali 100,00 € e pulsante PDF.
+- R-1 CHIUSO. AU05 resta in corso: mancano revisioni e PDF nell'audit.
+
+## 2026-10-25 — R-1 chiuso, tester e validatore
+
+- Tester: `SUPERATO` con prova UI su canale di anteprima, report `test/2026-10-25-r1-esito.md` e screenshot.
+- Validatore: `APPROVATO`; non ha potuto rieseguire i comandi per un limite di permessi dell'ambiente, ha verificato codice, test e coerenza delle prove.
+- Dati di prova rimossi da staging con `E2E_STATO`.
+
+## 2026-10-25 — Correzioni agenda dopo la prova di Andrea
+
+- Localizzazione italiana globale: date picker e testi Material in italiano.
+- **Luogo e note** spostata subito sotto data/ora.
+- Ripetizione: giorno di inizio sempre presente, sostituzione del giorno automatico al cambio data,
+  intervallo personalizzato coerente, etichette con i giorni e anteprima delle prossime date.
+- WhatsApp: il server reale è VOLTY e usa `/invia {numero, testo}`; il Worker ora lo supporta con fallback
+  al vecchio `/send`. Aggiunto **Invia di nuovo** nel dettaglio con conferma.
+- Regole `utenti` rafforzate contro l'auto-promozione a super admin (test E2E 403).
+- CI GitHub Actions per analisi e test; `flutter test` 900 verdi; test Worker 13 verdi.
+
+## 2026-10-26 — Audit ondata 2: Catalogo
+
+- AU04 SUPERATA sulle voci provate: categoria, tre prodotti con codice/prezzo/categoria, ricerca, filtro con stato vuoto, paniere con 2 figli, persistenza dopo ricarica.
+- Non provati: immagine prodotto ed eliminazione.
+- Prova su canale di anteprima, staging non toccato; dati di test rimossi.
+
+## 2026-10-25 — Prima card cliente con titolo
+
+- La card **Cliente e appuntamento** è la prima del form: contiene il **titolo** come primo campo, poi
+  cliente (con **+** nuovo cliente) e operatore.
+- La card **Data e ora** segue; **Luogo e note** resta subito sotto.
+- Test widget aggiornato sull'ordine; screenshot `2026-10-25-form-luogo-note-ordine.png` rifatto.

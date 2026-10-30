@@ -1,0 +1,12 @@
+OK	pulizia dati di prova AU03	0 clienti rimossi
+OK	login A	
+OK	VIES P.IVA valida	FERRARI S.P.A.
+OK	creazione cliente	AU03 Cliente 37244 in Firestore
+OK	ricerca	
+OK	duplicato bloccato	
+FALLITA	esecuzione	Error: telefono non salvato in Firestore: 029999777
+{
+  "esito": "FALLITA",
+  "nome": "AU03 Cliente 37244",
+  "errore": "Error: telefono non salvato in Firestore: 029999777"
+}

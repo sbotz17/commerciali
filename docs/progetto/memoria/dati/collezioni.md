@@ -20,5 +20,14 @@
 | `giro_visite` | auto | `azienda_id`, `data`, `ora`, `ordine`, `stato`, `cliente_id` |
 | `contatori` | `preventivi_{aziendaId}` | `azienda_id`, `valore` |
 | `bandi_*` | varie | globali, lettura pubblica |
+| `appuntamenti` | auto | `azienda_id`, `data`, `ora`, `operatore_id`, `cliente_id`, `call_*`, id esterni |
+| `task` | auto | `azienda_id`, `scadenza`, `operatore_id`, `stato`, `priorita` |
+| `notifiche` | auto | `azienda_id`, `utente_uid`, `tipo`, `stato`, `letta_at` |
+| `chat_stanze` | auto | `azienda_id`, `tipo`, `partecipanti_uids`, `ultimo_messaggio` |
+| `chat_stanze/{id}/messaggi` | auto | `mittente_uid`, `testo`, `created_at`, `eliminato` |
+| `integrazioni_azienda` | `{aziendaId}` | modalità Google/Microsoft, client ID pubblico, `secret_ref`, stato, call predefinita, condivisione |
+| `integrazioni` | `{aziendaId}_{uid}` | account/calendario collegato, stato, ultimo sync; **nessun token** |
+| `condivisioni_calendario` | `{az}_{prop}_{dest}` | livello, stato, creato/revocato, audit |
+| `impostazioni_agenda` | `{aziendaId}` | fuso, promemoria, template, slot, limiti, condivisione |
 
-**Ultima revisione**: 2026-10-22
+**Ultima revisione**: 2026-10-24

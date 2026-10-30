@@ -1,3 +1,27 @@
 name = "commerciali-vies"
 main = "src/index.js"
 compatibility_date = "2026-10-21"
+
+[vars]
+FIREBASE_PROJECT = "commerciali-app"
+WHATSAPP_URL = "https://35.188.136.131.sslip.io"
+FIREBASE_API_KEY = "AIzaSyC1u1OVQxcgHXoKx_oWq_9Rv_YUqW43da4"
+
+[[kv_namespaces]]
+binding = "WHATSAPP_CONFIG"
+id = "b496969fab494fa48c8b3ba960e40dbd"
+
+[[kv_namespaces]]
+binding = "ALLEGATI"
+id = "abfb75d75cfe4b5ba82a31c75fc9a5c8"
+
+[[kv_namespaces]]
+binding = "PROMEMORIA"
+id = "b014f6a7ea764ccb910ba15d452d5f29"
+
+[[kv_namespaces]]
+binding = "EMAIL_CONFIG"
+id = "f70b070a45ee437ab21beaca321c169b"
+
+[triggers]
+crons = ["*/5 * * * *"]

@@ -4,11 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
+import 'firebase_options_prod.dart';
+
+/// `staging` (default) oppure `prod`, scelto con
+/// `--dart-define=APP_ENV=prod`.
+const String _ambiente = String.fromEnvironment(
+  'APP_ENV',
+  defaultValue: 'staging',
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
+    options: _ambiente == 'prod'
+        ? DefaultFirebaseOptionsProd.currentPlatform
+        : DefaultFirebaseOptions.currentPlatform,
   );
   runApp(
     ProviderScope(

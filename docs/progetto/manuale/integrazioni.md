@@ -2,6 +2,22 @@
 
 **Stato: bozza tecnica.** Le credenziali vanno inserite in secret/variabili d'ambiente, mai nel codice o in chat.
 
+## Chi configura cosa
+
+| Voce | Chi la configura | Dove |
+|---|---|---|
+| Client ID/secret Google | Superadmin / responsabile tecnico, una volta per l'app | Google Cloud + secret del Worker |
+| Connessione a Google Calendar | Ogni utente, con il proprio account | Impostazioni utente → Integrazioni |
+| App registration Azure/Microsoft | Superadmin / responsabile tecnico, una volta per l'app | Azure Portal + secret del Worker |
+| Connessione a Microsoft 365/Teams | Ogni utente, con il proprio account aziendale | Impostazioni utente → Integrazioni |
+| SMTP | Azienda, con eventuale override per utente | Impostazioni → Email |
+| WhatsApp Volty | Superadmin | Impostazioni → WhatsApp |
+| Bucket R2 | Superadmin | Impostazioni → Storage |
+| VAPID/FCM | Superadmin / responsabile tecnico | Firebase Console + secret del Worker |
+| Apple Developer/APNs | Superadmin / responsabile tecnico | Apple Developer + Firebase Console |
+
+Le **password e i token** non vanno mai incollati in chat, in Firestore o nel codice: si inseriscono in un pannello superadmin che li invia al Worker e li salva come secret.
+
 ## 1. Google Calendar e Google Meet
 
 ### Cosa serve
@@ -65,6 +81,18 @@
 - alcuni permessi richiedono consenso amministratore del tenant;
 - costi e disponibilità dipendono dal piano Microsoft.
 
+## 2bis. Email clienti (Resend)
+
+Per l'MVP l'email ai clienti usa un unico mittente di piattaforma tramite **Resend**.
+
+1. Apri **Super Admin → Server email**.
+2. Inserisci l'**email mittente** (dominio verificato su Resend), il **nome mittente** e la **API key**.
+3. Salva e usa **Invia email di prova** verso un indirizzo tuo.
+4. La chiave resta nel KV `EMAIL_CONFIG` del Worker e non viene salvata in Firestore.
+
+Senza questa configurazione il canale email risulta **non configurato** e WhatsApp resta l'unico canale
+esterno disponibile. La configurazione SMTP per singola azienda resta un'evoluzione separata.
+
 ## 3. Email SMTP per azienda
 
 ### Cosa serve
@@ -102,16 +130,19 @@
 - URL del server Volty;
 - API key;
 - numero mittente;
-- endpoint `/send` raggiungibile;
+- endpoint VOLTY `/invia` raggiungibile (il Worker supporta anche il vecchio `/send`);
 - consenso del destinatario.
 
 ### Configurazione
 
-1. **Impostazioni → Integrazioni → WhatsApp**.
-2. Inserisci URL e API key (salvati come secret).
-3. Imposta numero mittente e numero operatore.
-4. Invia un messaggio di prova.
-5. Attiva il canale.
+1. **Super Admin → Server WhatsApp** (nella nuova app Closer).
+2. Inserisci URL e API key del server: vengono salvati nel KV del Worker
+   Cloudflare, non in Firestore e non sul dispositivo degli utenti.
+3. Premi **Verifica connessione**; se il numero non è collegato, usa
+   **Mostra QR** e scansiona il QR da WhatsApp → Dispositivi collegati.
+4. Ogni utente imposta il proprio numero e il consenso in
+   **Impostazioni → Notifiche → WhatsApp**.
+5. Gli inviti e le conferme degli appuntamenti partono in automatico.
 
 ### Comportamento
 
@@ -180,3 +211,13 @@
 - token OAuth e SMTP solo lato server;
 - redirect OAuth limitati ai domini Closer;
 - log senza password, token o contenuto sensibile.
+
+## Server WhatsApp di piattaforma
+
+Il server è una VM Google Cloud (`whatsapp-server`) con reverse proxy HTTPS Caddy su
+`https://35.188.136.131.sslip.io`. È collegato al numero `393516722792`.
+
+- La API key è nel KV Cloudflare `WHATSAPP_CONFIG` e nel `.env` della VM, non nel repository.
+- Staging usa il Worker `commerciali-vies`; produzione usa `commerciali-vies-prod`.
+- Il QR e lo stato si gestiscono da Super Admin → WhatsApp.
+- Il server usa Baileys (WhatsApp Web non ufficiale): per uso intensivo valutare la WhatsApp Business Cloud API.

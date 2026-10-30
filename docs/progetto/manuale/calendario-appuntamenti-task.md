@@ -16,24 +16,76 @@ L'obiettivo è che un utente non debba cercare in tre schermate diverse.
 ## Calendario
 
 1. Apri **Calendario** dal menu.
-2. Scegli la vista **Giorno** o **Settimana**.
-3. Usa **Oggi** per tornare alla data corrente.
-4. Filtra per **operatore**, **tipo** e **stato**.
-5. Tocca un elemento per aprire il dettaglio.
-6. Tocca uno spazio vuoto per creare un appuntamento con data e ora già impostate.
+2. Il calendario si apre sulla **vista mensile**. Scegli **Giorno**, **Settimana** o **Mese** per il periodo e **Calendario** o **Card** per lo stile.
+3. Usa **Oggi** per tornare alla data corrente e le frecce per spostarti.
+4. Filtra per **operatore**.
+5. Tocca un elemento per aprire il dettaglio. Su telefono il dettaglio occupa quasi tutto lo schermo:
+   in alto trovi titolo, data/ora e stato; al centro le sezioni **Panoramica**, **Cliente**,
+   **Condivisione**, **Dettagli** e **Allegati**; in fondo i pulsanti delle azioni, a tutta larghezza.
+   La **X** in alto a destra chiude il dettaglio.
+6. Tocca uno spazio vuoto nella vista giorno o settimana per creare un appuntamento con data e ora già impostate.
+7. Dalla vista mese, tocca un giorno per aprirlo nella vista giornaliera.
 
 Gli elementi senza orario compaiono in **Senza orario**.
 
 ## Creare un appuntamento
 
-1. Premi **Nuovo appuntamento**.
-2. Inserisci il **titolo** (obbligatorio).
-3. Scegli data, ora e durata.
-4. Collega un cliente, se serve.
-5. Assegna un **operatore**.
-6. Inserisci luogo e indirizzo.
-7. Aggiungi note e, se serve, foto o immagini.
-8. Salva.
+1. Premi **+** accanto a **Card** nella barra del calendario.
+2. La **prima card** è **Cliente e appuntamento**: il **titolo** è il primo campo (obbligatorio). Subito
+   sotto scegli il **cliente**; con il **+** puoi crearne uno nuovo e selezionarlo subito.
+3. Assegna un **operatore**.
+4. Nella card **Data e ora** scegli **data e ora di inizio** e **data e ora di fine**. Il flag
+   **Tutto il giorno** disattiva gli orari.
+5. Inserisci **luogo e note**: la card è subito sotto data e ora.
+6. Se serve, imposta **Ripeti**: mai, ogni giorno, ogni settimana, ogni due settimane, ogni mese, ogni anno
+   o personalizza scegliendo i giorni della settimana e ogni quante settimane.
+7. Scegli la **notifica**: all'ora dell'evento, 5/10/15/30 minuti prima oppure personalizzata.
+8. In **Condivisione** scegli una o più persone oppure un gruppo: ricevono una notifica e devono confermare.
+9. Attiva **Appuntamento privato** se titolo, luogo e dettagli devono essere visibili solo a te e
+   all'utente assegnato.
+10. In **Allegati** puoi caricare immagini, video, PDF o file email (max 10 MB per file).
+11. Salva.
+
+### Avviso automatico al cliente
+
+Nel form c'è la sezione **Avviso al cliente**:
+- **Avvisa il cliente** è attivo per impostazione predefinita;
+- **WhatsApp** e **Email** sono proposti se il cliente ha il recapito; un canale senza recapito non parte;
+- se il cliente ha sia telefono sia email, riceve entrambi i messaggi.
+
+Il messaggio parte **al salvataggio** e ogni volta che cambi **data o ora**. Se salvi senza cambiare
+l'orario non viene inviato di nuovo. Il testo contiene data, ora e luogo; per un appuntamento privato il
+titolo non viene scritto al cliente. L'esito (inviato, senza recapito, email non configurata, errore) compare
+nel dettaglio e con un avviso dopo il salvataggio. Nel dettaglio puoi usare **Invia di nuovo** per ripetere
+l'invio, con conferma del destinatario.
+
+L'email richiede la configurazione **Super Admin → Server email** (Resend, mittente e API key). Se non è
+configurata, WhatsApp continua a funzionare e l'email viene segnalata come non disponibile.
+
+L'appuntamento condiviso resta **in attesa di conferma** finché almeno un invitato non conferma la
+disponibilità. Nel dettaglio vedi lo stato di ogni invitato e, se sei tra gli invitati, i pulsanti
+**Confermo** e **Non disponibile**.
+
+### Ripetizione
+
+La sezione **Ripetizione** è sotto luogo e note. Scegli **Mai**, ogni giorno, ogni settimana, ogni due
+settimane, ogni mese, ogni anno o **Personalizza**. Per le ripetizioni settimanali scegli i giorni: il giorno
+di inizio resta sempre selezionato e viene aggiornato quando cambi la data, così l'appuntamento non sparisce
+dal calendario. Sotto trovi l'anteprima delle prossime date.
+
+Nel dettaglio dell'appuntamento trovi anche i **dati del cliente collegato** (nome, referente, contatti,
+P.IVA, indirizzo e note). Il pulsante **Modifica cliente** apre la scheda del cliente; dopo il salvataggio
+il nome aggiornato viene riportato anche sull'appuntamento.
+
+Quando un invitato risponde, chi ha creato l'appuntamento e l'utente assegnato ricevono una **notifica
+In-App**. Se hanno attivato WhatsApp nelle proprie preferenze, ricevono anche un messaggio WhatsApp.
+Per attivarlo: **Impostazioni → Notifiche → WhatsApp**, inserisci il numero e attiva il consenso.
+
+La scelta **Notifica** nel form programma un promemoria WhatsApp: il Worker lo invia ogni minuto quando
+scade, se il server WhatsApp è configurato. Non è ancora un push/notifica In-App programmata.
+
+Gli **allegati** sono nel KV del Worker (non in Firestore) e si aprono con un link temporaneo di un'ora.
+Sono una soluzione temporanea finché R2 non viene attivato.
 
 ### Icona auto
 

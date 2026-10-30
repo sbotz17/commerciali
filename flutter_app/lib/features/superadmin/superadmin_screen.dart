@@ -121,9 +121,9 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
 
   /// Apre la creazione di una nuova azienda; se va a buon fine ricarica.
   Future<void> _apriNuovaAzienda() async {
-    final creata = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const NuovaAziendaScreen()),
-    );
+    final creata = await Navigator.of(
+      context,
+    ).push<bool>(MaterialPageRoute(builder: (_) => const NuovaAziendaScreen()));
     if (!mounted || creata != true) return;
     await _carica();
   }
@@ -148,7 +148,8 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
         key: Key('superadmin-riservato'),
         icona: Icons.lock_outline,
         titolo: 'Accesso riservato',
-        sottotitolo: 'Questa sezione è visibile solo al super admin '
+        sottotitolo:
+            'Questa sezione è visibile solo al super admin '
             'della piattaforma.',
       );
     }
@@ -156,19 +157,46 @@ class _SuperAdminScreenState extends ConsumerState<SuperAdminScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final largo = constraints.maxWidth >= AppBreakpoints.telefono;
-        final orizzontale =
-            largo ? AppSpazi.paginaDesktop : AppSpazi.paginaTelefono;
+        final orizzontale = largo
+            ? AppSpazi.paginaDesktop
+            : AppSpazi.paginaTelefono;
 
         return Padding(
           padding: EdgeInsets.all(orizzontale),
-          child: CorpoSuperAdmin(
-            aziende: _aziende,
-            caricamento: !_avviato || _caricamento,
-            errore: _errore,
-            largo: largo,
-            onRiprova: _carica,
-            onEntra: _entra,
-            onNuova: _apriNuovaAzienda,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Wrap(
+                spacing: AppSpazi.xs,
+                runSpacing: AppSpazi.xs,
+                children: [
+                  OutlinedButton.icon(
+                    key: const Key('superadmin-whatsapp'),
+                    onPressed: () => context.go('/superadmin/whatsapp'),
+                    icon: const Icon(Icons.chat_outlined),
+                    label: const Text('Server WhatsApp'),
+                  ),
+                  OutlinedButton.icon(
+                    key: const Key('superadmin-email'),
+                    onPressed: () => context.go('/superadmin/email'),
+                    icon: const Icon(Icons.alternate_email),
+                    label: const Text('Server email'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpazi.s),
+              Expanded(
+                child: CorpoSuperAdmin(
+                  aziende: _aziende,
+                  caricamento: !_avviato || _caricamento,
+                  errore: _errore,
+                  largo: largo,
+                  onRiprova: _carica,
+                  onEntra: _entra,
+                  onNuova: _apriNuovaAzienda,
+                ),
+              ),
+            ],
           ),
         );
       },
