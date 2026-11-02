@@ -106,10 +106,13 @@ String _messaggioErroreTask(Object errore) {
 
 /// Form completo di un task, aperto a pagina intera (nuovo o modifica).
 class TaskFormScreen extends ConsumerStatefulWidget {
-  const TaskFormScreen({super.key, this.task});
+  const TaskFormScreen({super.key, this.task, this.dataIniziale});
 
   /// Task da modificare; `null` per crearne uno nuovo.
   final TaskItem? task;
+
+  /// Giorno proposto per la scadenza di un nuovo task.
+  final DateTime? dataIniziale;
 
   @override
   ConsumerState<TaskFormScreen> createState() => _TaskFormScreenState();
@@ -146,7 +149,11 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
     _titolo = TextEditingController(text: task?.titolo ?? '');
     _descrizione = TextEditingController(text: task?.descrizione ?? '');
     _data = TextEditingController(
-      text: _dataItalianaDaScadenza(task?.scadenzaData) ?? '',
+      text:
+          _dataItalianaDaScadenza(task?.scadenzaData) ??
+          (widget.dataIniziale == null
+              ? ''
+              : formattaDataVisita(widget.dataIniziale!)),
     );
     _ora = TextEditingController(text: task?.scadenzaOra ?? '');
     _note = TextEditingController(text: task?.note ?? '');
@@ -304,7 +311,8 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
     );
     if (scelta == null || !mounted) return;
     setState(() {
-      _ora.text = '${scelta.hour.toString().padLeft(2, '0')}:'
+      _ora.text =
+          '${scelta.hour.toString().padLeft(2, '0')}:'
           '${scelta.minute.toString().padLeft(2, '0')}';
     });
   }
@@ -327,8 +335,8 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
       'priorita': _priorita,
       'stato': task?.stato ?? 'aperto',
       'cliente_id': _clienteId,
-      'cliente_nome': cliente?.nome ??
-          (cliente == null ? task?.clienteNome : null),
+      'cliente_nome':
+          cliente?.nome ?? (cliente == null ? task?.clienteNome : null),
       'note': _note.text,
       // Campi non gestiti dal form: preservati in modifica.
       'appuntamento_id': task?.appuntamentoId,
@@ -363,9 +371,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
     final opzioniOperatori = _opzioniOperatori;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_modifica ? 'Modifica task' : 'Nuovo task'),
-      ),
+      appBar: AppBar(title: Text(_modifica ? 'Modifica task' : 'Nuovo task')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpazi.paginaTelefono),
@@ -497,7 +503,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                           onChanged: _salvando || _caricamento
                               ? null
                               : (valore) =>
-                                  setState(() => _operatoreId = valore),
+                                    setState(() => _operatoreId = valore),
                         ),
                         DropdownButtonFormField<String>(
                           key: const Key('task-priorita'),
@@ -557,10 +563,11 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                           onChanged: _salvando || _caricamento
                               ? null
                               : (valore) => setState(() {
-                                    _clienteId = (valore == null || valore.isEmpty)
-                                        ? null
-                                        : valore;
-                                  }),
+                                  _clienteId =
+                                      (valore == null || valore.isEmpty)
+                                      ? null
+                                      : valore;
+                                }),
                         ),
                         TextFormField(
                           key: const Key('task-note'),
@@ -570,9 +577,7 @@ class _TaskFormScreenState extends ConsumerState<TaskFormScreen> {
                           maxLines: 4,
                           textCapitalization: TextCapitalization.sentences,
                           textInputAction: TextInputAction.newline,
-                          decoration: const InputDecoration(
-                            labelText: 'Note',
-                          ),
+                          decoration: const InputDecoration(labelText: 'Note'),
                         ),
                       ],
                     ),

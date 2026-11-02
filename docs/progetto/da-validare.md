@@ -124,3 +124,15 @@ innocui. L'endpoint può restare senza essere chiamato.
 
 - La prima card del form è **Cliente e appuntamento**, con il **titolo** come primo campo, poi cliente e
   operatore; subito dopo **Data e ora** e **Luogo e note**.
+
+## 2026-11-02 — Creazione dal giorno con scelta del tipo
+
+**Cosa fa**: nella vista mensile, toccando un giorno (o il **+**) compare la scelta **Appuntamento**,
+**Visita** o **Task**, con la data già compilata. Non si passa più alla vista giorno.
+
+**Come provarlo**: apri Calendario in vista **Mese**, tocca un giorno; scegli uno dei tre tipi; controlla
+la data precompilata; salva e verifica che l’appuntamento/task compaia in agenda e la visita in **Visite**.
+
+**Rischi**: nessuna modifica a dati o regole; il task form ha solo un parametro opzionale per la data.
+
+**Come tornare indietro**: ripristinare `calendario_screen.dart` e `task_form_screen.dart`.

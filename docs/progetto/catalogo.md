@@ -86,6 +86,7 @@ oggetto con nome, percorso, scopo e dove è usato.
 | Email clienti (Resend) | `features/superadmin/email_server_screen.dart`, Worker `/email/*`, KV `EMAIL_CONFIG` | Mittente, API key e prova; stato nel dettaglio appuntamento |
 | WhatsApp VOLTY | `worker/src/whatsapp.mjs`, `worker/src/index.js` | `/invia {numero, testo}`, fallback `/send`, normalizzazione stato |
 | Test automatici CI | `.github/workflows/test.yml` | `flutter analyze`, `flutter test`, controlli e test Worker |
+| Creazione dal calendario | `calendario_screen.dart` (`mostraSceltaTipoCreazione`), `task_form_screen.dart` | Scelta Appuntamento/Visita/Task dal giorno o dal **+**; data iniziale nel task |
 | Notifiche invito | `flutter_app/lib/data/services/sp_service.dart` | Notifica In-App a creatore/operatore dopo la risposta; `inviaWhatsapp`/`inviaWhatsappAUtente` best-effort |
 | Rubrica WhatsApp | `firestore.rules`, `flutter_app/lib/features/impostazioni/notifiche_preferenze_screen.dart` | `contatti_notifiche` aziendale: numero e consenso, leggibile dai colleghi |
 | Configurazione WhatsApp | `flutter_app/lib/features/superadmin/whatsapp_server_screen.dart`, `worker/src/index.js` | Super Admin → Server WhatsApp; URL/API key nel KV del Worker, QR e stato; invio autenticato tramite Worker |

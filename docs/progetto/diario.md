@@ -713,3 +713,11 @@
   cliente (con **+** nuovo cliente) e operatore.
 - La card **Data e ora** segue; **Luogo e note** resta subito sotto.
 - Test widget aggiornato sull'ordine; screenshot `2026-10-25-form-luogo-note-ordine.png` rifatto.
+
+## 2026-11-02 — Creazione dal giorno e scelta del tipo
+
+- Nella vista mensile il tocco su un giorno non passa più alla vista giorno: apre la scelta
+  **Appuntamento / Visita / Task** con la data già impostata.
+- Anche il **+** apre la stessa scelta.
+- Il form del task accetta una data iniziale; la visita usa `VisitaFormScreen(dataIniziale: ...)`.
+- Test widget sulla scelta dei tre tipi e sul prefiltro della scadenza del task.

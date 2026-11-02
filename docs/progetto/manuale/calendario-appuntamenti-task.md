@@ -24,13 +24,13 @@ L'obiettivo è che un utente non debba cercare in tre schermate diverse.
    **Condivisione**, **Dettagli** e **Allegati**; in fondo i pulsanti delle azioni, a tutta larghezza.
    La **X** in alto a destra chiude il dettaglio.
 6. Tocca uno spazio vuoto nella vista giorno o settimana per creare un appuntamento con data e ora già impostate.
-7. Dalla vista mese, tocca un giorno per aprirlo nella vista giornaliera.
+7. Dalla vista mese, tocca un giorno per scegliere subito cosa creare: **Appuntamento**, **Visita** o **Task**. Non si passa più automaticamente alla vista giorno; la vista **Giorno** resta selezionabile dall’alto.
 
 Gli elementi senza orario compaiono in **Senza orario**.
 
 ## Creare un appuntamento
 
-1. Premi **+** accanto a **Card** nella barra del calendario.
+1. Premi **+** accanto a **Card** nella barra del calendario: compare la scelta **Appuntamento / Visita / Task**. Scegli **Appuntamento**.
 2. La **prima card** è **Cliente e appuntamento**: il **titolo** è il primo campo (obbligatorio). Subito
    sotto scegli il **cliente**; con il **+** puoi crearne uno nuovo e selezionarlo subito.
 3. Assegna un **operatore**.
@@ -45,6 +45,13 @@ Gli elementi senza orario compaiono in **Senza orario**.
    all'utente assegnato.
 10. In **Allegati** puoi caricare immagini, video, PDF o file email (max 10 MB per file).
 11. Salva.
+
+### Creare dal mese: appuntamento, visita o task
+
+Toccando un giorno nella vista mensile, o il pulsante **+**, compare la scelta:
+- **Appuntamento**: apre il form con la data già impostata;
+- **Visita**: apre il form della visita con la data già impostata; la visita si trova poi nella sezione **Visite**;
+- **Task**: apre il form del task con la data di scadenza già impostata.
 
 ### Avviso automatico al cliente
 

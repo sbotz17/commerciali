@@ -73,7 +73,11 @@ void main() {
   });
 
   group('TaskFormScreen', () {
-    Future<void> apriForm(WidgetTester tester, {TaskItem? task}) async {
+    Future<void> apriForm(
+      WidgetTester tester, {
+      TaskItem? task,
+      DateTime? dataIniziale,
+    }) async {
       tester.view.physicalSize = const Size(1000, 2400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -81,7 +85,9 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          child: MaterialApp(home: TaskFormScreen(task: task)),
+          child: MaterialApp(
+            home: TaskFormScreen(task: task, dataIniziale: dataIniziale),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -94,6 +100,15 @@ void main() {
       await tester.tap(salva);
       await tester.pumpAndSettle();
     }
+
+    testWidgets('propone la data del giorno scelto', (tester) async {
+      await apriForm(tester, dataIniziale: DateTime(2026, 11, 12));
+
+      final campo = tester.widget<TextFormField>(
+        find.byKey(const Key('task-scadenza-data')),
+      );
+      expect(campo.controller?.text, '12/11/2026');
+    });
 
     testWidgets('mostra tutti i campi del nuovo task', (tester) async {
       await apriForm(tester);
@@ -143,11 +158,15 @@ void main() {
       );
       await premiSalva(tester);
 
-      expect(find.text('Inserisci una data valida (gg/mm/aaaa)'), findsOneWidget);
+      expect(
+        find.text('Inserisci una data valida (gg/mm/aaaa)'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('in assenza di Firebase mostra l\'errore di caricamento',
-        (tester) async {
+    testWidgets('in assenza di Firebase mostra l\'errore di caricamento', (
+      tester,
+    ) async {
       await apriForm(tester);
 
       expect(find.byKey(const Key('task-errore-dati')), findsOneWidget);
@@ -155,8 +174,9 @@ void main() {
       expect(find.byKey(const Key('task-titolo')), findsOneWidget);
     });
 
-    testWidgets('il salvataggio fallito mostra l\'avviso d\'errore',
-        (tester) async {
+    testWidgets('il salvataggio fallito mostra l\'avviso d\'errore', (
+      tester,
+    ) async {
       await apriForm(tester);
 
       await tester.enterText(

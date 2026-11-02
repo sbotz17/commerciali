@@ -626,6 +626,47 @@ void main() {
     });
   });
 
+  testWidgets('la creazione dal giorno propone appuntamento, visita e task', (
+    tester,
+  ) async {
+    String? scelta;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light,
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => FilledButton(
+              onPressed: () async {
+                scelta = await mostraSceltaTipoCreazione(
+                  context,
+                  DateTime(2026, 10, 26),
+                );
+              },
+              child: const Text('Apri'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Apri'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Cosa vuoi creare il 26/10/2026'),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('calendario-crea-appuntamento')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('calendario-crea-visita')), findsOneWidget);
+    expect(find.byKey(const Key('calendario-crea-task')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('calendario-crea-task')));
+    await tester.pumpAndSettle();
+    expect(scelta, creazioneTipoTask);
+  });
+
   testWidgets('la vista mese mostra i giorni e le voci', (tester) async {
     final elementi = elementiDaAppuntamenti([
       appuntamento(titolo: 'Visita del mese', ora: '09:30'),

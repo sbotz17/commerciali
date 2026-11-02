@@ -30,6 +30,7 @@
 | Data picker | mese e giorni in italiano ("ottobre 2026", "lunedì") |
 | Ripetizione | giorno di inizio protetto, sostituzione al cambio data, anteprima date |
 | Form | prima card **Cliente e appuntamento** con titolo primo campo, poi Data e ora e Luogo e note |
+| Creazione dal mese | scelta Appuntamento/Visita/Task con data precompilata; niente passaggio automatico alla vista giorno |
 
 Screenshot: `2026-10-25-promemoria-cliente-form.png`, `2026-10-25-promemoria-cliente-esito.png`, `2026-10-25-form-luogo-note-ordine.png`, `2026-10-25-date-picker-italiano.png`.
 I dati di prova (utenti, aziende, clienti, appuntamenti) sono stati eliminati; backup staging di

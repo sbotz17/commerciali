@@ -23,7 +23,9 @@ import '../../data/models/user_profile.dart';
 import '../../state/auth_providers.dart';
 import '../../state/azienda_providers.dart';
 import '../clienti/clienti_screen.dart' show ClienteFormScreen;
-import '../visite/visite_screen.dart' show dataIsoVisita, formattaDataVisita;
+import '../task/task_form_screen.dart' show TaskFormScreen;
+import '../visite/visite_screen.dart'
+    show VisitaFormScreen, dataIsoVisita, formattaDataVisita;
 import 'appuntamento_form_screen.dart'
     show
         AppuntamentoFormScreen,
@@ -42,6 +44,70 @@ export 'viste_calendario.dart';
 
 /// Calendario dell'agenda con viste giorno/settimana/mese (calendario classico
 /// o card) e filtro operatore.
+/// Tipi selezionabili quando si crea un elemento dal calendario.
+const String creazioneTipoAppuntamento = 'appuntamento';
+const String creazioneTipoVisita = 'visita';
+const String creazioneTipoTask = 'task';
+
+/// Mostra la scelta del tipo di elemento da creare per [giorno].
+///
+/// Torna `appuntamento`, `visita`, `task` oppure `null` se l'utente chiude.
+Future<String?> mostraSceltaTipoCreazione(
+  BuildContext context,
+  DateTime giorno,
+) {
+  return showModalBottomSheet<String>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) {
+      final tema = Theme.of(sheetContext);
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpazi.m,
+                0,
+                AppSpazi.m,
+                AppSpazi.xs,
+              ),
+              child: Text(
+                'Cosa vuoi creare il ${formattaDataVisita(giorno)}?',
+                style: tema.textTheme.titleMedium,
+              ),
+            ),
+            ListTile(
+              key: const Key('calendario-crea-appuntamento'),
+              leading: const Icon(Icons.event_outlined),
+              title: const Text('Appuntamento'),
+              subtitle: const Text('Data, ora, cliente e promemoria'),
+              onTap: () =>
+                  Navigator.of(sheetContext).pop(creazioneTipoAppuntamento),
+            ),
+            ListTile(
+              key: const Key('calendario-crea-visita'),
+              leading: const Icon(Icons.route_outlined),
+              title: const Text('Visita'),
+              subtitle: const Text('Visita del giro clienti'),
+              onTap: () => Navigator.of(sheetContext).pop(creazioneTipoVisita),
+            ),
+            ListTile(
+              key: const Key('calendario-crea-task'),
+              leading: const Icon(Icons.task_alt),
+              title: const Text('Task'),
+              subtitle: const Text('Attività con scadenza'),
+              onTap: () => Navigator.of(sheetContext).pop(creazioneTipoTask),
+            ),
+            const SizedBox(height: AppSpazi.xs),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 class CalendarioScreen extends ConsumerStatefulWidget {
   const CalendarioScreen({super.key, this.appuntamentoId});
 
@@ -231,12 +297,62 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
     setState(() => _giorno = DateTime(oggi.year, oggi.month, oggi.day));
   }
 
-  /// Apre il giorno selezionato nella vista giornaliera.
-  void _apriGiorno(DateTime giorno) {
-    setState(() {
-      _giorno = DateTime(giorno.year, giorno.month, giorno.day);
-      _vista = VistaAgenda.giorno;
-    });
+  /// Apre la scelta di cosa creare per il giorno selezionato.
+  ///
+  /// Dalla vista mensile non si passa più automaticamente alla vista giorno:
+  /// il tocco sul giorno apre direttamente la creazione.
+  Future<void> _apriGiorno(DateTime giorno) async {
+    final selezionato = DateTime(giorno.year, giorno.month, giorno.day);
+    setState(() => _giorno = selezionato);
+    final tipo = await mostraSceltaTipoCreazione(context, selezionato);
+    if (!mounted || tipo == null) return;
+    switch (tipo) {
+      case creazioneTipoAppuntamento:
+        await _apriNuovoAppuntamento(giorno: selezionato);
+      case creazioneTipoVisita:
+        await _apriNuovaVisita(selezionato);
+      case creazioneTipoTask:
+        await _apriNuovoTask(selezionato);
+    }
+  }
+
+  /// Apre la scelta di creazione sul giorno mostrato dal calendario.
+  Future<void> _apriCreazione() => _apriGiorno(_giorno);
+
+  /// Apre il form di una nuova visita con la data del giorno scelto.
+  Future<void> _apriNuovaVisita(DateTime giorno) async {
+    var ordine = 0;
+    try {
+      final servizio = ref.read(spServiceProvider);
+      servizio.setAziendaAttiva(ref.read(aziendaAttivaProvider));
+      final iso = dataIsoVisita(giorno);
+      ordine = (await servizio.getVisitePeriodo(iso, iso)).length;
+    } catch (_) {
+      // Senza il conteggio la visita parte comunque in cima al giro.
+    }
+    if (!mounted) return;
+    final salvato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) =>
+            VisitaFormScreen(dataIniziale: giorno, ordineIniziale: ordine),
+      ),
+    );
+    if (salvato != true || !mounted) return;
+    await _carica();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Visita salvata. La trovi nella sezione Visite.'),
+      ),
+    );
+  }
+
+  /// Apre il form di un nuovo task con la data del giorno scelto.
+  Future<void> _apriNuovoTask(DateTime giorno) async {
+    final salvato = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => TaskFormScreen(dataIniziale: giorno)),
+    );
+    if (salvato == true) await _carica();
   }
 
   /// Apre il form di un nuovo appuntamento con data (e ora) già impostate.
@@ -611,7 +727,7 @@ class _CalendarioScreenState extends ConsumerState<CalendarioScreen> {
                 onStile: (stile) => setState(() => _stile = stile),
                 onOperatore: (operatore) =>
                     setState(() => _operatoreId = operatore),
-                onNuovo: _apriNuovoAppuntamento,
+                onNuovo: _apriCreazione,
               ),
             ),
             Expanded(
@@ -782,7 +898,7 @@ class _BarraCalendario extends StatelessWidget {
 
     final pulsanteNuovo = IconButton.filled(
       key: const Key('calendario-nuovo-appuntamento'),
-      tooltip: 'Nuovo appuntamento',
+      tooltip: 'Nuovo',
       onPressed: onNuovo,
       icon: const Icon(Icons.add),
       visualDensity: VisualDensity.compact,
