@@ -1,0 +1,12 @@
+{
+  "name": "closer-audit-ui",
+  "private": true,
+  "description": "Prove UI reali sull'app pubblicata (audit ondate). Usa Chrome di sistema con Playwright.",
+  "scripts": {
+    "clienti": "node clienti-b.js",
+    "preventivi": "node preventivi-e.js"
+  },
+  "dependencies": {
+    "playwright": "1.55.0"
+  }
+}

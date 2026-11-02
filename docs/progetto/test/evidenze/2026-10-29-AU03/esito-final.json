@@ -1,0 +1,73 @@
+{
+  "nome": "AU03 Cliente 25054",
+  "passi": [
+    {
+      "nome": "pulizia dati di prova AU03",
+      "esito": "OK",
+      "dettaglio": "0 clienti rimossi"
+    },
+    {
+      "nome": "login A",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "VIES P.IVA valida",
+      "esito": "OK",
+      "dettaglio": "FERRARI S.P.A."
+    },
+    {
+      "nome": "creazione cliente",
+      "esito": "OK",
+      "dettaglio": "AU03 Cliente 25054 in Firestore"
+    },
+    {
+      "nome": "ricerca",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "duplicato bloccato",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "modifica",
+      "esito": "OK",
+      "dettaglio": "029999777 in Firestore"
+    },
+    {
+      "nome": "persistenza",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "negativo nome obbligatorio",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "isolamento azienda",
+      "esito": "OK",
+      "dettaglio": "B non vede il cliente di A"
+    },
+    {
+      "nome": "eliminazione",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "persistenza eliminazione",
+      "esito": "OK",
+      "dettaglio": ""
+    },
+    {
+      "nome": "controllo di sensibilità",
+      "esito": "OK",
+      "dettaglio": "nome inesistente non trovato"
+    }
+  ],
+  "esito": "PROVATA",
+  "aziendaA": "MaUvu0yFRSGaT2zuKuFE",
+  "aziendaB": "kXJ31xltH7r8BnItVZCg"
+}

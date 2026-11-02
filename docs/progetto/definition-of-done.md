@@ -8,9 +8,18 @@ Un task o un milestone **non è "fatto"** e non si rilascia se manca anche uno s
 2. `flutter test` → tutti verdi; ogni correzione ha un test che fallisce senza la correzione.
 3. Nessuna modifica a `firestore.rules`, vecchia app o configurazioni di produzione senza approvazione.
 
+## Test eseguiti dalla squadra
+
+I test sono un compito della squadra, **non di Andrea**:
+
+- il tester esegue i comandi (`flutter analyze`, `flutter test`, script E2E) e la prova su staging;
+- ogni comportamento nuovo o corretto ha un test automatico che lo copre;
+- se manca un test, il task non è `FATTO` e torna allo sviluppo;
+- ad Andrea si chiede solo la validazione funzionale/UX, dopo il report del tester.
+
 ## Prova reale su staging (obbligatoria)
 
-Il tester deve eseguire l'app pubblicata su `https://commerciali-flutter.web.app` con un utente di test e:
+Il tester deve eseguire l'app pubblicata su `https://commerciali-app.web.app` con un utente di test e:
 
 1. fare login (email/password o Google);
 2. verificare che l'**azienda attiva** sia impostata automaticamente;
@@ -21,6 +30,37 @@ Il tester deve eseguire l'app pubblicata su `https://commerciali-flutter.web.app
 7. verificare che **nessuna pagina del perimetro** mostri "Schermata in preparazione".
 
 Il report deve contenere comandi, passi, esito atteso/ottenuto e almeno una prova (screenshot o log).
+
+## Servizi esterni e contratti
+
+Per ogni schermata che usa un servizio esterno (Worker, server WhatsApp, OAuth, SMTP, push):
+
+- il tester deve provare il **flusso completo nella UI**, non solo l'endpoint con `curl`;
+- la risposta del servizio deve essere normalizzata in un contratto unico e coperta da un test che usa una
+  risposta reale o un fixture identico alla produzione;
+- un test unitario con una risposta inventata non sostituisce la prova UI;
+- se la UI non è provabile, il task è **BLOCCATO**, non "SUPERATO con residuo": non si dichiara FATTO.
+
+## Audit obbligatorio prima di ogni rilascio
+
+`docs/progetto/test/audit-completa.md` è il gate obbligatorio prima di ogni pubblicazione, **staging e
+produzione**.
+
+- Nessun deploy hosting, nessuna promozione e nessun rilascio senza audit-completa eseguito.
+- Il report deve avere esiti reali, prove UI e residui elencati.
+- Tester `SUPERATO` + validatore `APPROVATO`.
+- Per la produzione: guardiano `GO`, backup verificato, rollback pronto.
+- Un'area non provata è **BLOCCATA**: non si pubblica “con residuo”.
+
+## Produzione: zero bug noti
+
+- Nessun bug noto aperto può entrare in produzione.
+- Prima del rilascio: E2E reale su staging, smoke test sulla produzione e rollback pronto.
+- Dopo il rilascio: verifica in sola lettura di login, azienda attiva, dati principali e assenza di
+  `permission-denied`.
+- Se un bug arriva in produzione: rollback immediato, correzione su staging, test che lo riproduce, tester,
+  validatore e nuovo rilascio. Mai correzione diretta in produzione.
+- Non si dichiara “nessun bug”: si dichiara “nessun bug noto, prove eseguite, residui elencati”.
 
 ## Validazione
 

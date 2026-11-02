@@ -27,6 +27,7 @@ void main() {
     UserProfile? profiloDaMostrare = profilo,
     List<Azienda> aziendeDaMostrare = aziende,
     String? aziendaAttivaId = 'a1',
+    bool admin = true,
     void Function(String)? onCambiaAzienda,
     VoidCallback? onLogout,
     void Function(String)? onVoce,
@@ -44,6 +45,7 @@ void main() {
             profilo: profiloDaMostrare,
             aziende: aziendeDaMostrare,
             aziendaAttivaId: aziendaAttivaId,
+            admin: admin,
             onCambiaAzienda: onCambiaAzienda ?? (_) {},
             onLogout: onLogout ?? () {},
             onVoce: onVoce ?? (_) {},
@@ -70,6 +72,45 @@ void main() {
     expect(
       find.byKey(const Key('impostazioni-azienda-tendina')),
       findsOneWidget,
+    );
+  });
+
+  testWidgets(
+      'il commerciale vede Notifiche ma non le voci di amministrazione',
+      (tester) async {
+    const commerciale = UserProfile(
+      id: 'u2',
+      uid: 'u2',
+      email: 'commerciale@example.it',
+      nome: 'Commerciale',
+      ruolo: 'commerciale',
+    );
+
+    await mostraImpostazioni(
+      tester,
+      profiloDaMostrare: commerciale,
+      aziendeDaMostrare: const [
+        Azienda(id: 'a1', nome: 'Acme S.r.l.', ruolo: 'commerciale'),
+      ],
+      admin: false,
+    );
+
+    expect(
+      find.byKey(const Key('impostazioni-voce-notifiche')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('impostazioni-voce-condivisioni')),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('impostazioni-personali')), findsOneWidget);
+    expect(find.byKey(const Key('impostazioni-accessi')), findsNothing);
+    expect(find.byKey(const Key('impostazioni-voce-utenti')), findsNothing);
+    expect(find.byKey(const Key('impostazioni-voce-ruoli')), findsNothing);
+    expect(find.byKey(const Key('impostazioni-voce-licenze')), findsNothing);
+    expect(
+      find.byKey(const Key('impostazioni-voce-integrazioni')),
+      findsNothing,
     );
   });
 

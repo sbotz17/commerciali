@@ -5,6 +5,10 @@
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
   },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
   "hosting": [
     {
       "target": "app",
@@ -59,9 +63,16 @@
     },
     {
       "target": "flutter",
-      "public": "flutter_app/build/web",
+      "public": "hosting_redirect",
       "ignore": [
         "**/.*"
+      ],
+      "redirects": [
+        {
+          "source": "**",
+          "destination": "https://commerciali-app.web.app",
+          "type": 301
+        }
       ],
       "rewrites": [
         {
@@ -72,33 +83,6 @@
       "headers": [
         {
           "source": "/index.html",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache, no-store, must-revalidate"
-            }
-          ]
-        },
-        {
-          "source": "/flutter_bootstrap.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache, no-store, must-revalidate"
-            }
-          ]
-        },
-        {
-          "source": "/main.dart.js",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache, no-store, must-revalidate"
-            }
-          ]
-        },
-        {
-          "source": "/flutter_service_worker.js",
           "headers": [
             {
               "key": "Cache-Control",

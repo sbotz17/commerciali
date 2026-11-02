@@ -45,6 +45,17 @@ class AuthService {
     );
   }
 
+  /// Registra un nuovo account con email/password.
+  ///
+  /// Dopo la registrazione l'utente non ha ancora un'azienda: `AuthGate`
+  /// mostrerà l'onboarding per crearne una.
+  Future<UserCredential> registraConEmail(String email, String password) {
+    return _auth.createUserWithEmailAndPassword(
+      email: _normalizzaEmail(email),
+      password: password,
+    );
+  }
+
   /// Accesso con Google, adatto a web e mobile.
   ///
   /// Sul web usa il popup con [GoogleAuthProvider]; su Android/iOS usa il

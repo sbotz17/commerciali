@@ -10,10 +10,14 @@
 - Le licenze hanno piano, stato, date e limiti (`max_utenti`, `max_preventivi`).
 - `piani_config` definisce pagine e limiti per piano.
 - `whatsapp_config/1` contiene URL e API key del server WhatsApp.
+- `Impostazioni → Calendario e integrazioni`: card Google/Microsoft (modalità app Closer o app propria) e stato SMTP/WhatsApp/R2/Push. I segreti non sono in Firestore: il Client Secret si attiverà con il Worker.
+- `Impostazioni → Personale`: Notifiche (canali, push, silenzio, anteprima) e Condivisione calendario, visibili a tutti i ruoli, commerciale compreso.
+- `Impostazioni → Accessi`: solo admin (agenda, integrazioni, utenti, ruoli, licenze).
+- `integrazioni_azienda/{aziendaId}`: configurazione azienda; `condivisioni_calendario/{az}_{prop}_{dest}`: condivisione calendario.
 
 ## Test
 
 - Creare/modificare un utente e cambiare ruolo.
 - Verificare i limiti del piano e l'accesso del super admin a un'azienda.
 
-**Ultima revisione**: 2026-10-22
+**Ultima revisione**: 2026-10-24

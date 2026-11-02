@@ -56,3 +56,113 @@ automatizzato). Google resta attivo per gli altri utenti. Stato: attivo.
 - Call: creazione automatica di Google Meet/Teams; licenze e configurazioni Azure/Google da verificare.
 - Chat interna: dirette 1-a-1 + gruppi, testo e immagini, letture, ricerca, soft delete, notifiche in-app/push; WhatsApp non usato per la chat.
 - Stato: requisiti e architettura pronti; implementazione a micro-task, prima DBA poi modelli/UI, integrazioni all'arrivo delle credenziali.
+
+## 2026-10-24 — Calendario classico predefinito
+
+Richiesta di Andrea: nell'app l'agenda deve aprirsi con la classica vista a calendario, non con l'elenco a
+card. Periodi disponibili: **giorno**, **settimana**, **mese**; lo stile **Card** esistente resta
+selezionabile per tutti e tre i periodi. Scelta di partenza: calendario **mensile**, perché dà subito la
+visione d'insieme; il periodo scelto dall'utente vale solo per la sessione. Nessuna nuova collezione, regola
+o dipendenza: solo UI e funzioni pure, coperte da test.
+
+## 2026-10-24 — Inviti appuntamento con conferma disponibilità
+
+Richiesta di Andrea: condividere un appuntamento con un collega o un gruppo, inviare una notifica e
+lasciare l'appuntamento **provvisorio** fino alla conferma. Scelte:
+
+- nessuna nuova collezione: `invitati_uids`, `conferme` e `stato_condivisione` su `appuntamenti`;
+- i gruppi sono le stanze chat di tipo `gruppo` già esistenti, selezionabili insieme alle singole persone;
+- l'invitato conferma dal dettaglio aperto dalla notifica (`/calendario?appuntamento=…`); la risposta è
+  registrata in transazione per non perdere conferme simultanee;
+- la prima conferma porta lo stato a `confermato`; tutti i rifiuti a `rifiutato`; altrimenti `in_attesa`.
+  Lo stato `stato` dell'appuntamento (da fare/fatto/annullato) resta separato.
+
+## 2026-10-24 — Allegati e promemoria senza R2/Blaze
+
+Cloudflare R2 non è abilitato sull’account e Firebase non è sul piano Blaze: non è possibile usare R2 né
+Cloud Functions. Per non lasciare le funzioni incompiute:
+
+- **Allegati**: file (immagini, video, PDF, email) nel KV del Worker `ALLEGATI`, max 10 MB per file;
+  metadati in `allegati`. È una soluzione temporanea, da migrare a R2 quando sarà attivo.
+- **Promemoria**: code nel KV `PROMEMORIA`, Cron del Worker ogni minuto; l’invio avviene via WhatsApp
+  usando la configurazione del server. Non c’è ancora push/In-App programmato: per quello serve Blaze.
+- **Privacy**: i dettagli degli appuntamenti privati sono in `appuntamenti/{id}/privato/dettagli`,
+  leggibili solo da creatore, operatore e super admin; il documento principale resta redatto.
+
+## 2026-10-24 — Audit completo e blocco nuove funzioni
+
+**Decisione**: dopo i bug sfuggiti su WhatsApp, push e accesso, le nuove funzioni sono congelate. La squadra
+esegue un audit per aree (`docs/progetto/test/audit-completa.md`) con test automatici, prova E2E reale nella
+UI pubblicata, report tester e validazione. Un'area senza prova UI è `BLOCCATA`, non “SUPERATA con residuo”.
+
+**Motivo**: i test precedenti coprivano pezzi isolati e non il flusso usato dall'utente. La fiducia si
+ricostruisce con prove ripetibili, non con nuove funzioni.
+
+**Effetto**: nessun rilascio e nessuna nuova funzione fino alla chiusura delle aree AU01–AU15.
+
+## 2026-10-25 — Promemoria automatico al cliente
+
+- Andrea ha chiesto che il cliente riceva il promemoria **automaticamente** al salvataggio e alla modifica
+  di data/ora, su **WhatsApp, email o entrambi** in base ai recapiti presenti.
+- Canali scelti per singolo appuntamento (interruttore "Avvisa il cliente" + WhatsApp/Email), predefiniti
+  entrambi; il form scarta i canali senza recapito.
+- L'invio non parte dal browser: il Worker legge appuntamento e cliente, compone il testo e chiama il server
+  WhatsApp o il provider email. Nessun testo libero o destinatario arbitrario dal client.
+- Email tramite **Resend** con un mittente unico di piattaforma configurato in **Super Admin → Server email**
+  (API key nel KV `EMAIL_CONFIG`). È una scelta MVP: resta aperta la configurazione SMTP per singola azienda
+  prevista dall'architettura.
+- Idempotenza per appuntamento + impronta di data/ora e limite di frequenza per utente; nessun doppio invio
+  sullo stesso orario.
+- Stato: attivo su staging; l'email resta da attivare inserendo la API key Resend.
+
+## 2026-10-25 — Correzioni agenda: lingua, luogo/note, ripetizione e WhatsApp
+
+- Il calendario e i selettori di data usano **italiano** anche nei testi Material (mese, giorni, pulsanti),
+  tramite `flutter_localizations` e locale `it`.
+- **Luogo e note** è la sezione subito sotto data/ora; la ripetizione viene dopo.
+- Il giorno di inizio di una ripetizione settimanale è sempre selezionato; cambiando la data il giorno
+  automatico precedente viene sostituito, non aggiunto. I giorni scelti a mano restano.
+- Il server WhatsApp in uso è **VOLTY** (`/invia`), non il vecchio `/send`: il Worker supporta entrambi e
+  normalizza lo stato; l'invio manuale dal dettaglio permette di ritentare con conferma.
+- Le regole `utenti` impediscono l'auto-assegnazione di `super_admin`, `ruolo` e `attivo`; test E2E su
+  staging conferma 403.
+- Aggiunto workflow GitHub Actions `Test automatici` per `flutter analyze`, `flutter test` e test Worker.
+
+## 2026-10-26 — Audit completo: una sola corsia di rilascio e registro per funzione
+
+**Decisione**: durante l'audit, staging è considerato una versione sola e stabile. Le prove si fanno sulla
+build pubblicata e su un canale di anteprima; ogni pubblicazione su staging deve partire da un commit
+tracciato e non da una cartella con modifiche non committate. La build provata si annota nel report con
+versione, data/ora e commit (la versione è visibile in Impostazioni).
+
+**Motivo**: il 25-26/10 staging è stato ripubblicato almeno quattro volte (23:34, 23:46, 23:59, 00:03)
+mentre l'audit era in corso. I bug sembravano sparire e ricomparire, i test automatici si rompevano per
+etichette cambiate e non era possibile dire ad Andrea "questa versione funziona".
+
+**Conseguenze**: niente nuove funzioni durante l'audit; niente deploy da cartelle sporche; un solo ramo di
+rilascio; il registro `2026-10-26-registro-funzionalita.md` è la fonte unica dello stato per funzione.
+
+**In sospeso**: il task in Avanza non è stato creato perché il workflow `registra-ore.yml` su `main` non
+accetta l'input `tasks_json` (HTTP 422); nessun codice `T-N` inventato. Va aggiunta l'azione `importa-task`
+al workflow (zona protetta: serve una seconda lettura indipendente).
+
+## 2026-10-29 — Audit riaperti e standard di prova
+
+**Decisione di Andrea**: se trova una cosa rotta, la squadra ha testato male; gli audit sono tutti da
+rivedere; la squadra deve essere meglio di una persona. Recepito senza eccezioni.
+
+**Effetto**:
+- Nessuna area è più `PROVATA`; le vecchie `SUPERATA` sono revocate. AU01–AU09 e AU11–AU14 sono `DA RIFARE`,
+  AU10 e AU15 `BLOCCATA`.
+- Standard obbligatorio (skill `squadra-audit`): criterio scritto prima, prova UI reale, persistenza, caso
+  negativo, risposta reale del servizio, test che fallisce se la funzione si rompe con esecuzione rossa,
+  evidenza con build/commit, tester e validatore in sessioni distinte.
+- L'area è `PROVATA` solo se **tutte** le sue funzioni lo sono. `FALLITA` resta `FALLITA` finché il ritorno
+  non è chiuso.
+- Il deploy è vietato con aree non `PROVATA`. Il controllo automatico non è ancora attivo: il coordinatore
+  esegue `scripts/controlla-audit.py` a mano e annota l'esito; il deploy resta vietato.
+- Ogni guasto segnalato da Andrea è un guasto del processo: causa, test che l'avrebbe fermato, riaudit,
+  voce nel registro.
+
+**Responsabile**: coordinatore aggiorna i registri entro il 31/10/2026; validatore verifica che nessuna
+area resti `SUPERATA`.

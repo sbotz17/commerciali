@@ -86,6 +86,9 @@ void main() {
     test('fa trim degli spazi', () {
       expect(normalizzaPiva('  12345678901  '), '12345678901');
       expect(normalizzaPiva('  it 12345678901 '), '12345678901');
+      expect(normalizzaPiva('IT 001 595 603 66'), '00159560366');
+      expect(normalizzaPiva('001 595 603 66'), '00159560366');
+      expect(normalizzaPiva('001.595.603.66'), '00159560366');
     });
 
     test('senza prefisso resta invariata (maiuscola)', () {

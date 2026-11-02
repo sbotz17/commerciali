@@ -100,8 +100,8 @@ String messaggioErrorePreventivi(Object errore) {
 
 /// Elenco dei preventivi dell'azienda attiva.
 ///
-/// La modifica e la creazione aprono per ora la rotta `/preventivi/nuovo`
-/// (editor in F12b).
+/// La creazione apre `/preventivi/nuovo`; la modifica apre
+/// `/preventivi/<id>` con il preventivo scelto nel tabellone.
 class PreventiviScreen extends ConsumerStatefulWidget {
   const PreventiviScreen({super.key});
 
@@ -156,9 +156,14 @@ class _PreventiviScreenState extends ConsumerState<PreventiviScreen> {
     }
   }
 
-  /// Apre il preventivo: per ora la rotta dell'editor (F12b).
-  void _apriPreventivo(Preventivo _) {
-    context.go('/preventivi/nuovo');
+  /// Apre nell'editor il preventivo scelto, con il suo id nella rotta.
+  ///
+  /// Senza id (documento incompleto) non si naviga: meglio restare sull'elenco
+  /// che aprire un editor vuoto.
+  void _apriPreventivo(Preventivo preventivo) {
+    final id = preventivo.id.trim();
+    if (id.isEmpty) return;
+    context.go('/preventivi/$id');
   }
 
   @override

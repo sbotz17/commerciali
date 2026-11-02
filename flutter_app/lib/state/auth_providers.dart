@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/models/user_profile.dart';
 import '../data/services/auth_service.dart';
+import '../data/services/passkey_service.dart';
 
 /// Istanza singleton di `FirebaseAuth`.
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
@@ -21,6 +22,11 @@ final authServiceProvider = Provider<AuthService>((ref) {
     auth: ref.watch(firebaseAuthProvider),
     firestore: ref.watch(firestoreProvider),
   );
+});
+
+/// Accesso con Face ID (passkey). Iniettabile nei test.
+final passkeyServiceProvider = Provider<PasskeyService>((ref) {
+  return PasskeyService();
 });
 
 /// Stato di autenticazione: l'utente corrente oppure `null` se non loggato.

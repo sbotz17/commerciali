@@ -139,9 +139,9 @@ getVisitePeriodo`, `getBandi/upsertBandi`, `getFontiBandi/…/getSyncLog/scriviL
 
 ### 9. Deployment e convivenza
 
-- Web: `flutter build web` → nuova target Hosting separata (es. `flutter-commerciali-app.web.app`) nello
-  stesso progetto `commerciali-app`; la vecchia app resta sulla target attuale finché non c'è parità
-  validata, poi il passaggio sostituisce la target principale. Non usare in parallelo sulla stessa
+- Web: `flutter build web` → target Hosting `app` del progetto `commerciali-app`, pubblicata su
+  `https://commerciali-app.web.app`. L’alias `commerciali-flutter.web.app` reindirizza alla principale e
+  non è un secondo ambiente. Non usare in parallelo sulla stessa
   operazione critica (numerazione preventivi).
 - Android/iOS: build di release (firma, bundle); web resta il riferimento per lo sviluppo rapido.
 - Nessun deploy di `firestore.rules`, contatori o Worker in questa attività.
@@ -267,6 +267,22 @@ N tentativi poi `fallito`; idempotenza con `runTransaction` su `promemoria/{id}`
 assoluto calcolato dal `fuso_orario` azienda; il cron legge un intervallo UTC. Niente Cloud
 Functions/Blaze.
 
+### 4bis. Promemoria automatico al cliente (WhatsApp + email)
+
+Il client chiama `POST /promemoria-cliente` dopo il salvataggio dell'appuntamento. Il Worker:
+1. verifica utente e appartenenza all'azienda;
+2. legge `appuntamenti/{id}` (e, se privato, `privato/dettagli`) con il token dell'utente;
+3. ricava recapiti da `cliente_telefono`/`cliente_email` o dalla scheda `clienti`;
+4. compone il testo dal documento (mai da un testo libero del client);
+5. invia su WhatsApp con il server configurato e su email con Resend;
+6. scrive su `promemoria_cliente` solo stati e data, senza recapiti.
+
+L'idempotenza usa una chiave KV `cliente-fatto:{progetto}:{appuntamento}:{hash(data,ora,fine,tutto_il_giorno)}`,
+quindi lo stesso orario non parte due volte e una nuova data/ora genera un nuovo invio. C'è un limite di
+20 invii al minuto per utente. L'email usa `EMAIL_CONFIG` (KV) con `{apiKey, from, nome}`; l'endpoint
+`/email/config` e `/email/test` è riservato al super admin. Per gli appuntamenti privati il titolo non
+compare nel messaggio.
+
 ### 4. Email SMTP per azienda
 
 Campi in `impostazioni_agenda` (o `integrazioni`): smtp_host, smtp_port, smtp_user, mittente,
@@ -278,8 +294,10 @@ rispetto dei limiti del provider. Nessuna credenziale nel codice.
 
 ### 5. WhatsApp Volty
 
-Contratto esistente: `POST {url}/send`, header `x-api-key`, body `{to, message, mediaUrl}` →
-`{ok, id}` o `{error}`; config in `whatsapp_config/1`. **Da spostare lato server**: oggi
+Contratto attuale: server **VOLTY** `POST {url}/invia`, header `x-api-key`, body
+`{numero, testo}` → `{ok, messageId}` o `{errore, codice}`; il Worker ripiega sul vecchio
+`POST {url}/send` `{to, message}` solo se `/invia` risponde 404. Lo stato è `{connesso, numero, stato}` e
+viene normalizzato in `{connected, number, state}`. Config in KV `WHATSAPP_CONFIG`. **Da spostare lato server**: oggi
 `whatsapp_config` è leggibile da qualsiasi utente loggato (regola `read: if signedIn()`), quindi la
 api_key è esposta → spostare l'invio in un endpoint Worker (`/whatsapp/send`) che legge la chiave da
 Worker secret e stringere la regola. Messaggi dai template con segnaposto; errori HTTP/`error` mappati
@@ -562,3 +580,136 @@ NON usare Cloud Functions/Blaze (niente trigger Firestore) · NON esporre segret
 NON hard-delete messaggi (solo soft) · NON WhatsApp per la chat · NON presenza/thread/vocali/chiamate ·
 NON ricerca full-text server (costo) · NON consentire esterni. Rischi: duplicati notifiche, limiti/costi
 R2, privacy immagini (dati personali), utenti senza permesso.
+
+## 2026-10-24 — OAuth aziendale e calendario condiviso
+
+Completa l'area calendario (sezione 2026-10-23) con il collegamento OAuth ai calendari esterni
+(Google Calendar/Meet, Microsoft 365/Teams) e la condivisione del calendario **dentro** Closer.
+Vale il principio già fissato: i token/secret non stanno mai in Firestore né nel client, ma solo nel
+Worker (Cloudflare KV/secret).
+
+### 1. Modello a tre livelli
+
+- **App OAuth** (livello piattaforma) — l'identità Closer registrata presso il provider (client ID/
+  client secret, redirect URI). Una sola per provider in modalità default.
+- **Connessione utente** (livello persona) — il singolo operatore autorizza l'app ad accedere al
+  *proprio* calendario; il Worker conserva un set di token per `azienda/uid/provider` in KV/secret.
+  In Firestore resta solo lo stato (`integrazioni/{aziendaId}_{uid}`: `stato`, `scopes`, `calendar_id`,
+  `tenant_id`).
+- **Calendario/evento** (livello operativo) — gli eventi creati/sincronizzati appartengono all'account
+  dell'operatore; Closer mantiene i riferimenti (`google_event_id`/`outlook_event_id`, `etag`, URL call)
+  su `appuntamenti`.
+
+### 2. Default e opzione per azienda
+
+Default: **una app OAuth Closer verificata** per provider, usata da tutte le aziende (nessuna
+configurazione da parte dell'azienda, solo il consenso dell'utente). Opzione avanzata: un'azienda può
+usare la **propria app** (`modalita: closer|personalizzata`) dichiarata in `integrazioni_azienda/{az}`
+con `client_id`, `secretRef` (riferimento al secret, mai il valore) e `redirect_uri`. In modalità
+`personalizzata` il Worker risolve i riferimenti dell'azienda invece di quelli di piattaforma.
+
+### 3. Provider: Google e Microsoft
+
+- **Google** — app OAuth **External + verifica** per il multi-azienda (consenso utente, schermata di
+  verifica OAuth, scope sensibili dichiarati); app **Internal** accettabile solo per una singola azienda
+  su Google Workspace. Meet richiede la licenza Workspace (a pagamento, da verificare).
+- **Microsoft** — registrazione app **multi-tenant** con consenso amministratore; per una singola
+  azienda si può vincolare l'app al proprio tenant. Graph con permessi delegati; Teams/online meeting
+  richiedono licenza M365 (a pagamento).
+
+### 4. Flusso OAuth
+
+1. **start** — il client chiede al Worker l'URL di autorizzazione; il Worker genera `state` firmato
+   (+ `nonce`/PKCE `code_challenge`) e lo lega a `azienda/uid/provider`.
+2. **redirect** — il provider reindirizza al **callback Worker** con `code` e `state`.
+3. **callback** — verifica firma e scadenza di `state`, scambia `code` (con `code_verifier` PKCE) con
+   `access_token` + `refresh_token`.
+4. **storage** — token salvati in KV/secret con chiave `azienda/uid/provider`; il client riceve solo lo
+   stato "collegato".
+5. **refresh** — il Worker rinnova con `refresh_token` prima della scadenza; su errore di grant marca la
+   connessione da riconnettere.
+6. **revoca** — endpoint esplicito: revoca presso il provider e cancella i token dal KV.
+Il client **non vede mai** token o secret: tutte le chiamate passano dal Worker.
+
+### 5. Perimetro token (scope minimi)
+
+- Google: `calendar.events` (creazione/modifica) + `calendar.events.readonly` (sync) — oppure
+  `calendar.readonly` se serve solo lettura; Meet ottenuto con `conferenceDataVersion=1` sull'evento.
+- Microsoft Graph: `User.Read`, `Calendars.ReadWrite`, `OnlineMeetings.ReadWrite`, `offline_access`
+  (refresh). Niente scope di posta/file: solo calendario e meeting.
+- **PKCE** obbligatorio dove il provider lo supporta; redirect URI rigoroso (allowlist esatta nel
+  Worker, niente wildcard).
+
+### 6. Creazione evento e call
+
+L'evento nasce sul **calendario dell'operatore** (non su un calendario aziendale unico); il cliente è
+aggiunto come invitato. Meet: `conferenceDataVersion=1` restituisce `hangoutLink`/`conferenceId`;
+Teams: `isOnlineMeeting: true` con `onlineMeetingProvider: teamsForBusiness` oppure
+`POST /users/{id}/onlineMeetings`. Su `appuntamenti` si salvano `call_url`, `meeting_id`,
+`google_event_id`/`outlook_event_id`, `etag`; aggiornamenti e cancellazioni passano dagli id esterni con
+controllo `etag` (conflitto → avviso, nessuna sovrascrittura silenziosa).
+
+### 7. Condivisione calendario dentro Closer
+
+Nuova collezione `condivisioni_calendario/{id}`: `azienda_id`, `proprietario_uid`, `destinatario_uid`,
+`livello`, `created_by/at`, `revocato_at`, `audit`. Livelli: `libero_occupato` | `dettagli` | `modifica`.
+Default `dettagli` (sola lettura). Vincoli: solo stessa azienda; il proprietario crea/revoca; il
+destinatario **non** ri-condivide; ogni azione tracciata (audit). La condivisione riguarda gli eventi
+esterni dell'account del proprietario, non i documenti Firestore.
+
+### 8. Privacy e visibilità
+
+- `libero_occupato`: mostra solo blocchi occupato/libero, maschera titolo/cliente/note/luogo.
+- `dettagli`: mostra data/ora/titolo/cliente/luogo; le note private sono escluse.
+- `modifica`: come `dettagli` + possibilità di intervento, con audit.
+- Distinzione obbligatoria: gli **eventi esterni** (Worker, token del proprietario) seguono i livelli di
+  condivisione sopra; gli **appuntamenti Closer** oggi sono visibili a tutta l'azienda per le regole
+  attuali (`appuntamenti` read `memberOf`). ⚠️ Per limitare la visibilità dei secondi (es. visibilità
+  per operatore) serve una **regola più restrittiva** da definire in un task separato, non in questa
+  attività.
+
+### 9. Worker: endpoint
+
+`/oauth/start`, `/oauth/callback`, `/calendario/condiviso`, `/calendario/evento`, `/calendario/revoca`,
+`/integrazioni/test`. Tutti autenticati con **Firebase ID token** (Authorization Bearer) e autorizzati
+per membership (`azienda_id` + `uid`). Rate limit per endpoint; logging senza segreti (mai token,
+`code`, `client_secret`, `state` integrale nei log).
+
+### 10. Settings (chi configura cosa)
+
+- **Admin azienda**: SMTP, Google/Microsoft (modalità, `client_id`, `secretRef`, redirect URI, "test
+  connessione"), WhatsApp/R2 **se** configurati per azienda (altrimenti piattaforma).
+- **Utente**: connessioni OAuth personali e condivisioni del proprio calendario.
+- **Super admin**: configurazioni di piattaforma (FCM/VAPID/APNs, app OAuth Closer default, secret di
+  piattaforma).
+
+### 11. Sicurezza
+
+Secret (client secret, refresh token, password SMTP, api key) solo in **Cloudflare KV/secret**, con
+cifratura at-rest, rotazione, revoca e audit; **nessun** secret in Firestore, log o browser. `state`
+OAuth firmato + `nonce`; allowlist dei redirect URI; scope minimi (nessun scope in più del necessario).
+Il client interagisce solo tramite Worker e non possiede mai credenziali.
+
+### 12. Fasi (micro-task, ordinate)
+
+F1 modello/regole/service (collezioni `condivisioni_calendario`, `integrazioni_azienda`, campi su
+`integrazioni` e `appuntamenti`) → F2 UI Impostazioni (admin) e Connessioni/Condivisione (utente) →
+F3 Worker Google (OAuth + eventi + sync) → F4 Worker Microsoft (Azure app + Graph + Teams) → F5
+condivisione calendario e livelli di visibilità → F6 creazione call e inviti (cliente invitato) →
+F7 test/E2E staging (connessione reale, evento, call, condivisione, 0 `permission-denied`, nessun
+secret esposto).
+
+### 13. Rischi
+
+Verifica Google (tempi e requisiti della schermata di consenso); scadenza dei secret Azure
+(`client_secret` con data di scadenza, da ruotare); tenant Microsoft restrittivi (consenso admin
+negato); licenze Meet/Teams a pagamento; quote/limiti API dei provider; token revocati/utente che
+scollega (gestire `refresh` fallito e stato da riconnettere); privacy della condivisione (fuoriuscita
+di dati tra operatori); costo di supporto per configurazioni `personalizzate`.
+
+### 14. NON fare
+
+NON fare uno store/app per singolo utente (un'app per provider, default Closer). NON salvare token in
+Firestore né nel browser. NON sync bidirezionale silenziosa (conflitti con avviso, mai sovrascrittura
+cieca). NON obbligare Google Workspace: la modalità default deve funzionare anche con account Google
+consumer, salvo le funzioni Meet che richiedono licenza. NON estendere gli scope oltre il minimo.

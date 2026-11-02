@@ -105,7 +105,9 @@ String? normalizzaPiva(String? value) {
   if (value == null) return null;
   var p = value.trim().toUpperCase();
   if (p.startsWith('IT')) p = p.substring(2);
-  p = p.trim();
+  // Toglie spazi, punti e altri separatori: `IT 001 595 603 66` e
+  // `00159560366` sono la stessa partita IVA per il controllo duplicati.
+  p = p.replaceAll(RegExp(r'[^0-9A-Z]'), '');
   return p.isEmpty ? null : p;
 }
 

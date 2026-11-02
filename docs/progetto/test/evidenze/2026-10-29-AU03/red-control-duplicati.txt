@@ -1,0 +1,10 @@
+FALLITA	dup-piva	Error: duplicato P.IVA non bloccato
+OK	dup-piva-formattata	
+OK	dup-nome	
+OK	dup-cf	
+OK	vies-non-valida	
+OK	pulizia finale	4 clienti rimossi
+{
+  "esito": "FALLITA",
+  "errore": null
+}

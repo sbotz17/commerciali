@@ -1,10 +1,35 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:commerciali_app/core/theme/app_theme.dart';
 import 'package:commerciali_app/data/models/preventivo.dart';
+import 'package:commerciali_app/data/services/sp_service.dart';
 import 'package:commerciali_app/features/preventivi/preventivi_screen.dart';
+import 'package:commerciali_app/state/azienda_providers.dart';
+
+/// Servizio dati finto per la schermata dei preventivi.
+///
+/// Solo i metodi usati dalla schermata sono implementati davvero; gli altri
+/// passano da `noSuchMethod` e fallirebbero il test, così nessuna chiamata a
+/// Firebase può passare inosservata.
+class _ServizioPreventiviFinto implements SpService {
+  _ServizioPreventiviFinto(this.preventivi);
+
+  final List<Preventivo> preventivi;
+
+  @override
+  void setAziendaAttiva(String? id) {}
+
+  @override
+  Future<List<Preventivo>> getPreventivi({String? soloUtenteId}) async =>
+      preventivi;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 void main() {
   Preventivo preventivo({
@@ -230,6 +255,98 @@ void main() {
       expect(find.text('Stato'), findsOneWidget);
       expect(find.text('Totale'), findsOneWidget);
       expect(find.text('Inviato'), findsOneWidget);
+    });
+  });
+
+  group('PreventiviScreen: apertura dall\'elenco', () {
+    /// Monta la schermata vera su un router minimo: l'elenco su `/preventivi`,
+    /// poi le rotte dell'editor (nuovo e per id) che mostrano un testo
+    /// riconoscibile al posto della schermata vera, così il test non tocca
+    /// Firebase.
+    Future<void> mostraSchermata(
+      WidgetTester tester, {
+      required List<Preventivo> preventivi,
+    }) async {
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final router = GoRouter(
+        initialLocation: '/preventivi',
+        routes: [
+          GoRoute(
+            path: '/preventivi',
+            builder: (context, state) =>
+                const Scaffold(body: PreventiviScreen()),
+          ),
+          GoRoute(
+            path: '/preventivi/nuovo',
+            builder: (context, state) =>
+                const Scaffold(body: Text('EDITOR NUOVO')),
+          ),
+          GoRoute(
+            path: '/preventivi/:id',
+            builder: (context, state) =>
+                Scaffold(body: Text('EDITOR ${state.pathParameters['id']}')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            spServiceProvider.overrideWith(
+              (ref) => _ServizioPreventiviFinto(preventivi),
+            ),
+          ],
+          child: MaterialApp.router(
+            theme: AppTheme.light,
+            routerConfig: router,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('cliccando una riga apre l\'editor del preventivo scelto',
+        (tester) async {
+      await mostraSchermata(
+        tester,
+        preventivi: [
+          preventivo(id: 'p1', numero: 'PRV-0001'),
+          preventivo(
+            id: 'p2',
+            numero: 'PRV-0002',
+            cliente: 'Rossi Impianti',
+            stato: 'inviato',
+          ),
+        ],
+      );
+
+      expect(find.byKey(const Key('lista-preventivi')), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('preventivo-p2')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('EDITOR p2'), findsOneWidget);
+      expect(find.text('EDITOR NUOVO'), findsNothing);
+    });
+
+    testWidgets('preventivo senza id resta sull\'elenco senza crash',
+        (tester) async {
+      await mostraSchermata(
+        tester,
+        preventivi: [preventivo(id: '', numero: 'PRV-0003')],
+      );
+
+      await tester.tap(find.byKey(const ValueKey('preventivo-')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('lista-preventivi')), findsOneWidget);
+      expect(find.text('EDITOR NUOVO'), findsNothing);
+      expect(find.textContaining('EDITOR '), findsNothing);
     });
   });
 }

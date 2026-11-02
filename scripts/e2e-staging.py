@@ -41,9 +41,11 @@ def admin_token():
     tokens = json.load(open(path))["tokens"]
     access = tokens["access_token"]
     if float(tokens.get("expires_at", 0)) <= time.time() * 1000 + 60_000:
+        if not os.environ.get("FIREBASE_CLI_CLIENT_SECRET"):
+            raise RuntimeError("Imposta FIREBASE_CLI_CLIENT_SECRET per rinnovare il token Firebase CLI")
         body = urllib.parse.urlencode({
             "client_id": "563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com",
-            "client_secret": "j9iVZfS8kkCEFUPaAeJV0sAi",
+            "client_secret": os.environ.get("FIREBASE_CLI_CLIENT_SECRET", ""),
             "refresh_token": tokens["refresh_token"],
             "grant_type": "refresh_token",
         }).encode()

@@ -1,6 +1,7 @@
 {
   "projects": {
-    "default": "commerciali-app"
+    "default": "commerciali-app",
+    "prod": "commerciali-prod"
   },
   "targets": {
     "commerciali-app": {
@@ -10,6 +11,13 @@
         ],
         "flutter": [
           "commerciali-flutter"
+        ]
+      }
+    },
+    "commerciali-prod": {
+      "hosting": {
+        "app": [
+          "commerciali-prod"
         ]
       }
     }
